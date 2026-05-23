@@ -1,0 +1,224 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { computeNextBillingDate } from '@/store/financialStore';
+import { useFinancialStore } from '@/store/useFinancialStore';
+import { Subscription } from '@/types/finance';
+import { CreditCard, Info, Pencil, Plus, Trash2 } from 'lucide-react';
+
+type ModalState = { mode: 'add' } | { mode: 'edit'; subscription: Subscription } | null;
+type DeleteTarget = { subscription: Subscription; pastCount: number } | null;
+
+const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const today = () => new Date().toISOString().slice(0, 10);
+
+const makeId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const monthlyEquivalent = (subscription: Subscription) => {
+  if (subscription.cycle === 'YEARLY') return subscription.amount / 12;
+  if (subscription.cycle === 'QUARTERLY') return subscription.amount / 3;
+  return subscription.amount;
+};
+
+export default function SubscriptionsPage() {
+  const { subscriptions, transactions, isInitialized, addSubscription, updateSubscription, deleteSubscription } = useFinancialStore();
+  const [modal, setModal] = useState<ModalState>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    const action = new URLSearchParams(window.location.search).get('action');
+    if (action === 'tool' || action === 'run') {
+      setModal({ mode: 'add' });
+      window.history.replaceState(null, '', '/subscriptions');
+    }
+  }, [isInitialized]);
+
+  const totalMonthlyCost = useMemo(() => subscriptions.reduce((sum, sub) => sum + monthlyEquivalent(sub), 0), [subscriptions]);
+
+  const saveSubscription = (formData: FormData, existing?: Subscription) => {
+    const name = String(formData.get('name') || '').trim();
+    const amount = Number(formData.get('amount'));
+    const cycle = String(formData.get('cycle') || 'MONTHLY') as Subscription['cycle'];
+    const notes = String(formData.get('notes') || '').trim();
+    const nextBillingDate = String(formData.get('nextBillingDate') || '');
+    const billingDay = nextBillingDate
+      ? Math.max(1, Math.min(28, new Date(`${nextBillingDate}T12:00:00`).getDate()))
+      : 1;
+
+    if (!name || amount <= 0 || !nextBillingDate) return;
+
+    const payload = {
+      name,
+      amount,
+      cycle,
+      notes,
+      billingDay,
+      nextBillingDate,
+      status: 'ACTIVE' as const,
+    };
+
+    if (existing) updateSubscription(existing.id, payload);
+    else addSubscription({ id: makeId(), ...payload });
+
+    setModal(null);
+  };
+
+  const requestDelete = (subscription: Subscription) => {
+    const t = today();
+    const pastCount = transactions.filter(
+      (tx) => (tx.subscriptionId === subscription.id || (tx.sourceType === 'subscription' && tx.sourceId === subscription.id)) && tx.date.slice(0, 10) <= t,
+    ).length;
+    setDeleteTarget({ subscription, pastCount });
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteSubscription(deleteTarget.subscription.id);
+    setDeleteTarget(null);
+  };
+
+  return (
+    <>
+      <div className="space-y-6">
+        <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
+          <div className="p-5 border-b border-border flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-[14px] font-semibold text-textPrimary">Tool Subscriptions</h1>
+              <p className="text-[12px] text-textMuted mt-1">Software and services that generate recurring expenses</p>
+            </div>
+            <button onClick={() => setModal({ mode: 'add' })} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
+              <Plus size={15} /> Add Subscription
+            </button>
+          </div>
+
+          {subscriptions.length === 0 ? (
+            <div className="text-center py-10 text-textMuted">
+              <div className="flex justify-center mb-3 text-slate-300"><CreditCard size={34} /></div>
+              <p className="text-[13px]">No tool subscriptions yet. Add recurring software costs here.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {subscriptions.map((sub) => (
+                <div key={sub.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-md bg-blue-50 text-accent flex items-center justify-center">
+                      <CreditCard size={18} />
+                    </div>
+                    <div>
+                      <div className="text-[13.5px] font-medium text-textPrimary">{sub.name}</div>
+                      <div className="text-[12px] text-textMuted">
+                        {sub.cycle.toLowerCase()} - next {new Date(sub.nextBillingDate).toLocaleDateString()}
+                        {sub.notes ? ` - ${sub.notes}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <div className="text-[14px] font-mono font-semibold text-textPrimary">{money.format(monthlyEquivalent(sub))}/mo</div>
+                      <div className="text-[11px] text-textMuted">{money.format(sub.amount)} billed</div>
+                    </div>
+                    <button onClick={() => setModal({ mode: 'edit', subscription: sub })} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${sub.name}`}>
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => requestDelete(sub)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${sub.name}`}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5 max-w-md">
+          <div className="text-[12px] text-textMuted">Total Monthly Cost</div>
+          <div className="text-[28px] font-semibold text-textPrimary mt-1">{money.format(totalMonthlyCost)}</div>
+          <p className="text-[12px] text-textMuted mt-1">Converted from monthly, quarterly, and yearly billing cycles.</p>
+        </div>
+      </div>
+
+      {modal && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setModal(null)}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[500px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+            <SubscriptionForm subscription={modal.mode === 'edit' ? modal.subscription : undefined} onCancel={() => setModal(null)} onSave={saveSubscription} />
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+            <h2 className="text-[16px] font-semibold text-textPrimary">Delete {deleteTarget.subscription.name}?</h2>
+            <p className="text-[13px] text-textSecondary mt-2">
+              This will remove the subscription and stop future auto-billing.
+            </p>
+            {deleteTarget.pastCount > 0 && (
+              <div className="mt-4 rounded-md bg-blue-50 border border-blue-100 p-3 flex gap-2 text-[13px] text-blue-700">
+                <Info size={15} className="shrink-0 mt-0.5" />
+                <span>
+                  {deleteTarget.pastCount} past recorded expense{deleteTarget.pastCount === 1 ? '' : 's'} will stay in your transaction history as a permanent record of what was spent.
+                </span>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-5 mt-5 border-t border-border">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
+              <button type="button" onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700">Delete Subscription</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[12px] font-medium text-textSecondary mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SubscriptionForm({ subscription, onCancel, onSave }: { subscription?: Subscription; onCancel: () => void; onSave: (formData: FormData, existing?: Subscription) => void }) {
+  const defaultBillingDate = subscription?.nextBillingDate ? String(subscription.nextBillingDate).slice(0, 10) : computeNextBillingDate(new Date().getDate());
+
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget), subscription); }} className="space-y-4">
+      <div>
+        <h2 className="text-[16px] font-semibold text-textPrimary">{subscription ? 'Edit Subscription' : 'Add Subscription'}</h2>
+        <p className="text-[13px] text-textMuted">Expenses are auto-recorded on the billing date each cycle.</p>
+      </div>
+      <Field label="Service Name">
+        <input name="name" defaultValue={subscription?.name} className={inputClass} placeholder="Vercel Pro" required />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Cost">
+          <input name="amount" type="number" min="0" step="0.01" defaultValue={subscription?.amount} className={inputClass} required />
+        </Field>
+        <Field label="Next Billing Date">
+          <input name="nextBillingDate" type="date" defaultValue={defaultBillingDate} className={inputClass} required />
+        </Field>
+      </div>
+      <Field label="Billing Cycle">
+        <select name="cycle" defaultValue={subscription?.cycle || 'MONTHLY'} className={inputClass}>
+          <option value="MONTHLY">Monthly</option>
+          <option value="QUARTERLY">Quarterly</option>
+          <option value="YEARLY">Yearly</option>
+        </select>
+      </Field>
+      <Field label="Notes">
+        <input name="notes" defaultValue={subscription?.notes} className={inputClass} placeholder="Optional" />
+      </Field>
+      <div className="flex justify-end gap-2 pt-2 border-t border-border">
+        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
+        <button className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">Save Subscription</button>
+      </div>
+    </form>
+  );
+}

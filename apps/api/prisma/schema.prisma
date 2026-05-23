@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions         Transaction[]
+  budgets              Budget[]
+  categories           Category[]
+  clients              Client[]
+  subscriptions        Subscription[]
+  auditLogs            AuditLog[]
+}
+
+model Client {
+  id              String    @id @default(uuid())
+  name            String
+  email           String?
+  company         String?
+  revenue         Float     @default(0)
+  clientType      String    @default("COMPANY")
+  status          String    @default("ACTIVE") // ACTIVE, COMPLETED, PROSPECT, INACTIVE
+  paymentType     String    @default("onetime") // onetime, retainer
+  paymentDate     DateTime?
+  billingDay      Int?
+  nextBillingDate DateTime?
+  recorded        Boolean   @default(false)
+  transactionId   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Subscription {
+  id              String   @id @default(uuid())
+  name            String
+  amount          Float
+  cycle           String   @default("MONTHLY") // MONTHLY, QUARTERLY, YEARLY
+  notes           String?
+  billingDay      Int      @default(1)
+  nextBillingDate DateTime
+  status          String   @default("ACTIVE")
+  transactionId   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Transaction {
+  id         String   @id @default(uuid())
+  amount     Float
+  type       String   // "INCOME" or "EXPENSE"
+  status     String   @default("COMPLETED") // COMPLETED, PENDING
+  date       DateTime
+  notes      String?
+  sourceType String   // manual, client, subscription
+  sourceId   String?
+  categoryId String
+  isAuto     Boolean  @default(false)
+  isEdited   Boolean  @default(false)
+   
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  clientId   String?
+  subscriptionId String?
+
+  @@index([userId])
+  @@index([clientId])
+  @@index([subscriptionId])
+  @@unique([userId, sourceType, sourceId])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // "INCOME" or "EXPENSE"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  budgets      Budget[]
+}
+
+model Budget {
+  id           String   @id @default(uuid())
+  monthlyLimit Float
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
