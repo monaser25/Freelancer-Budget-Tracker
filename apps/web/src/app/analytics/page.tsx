@@ -158,12 +158,12 @@ export default function AnalyticsPage() {
           <h1 className="text-[14px] font-semibold text-textPrimary">Analytics</h1>
           <p className="text-[12px] text-textMuted mt-0.5">Detailed financial breakdown and trends</p>
         </div>
-        <div className="flex bg-slate-100 rounded-lg p-1 gap-0.5">
+        <div className="flex w-full bg-slate-100 rounded-lg p-1 gap-0.5 sm:w-auto">
           {(['week', 'month', 'year'] as Period[]).map(p => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 rounded-md text-[13px] font-medium transition-all ${
+                className={`flex-1 px-4 py-1.5 rounded-md text-[13px] font-medium transition-all sm:flex-none ${
                 period === p
                   ? 'bg-white text-textPrimary shadow-sm'
                   : 'text-textMuted hover:text-textSecondary'
@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── period metrics ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-[14px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-[14px]">
         <MetricCard label="Revenue" sub={periodLabel} value={money.format(periodRevenue)} valueClass="text-green-600" />
         <MetricCard label="Expenses" sub={periodLabel} value={money.format(periodExpenses)} valueClass="text-red-500" />
         <MetricCard label="Net Profit" sub={periodLabel} value={money.format(periodProfit)} valueClass={periodProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── revenue vs expenses chart ── */}
-      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
+      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5 overflow-hidden">
         <h2 className="text-[14px] font-semibold text-textPrimary">Revenue vs Expenses</h2>
         <p className="text-[12px] text-textMuted mt-0.5 mb-5">
           {period === 'week' ? 'Daily breakdown this week' : period === 'month' ? 'Weekly breakdown this month' : 'Monthly breakdown this year'}
@@ -219,7 +219,7 @@ export default function AnalyticsPage() {
             <p className="text-[12px] text-textMuted mt-0.5">{periodLabel} · income per client</p>
           </div>
 
-          <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
+          <div className="grid grid-cols-3 divide-x divide-border border-b border-border overflow-hidden">
             <StatMini label="Total Clients" value={String(clients.length)} />
             <StatMini label="Active" value={String(activeClients)} />
             <StatMini label="Retainers" value={String(retainerClients)} />
@@ -243,7 +243,7 @@ export default function AnalyticsPage() {
                         <span className="text-[13px] font-medium text-textPrimary truncate">{client.name}</span>
                         <span className={`text-[13px] font-semibold shrink-0 ${revenue > 0 ? 'text-green-600' : 'text-textMuted'}`}>{money.format(revenue)}</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                         </div>
@@ -271,7 +271,7 @@ export default function AnalyticsPage() {
             <div className="py-10 text-center text-[13px] text-textMuted">No expenses recorded {periodLabel.toLowerCase()}</div>
           ) : (
             <>
-              <div className="px-5 pt-5 pb-2">
+              <div className="px-4 pt-5 pb-2 sm:px-5 overflow-x-auto">
                 <ResponsiveContainer width="100%" height={Math.max(120, categoryRows.length * 38)}>
                   <BarChart data={categoryRows} layout="vertical" margin={{ left: 0, right: 24, top: 0, bottom: 0 }}>
                     <CartesianGrid stroke="#F1F5F9" horizontal={false} />
@@ -287,13 +287,13 @@ export default function AnalyticsPage() {
                 {categoryRows.map(({ category, amount }) => {
                   const pct = periodExpenses > 0 ? Math.round((amount / periodExpenses) * 100) : 0;
                   return (
-                    <div key={category} className="px-5 py-2.5 flex items-center justify-between gap-3">
+                    <div key={category} className="px-4 py-2.5 flex flex-col gap-2 sm:px-5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-accent shrink-0" />
                         <span className="text-[13px] text-textPrimary">{category}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="w-full min-w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden sm:w-20">
                           <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
                         </div>
                         <span className="text-[13px] font-medium text-textPrimary w-16 text-right tabular-nums">{money.format(amount)}</span>
@@ -311,12 +311,12 @@ export default function AnalyticsPage() {
       {/* ── subscription costs ── */}
       {(subCosts.length > 0 || activeSubscriptions > 0) && (
         <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-          <div className="p-5 border-b border-border flex items-center justify-between gap-3">
+          <div className="p-4 sm:p-5 border-b border-border flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-[14px] font-semibold text-textPrimary">Subscription Costs</h2>
               <p className="text-[12px] text-textMuted mt-0.5">{activeSubscriptions} active subscription{activeSubscriptions !== 1 ? 's' : ''} · {periodLabel.toLowerCase()}</p>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <div className="text-[14px] font-semibold text-red-500">{money.format(subCosts.reduce((s, r) => s + r.cost, 0))}</div>
               <div className="text-[11px] text-textMuted">total this period</div>
             </div>
@@ -335,7 +335,7 @@ export default function AnalyticsPage() {
                         <span className="text-[13px] font-medium text-textPrimary">{sub.name}</span>
                         <span className="text-[13px] font-semibold text-red-500 shrink-0">{money.format(cost)}</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
                         </div>
@@ -354,14 +354,14 @@ export default function AnalyticsPage() {
       {/* ── all-time summary ── */}
       <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
         <h2 className="text-[14px] font-semibold text-textPrimary mb-5">All-Time Summary</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
           <SummaryBox label="Total Revenue" value={money.format(overview.totalRevenue)} sub="all recorded income" valueClass="text-green-600" />
           <SummaryBox label="Total Expenses" value={money.format(overview.totalExpenses)} sub="all recorded costs" valueClass="text-red-500" />
           <SummaryBox label="Net Profit" value={money.format(overview.netProfit)} sub={`${allTimeMargin}% margin`} valueClass={overview.netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
           <SummaryBox label="Monthly Tool Cost" value={`${money.format(overview.subscriptionBurden)}/mo`} sub={`${activeSubscriptions} active subscription${activeSubscriptions !== 1 ? 's' : ''}`} valueClass="text-textPrimary" />
         </div>
 
-        <div className="mt-5 pt-5 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-5">
+        <div className="mt-5 pt-5 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
           <SummaryBox label="Total Clients" value={String(overview.totalClients)} sub="across all statuses" valueClass="text-textPrimary" />
           <SummaryBox label="Active Clients" value={String(overview.activeClients)} sub={`${retainerClients} retainer${retainerClients !== 1 ? 's' : ''}`} valueClass="text-accent" />
           <SummaryBox label="Avg Revenue / Client" value={overview.totalClients > 0 ? money.format(overview.totalRevenue / overview.totalClients) : money.format(0)} sub="total ÷ clients" valueClass="text-textPrimary" />
@@ -377,7 +377,7 @@ export default function AnalyticsPage() {
 
 function MetricCard({ label, sub, value, valueClass }: { label: string; sub: string; value: string; valueClass: string }) {
   return (
-    <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
+    <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5">
       <div className="text-[12px] text-textMuted">{label}</div>
       <div className={`text-[22px] font-semibold tracking-tight mt-1 ${valueClass}`}>{value}</div>
       <div className="text-[11px] text-textMuted mt-0.5">{sub}</div>

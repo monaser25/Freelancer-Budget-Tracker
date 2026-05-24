@@ -158,7 +158,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[14px]">
         <div className="lg:col-span-2 space-y-[14px]">
-          <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5 h-[330px]">
+          <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5 h-[330px] overflow-hidden">
             <h3 className="text-[14px] font-semibold text-textPrimary">Revenue vs Expenses</h3>
             <p className="text-[12px] text-textMuted mt-1 mb-4">Monthly breakdown</p>
             <ResponsiveContainer width="100%" height="82%">
@@ -190,26 +190,28 @@ export default function DashboardPage() {
                 </button>
               </div>
             ) : (
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-50 border-b border-border">
-                  <tr>
-                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Source/Desc</th>
-                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Date</th>
-                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTransactions.map((tx) => (
-                    <tr key={tx.id} onClick={() => router.push('/transactions')} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
-                      <td className="p-[12px_14px] text-[13px] text-textPrimary">{tx.notes || tx.sourceType}</td>
-                      <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
-                      <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                        {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[460px] text-left border-collapse">
+                  <thead className="bg-slate-50 border-b border-border">
+                    <tr>
+                      <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Source/Desc</th>
+                      <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Date</th>
+                      <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentTransactions.map((tx) => (
+                      <tr key={tx.id} onClick={() => router.push('/transactions')} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
+                        <td className="p-[12px_14px] text-[13px] text-textPrimary">{tx.notes || tx.sourceType}</td>
+                        <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
+                        <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
+                          {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -227,7 +229,7 @@ export default function DashboardPage() {
           </div>
 
           <Link href="/subscriptions" className="block bg-card border border-border rounded-[var(--radius-lg)] p-5 hover:shadow-[var(--shadow-md)] hover:border-blue-200 transition-all">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="text-[14px] font-semibold text-textPrimary">Active Subscriptions</h3>
               <span className="text-[12px] text-accent">View all -&gt;</span>
             </div>
@@ -240,8 +242,8 @@ export default function DashboardPage() {
             </div>
             <div className="mt-4 divide-y divide-slate-50 border-t border-slate-50">
               {subscriptions.slice(0, 4).map((sub) => (
-                <div key={sub.id} className="py-2 flex items-center justify-between text-[12px]">
-                  <span className="text-textSecondary">{sub.name}</span>
+                <div key={sub.id} className="py-2 flex items-center justify-between gap-3 text-[12px]">
+                  <span className="min-w-0 truncate text-textSecondary">{sub.name}</span>
                   <span className="text-textMuted">{new Date(sub.nextBillingDate).toLocaleDateString()}</span>
                 </div>
               ))}
@@ -252,8 +254,8 @@ export default function DashboardPage() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[480px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[480px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             {(modal === 'income' || modal === 'expense') && (
               <TransactionForm type={modal === 'income' ? 'INCOME' : 'EXPENSE'} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveTransaction} />
             )}
@@ -269,7 +271,7 @@ function StatCard({ label, value, detail, icon, href, tone = 'muted' }: { label:
   return (
     <Link href={href} className="block bg-card border border-border rounded-[var(--radius-lg)] p-[18px_20px] cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-blue-200 transition-all">
       <div className="text-[12px] text-textMuted font-normal mb-[6px]">{label}</div>
-      <div className="text-[24px] font-semibold tracking-tight text-textPrimary">{value}</div>
+      <div className="break-words text-[22px] sm:text-[24px] font-semibold tracking-tight text-textPrimary">{value}</div>
       <div className={`text-[12px] mt-[6px] flex items-center gap-1 ${toneClass}`}>
         {icon} {detail}
       </div>
@@ -283,7 +285,7 @@ function ActionButton({ icon, label, onClick, href }: { icon: React.ReactNode; l
       <div className="w-[36px] h-[36px] rounded-md bg-slate-100 flex items-center justify-center text-textSecondary group-hover:bg-blue-100 group-hover:text-accent transition-all">
         {icon}
       </div>
-      <div className="text-[12px] font-medium text-textSecondary">{label}</div>
+      <div className="text-center text-[12px] font-medium text-textSecondary">{label}</div>
     </>
   );
 
@@ -346,7 +348,7 @@ function TransactionForm({ type, error, isSaving, onCancel, onSave }: { type: 'I
       <Field label="Description">
         <input name="notes" className={inputClass} placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Amount">
           <input name="amount" type="number" min="0" step="0.01" className={inputClass} required />
         </Field>
@@ -372,7 +374,7 @@ function TransactionForm({ type, error, isSaving, onCancel, onSave }: { type: 'I
           )}
         </select>
       </Field>
-      <div className="flex justify-end gap-2 pt-2 border-t border-border">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
         <button type="button" disabled={isSaving} onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
         <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Entry'}</button>
       </div>

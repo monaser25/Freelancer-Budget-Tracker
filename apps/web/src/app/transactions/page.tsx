@@ -109,12 +109,12 @@ export default function TransactionsPage() {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-[17px] font-semibold tracking-tight text-textPrimary">Transactions</h1>
             <p className="text-[12px] text-textMuted">Centralized ledger of all financial events</p>
           </div>
-          <button type="button" onClick={() => { setModalError(null); setAdding(true); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
+          <button type="button" onClick={() => { setModalError(null); setAdding(true); }} className="inline-flex w-full items-center justify-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover sm:w-auto">
             <Plus size={15} /> Add Transaction
           </button>
         </div>
@@ -140,59 +140,61 @@ export default function TransactionsPage() {
               <p className="text-[13px]">No transactions match this filter yet.</p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 border-b border-border">
-                <tr>
-                  <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Description / Source</th>
-                  <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Category</th>
-                  <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Date</th>
-                  <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Type</th>
-                  <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Amount</th>
-                  <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTransactions.map((tx, index) => (
-                  <tr key={tx.id} className={`border-b border-slate-50 hover:bg-slate-50 ${index % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
-                    <td className="p-[12px_14px] text-[13px] text-textPrimary">
-                      <div>{tx.notes || 'Unnamed Transaction'}</div>
-                      <div className="text-[11px] text-textMuted uppercase mt-1">{tx.sourceType}</div>
-                    </td>
-                    <td className="p-[12px_14px] text-[13px] text-textSecondary">
-                      <Badge>{tx.categoryId}</Badge>
-                    </td>
-                    <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
-                    <td className="p-[12px_14px] text-[13px] text-textSecondary">
-                      <div className="flex items-center gap-2">
-                        <Badge tone={tx.type === 'INCOME' ? 'green' : 'red'}>{tx.type === 'INCOME' ? 'Revenue' : 'Expense'}</Badge>
-                        {tx.isAuto && <Badge tone="blue">Auto</Badge>}
-                        {tx.isEdited && <Badge tone="amber">Edited</Badge>}
-                      </div>
-                    </td>
-                    <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                      {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
-                    </td>
-                    <td className="p-[12px_14px] text-right">
-                      <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.notes || 'transaction'}`}>
-                          <Pencil size={15} />
-                        </button>
-                        <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.notes || 'transaction'}`}>
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left border-collapse">
+                <thead className="bg-slate-50 border-b border-border">
+                  <tr>
+                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Description / Source</th>
+                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Category</th>
+                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Date</th>
+                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Type</th>
+                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Amount</th>
+                    <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredTransactions.map((tx, index) => (
+                    <tr key={tx.id} className={`border-b border-slate-50 hover:bg-slate-50 ${index % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
+                      <td className="p-[12px_14px] text-[13px] text-textPrimary">
+                        <div>{tx.notes || 'Unnamed Transaction'}</div>
+                        <div className="text-[11px] text-textMuted uppercase mt-1">{tx.sourceType}</div>
+                      </td>
+                      <td className="p-[12px_14px] text-[13px] text-textSecondary">
+                        <Badge>{tx.categoryId}</Badge>
+                      </td>
+                      <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
+                      <td className="p-[12px_14px] text-[13px] text-textSecondary">
+                        <div className="flex items-center gap-2">
+                          <Badge tone={tx.type === 'INCOME' ? 'green' : 'red'}>{tx.type === 'INCOME' ? 'Revenue' : 'Expense'}</Badge>
+                          {tx.isAuto && <Badge tone="blue">Auto</Badge>}
+                          {tx.isEdited && <Badge tone="amber">Edited</Badge>}
+                        </div>
+                      </td>
+                      <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
+                        {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
+                      </td>
+                      <td className="p-[12px_14px] text-right">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.notes || 'transaction'}`}>
+                            <Pencil size={15} />
+                          </button>
+                          <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.notes || 'transaction'}`}>
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setEditing(null)}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => setEditing(null)}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             <form onSubmit={(event) => { event.preventDefault(); saveEdit(new FormData(event.currentTarget)); }} className="space-y-4">
               <div>
                 <h2 className="text-[16px] font-semibold text-textPrimary">Edit Transaction</h2>
@@ -207,7 +209,7 @@ export default function TransactionsPage() {
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
                 <input name="notes" defaultValue={editing.notes} className={inputClass} />
               </label>
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
                 <button type="button" onClick={() => setEditing(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
                 <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Changes'}</button>
               </div>
@@ -217,15 +219,15 @@ export default function TransactionsPage() {
       )}
 
       {adding && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setAdding(false); }}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setAdding(false); }}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             <form onSubmit={(event) => { event.preventDefault(); saveNew(new FormData(event.currentTarget)); }} className="space-y-4">
               <div>
                 <h2 className="text-[16px] font-semibold text-textPrimary">Add Transaction</h2>
                 <p className="text-[13px] text-textMuted mt-1">Manual entries appear immediately after the API confirms them.</p>
                 {modalError && <p className="text-[13px] text-red-600 mt-2">{modalError}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
                   <span className="block text-[12px] font-medium text-textSecondary mb-1">Type</span>
                   <select name="type" className={inputClass} defaultValue="EXPENSE">
@@ -242,7 +244,7 @@ export default function TransactionsPage() {
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
                 <input name="notes" className={inputClass} required />
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
                   <span className="block text-[12px] font-medium text-textSecondary mb-1">Date</span>
                   <input name="date" type="date" defaultValue={today()} className={inputClass} required />
@@ -259,7 +261,7 @@ export default function TransactionsPage() {
                   </select>
                 </label>
               </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
                 <button type="button" disabled={isSaving} onClick={() => setAdding(false)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
                 <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Transaction'}</button>
               </div>

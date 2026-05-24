@@ -110,12 +110,12 @@ export default function SubscriptionsPage() {
     <>
       <div className="space-y-6">
         <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-          <div className="p-5 border-b border-border flex items-center justify-between gap-3">
+          <div className="p-4 sm:p-5 border-b border-border flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h1 className="text-[14px] font-semibold text-textPrimary">Tool Subscriptions</h1>
               <p className="text-[12px] text-textMuted mt-1">Software and services that generate recurring expenses</p>
             </div>
-            <button type="button" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
+            <button type="button" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="inline-flex w-full items-center justify-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover sm:w-auto">
               <Plus size={15} /> Add Subscription
             </button>
           </div>
@@ -128,12 +128,12 @@ export default function SubscriptionsPage() {
           ) : (
             <div className="divide-y divide-slate-50">
               {subscriptions.map((sub) => (
-                <div key={sub.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
-                  <div className="flex items-center gap-3">
+                <div key={sub.id} className="p-4 flex flex-col gap-4 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3 sm:items-center">
                     <div className="w-9 h-9 rounded-md bg-blue-50 text-accent flex items-center justify-center">
                       <CreditCard size={18} />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-[13.5px] font-medium text-textPrimary">{sub.name}</div>
                       <div className="text-[12px] text-textMuted">
                         {sub.cycle.toLowerCase()} - next {new Date(sub.nextBillingDate).toLocaleDateString()}
@@ -141,17 +141,19 @@ export default function SubscriptionsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <div className="text-left sm:text-right">
                       <div className="text-[14px] font-mono font-semibold text-textPrimary">{money.format(monthlyEquivalent(sub))}/mo</div>
                       <div className="text-[11px] text-textMuted">{money.format(sub.amount)} billed</div>
                     </div>
-                    <button type="button" onClick={() => { setModalError(null); setModal({ mode: 'edit', subscription: sub }); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${sub.name}`}>
-                      <Pencil size={15} />
-                    </button>
-                    <button type="button" onClick={() => requestDelete(sub)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${sub.name}`}>
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => { setModalError(null); setModal({ mode: 'edit', subscription: sub }); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${sub.name}`}>
+                        <Pencil size={15} />
+                      </button>
+                      <button type="button" onClick={() => requestDelete(sub)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${sub.name}`}>
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -159,7 +161,7 @@ export default function SubscriptionsPage() {
           )}
         </div>
 
-        <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5 max-w-md">
+        <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5 max-w-md">
           <div className="text-[12px] text-textMuted">Total Monthly Cost</div>
           <div className="text-[28px] font-semibold text-textPrimary mt-1">{money.format(totalMonthlyCost)}</div>
           <p className="text-[12px] text-textMuted mt-1">Converted from monthly, quarterly, and yearly billing cycles.</p>
@@ -167,16 +169,16 @@ export default function SubscriptionsPage() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[500px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             <SubscriptionForm subscription={modal.mode === 'edit' ? modal.subscription : undefined} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveSubscription} />
           </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={closeDeleteModal}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             <h2 className="text-[16px] font-semibold text-textPrimary">Delete {deleteTarget.subscription.name}?</h2>
             <p className="text-[13px] text-textSecondary mt-2">
               This will remove the subscription and stop future auto-billing.
@@ -190,7 +192,7 @@ export default function SubscriptionsPage() {
               </div>
             )}
             {deleteError && <p className="text-[13px] text-red-600 mt-3">{deleteError}</p>}
-            <div className="flex justify-end gap-2 pt-5 mt-5 border-t border-border">
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
               <button type="button" disabled={isDeleting} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
               <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Deleting...' : 'Delete Subscription'}</button>
             </div>
@@ -223,7 +225,7 @@ function SubscriptionForm({ subscription, error, isSaving, onCancel, onSave }: {
       <Field label="Service Name">
         <input name="name" defaultValue={subscription?.name} className={inputClass} placeholder="Vercel Pro" required />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Cost">
           <input name="amount" type="number" min="0" step="0.01" defaultValue={subscription?.amount} className={inputClass} required />
         </Field>
@@ -241,7 +243,7 @@ function SubscriptionForm({ subscription, error, isSaving, onCancel, onSave }: {
       <Field label="Notes">
         <input name="notes" defaultValue={subscription?.notes} className={inputClass} placeholder="Optional" />
       </Field>
-      <div className="flex justify-end gap-2 pt-2 border-t border-border">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
         <button type="button" disabled={isSaving} onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
         <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Subscription'}</button>
       </div>

@@ -16,14 +16,14 @@ export default function SettingsPage() {
         <h1 className="text-[16px] font-semibold text-textPrimary">Account</h1>
         <p className="text-[13px] text-textMuted mt-1">Manage your connected account credentials.</p>
         
-        <div className="mt-5 border-t border-border pt-5 flex items-center justify-between gap-4">
-          <div>
+        <div className="mt-5 border-t border-border pt-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="min-w-0">
             <div className="text-[13px] font-medium text-textPrimary">Email Address</div>
-            <div className="text-[13px] text-textSecondary mt-0.5">{user?.email || 'Loading...'}</div>
+            <div className="text-[13px] text-textSecondary mt-0.5 break-all">{user?.email || 'Loading...'}</div>
           </div>
           <button 
             onClick={() => signOut()}
-            className="px-4 py-2 rounded-md border border-border text-[13px] font-medium text-textSecondary hover:bg-slate-50 transition-colors"
+            className="w-full px-4 py-2 rounded-md border border-border text-[13px] font-medium text-textSecondary hover:bg-slate-50 transition-colors sm:w-auto"
           >
             Log Out
           </button>

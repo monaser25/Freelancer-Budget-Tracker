@@ -71,31 +71,31 @@ export function Topbar() {
 
   return (
     <>
-      <div className="h-[var(--header-h)] bg-sidebar border-b border-border flex items-center justify-between px-7 sticky top-0 z-50">
-        <div className="flex flex-col">
+      <div className="min-h-[var(--header-h)] bg-sidebar border-b border-border flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 md:px-7 sticky top-0 z-50">
+        <div className="flex min-w-0 flex-col">
           <h1 className="text-[17px] font-semibold tracking-tight text-textPrimary">{copy.title}</h1>
           <p className="text-[12px] text-textMuted">{copy.subtitle}</p>
         </div>
-        <div className="flex items-center gap-[10px]">
-          <Link href="/transactions" className="inline-flex items-center gap-[6px] px-[14px] py-[8px] rounded-md text-[13px] font-medium cursor-pointer border border-border bg-transparent text-textSecondary hover:bg-slate-100 hover:text-textPrimary transition-all">
+        <div className="flex w-full items-center gap-[10px] sm:w-auto">
+          <Link href="/transactions" className="inline-flex flex-1 sm:flex-none items-center justify-center gap-[6px] px-[14px] py-[8px] rounded-md text-[13px] font-medium cursor-pointer border border-border bg-transparent text-textSecondary hover:bg-slate-100 hover:text-textPrimary transition-all">
             View Ledger
           </Link>
-          <button type="button" onClick={openModal} className="inline-flex items-center gap-[6px] px-[14px] py-[8px] rounded-md text-[13px] font-medium cursor-pointer border-none bg-accent text-white hover:bg-accent-hover transition-all">
+          <button type="button" onClick={openModal} className="inline-flex flex-1 sm:flex-none items-center justify-center gap-[6px] px-[14px] py-[8px] rounded-md text-[13px] font-medium cursor-pointer border-none bg-accent text-white hover:bg-accent-hover transition-all">
             <Plus size={15} /> New Transaction
           </button>
         </div>
       </div>
 
       {isOpen && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setIsOpen(false); }}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setIsOpen(false); }}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             <form onSubmit={(event) => { event.preventDefault(); saveTransaction(new FormData(event.currentTarget)); }} className="space-y-4">
               <div>
                 <h2 className="text-[16px] font-semibold text-textPrimary">New Transaction</h2>
                 <p className="text-[13px] text-textMuted mt-1">Create a manual revenue or expense entry.</p>
                 {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
                   <span className="block text-[12px] font-medium text-textSecondary mb-1">Type</span>
                   <select name="type" className={inputClass} defaultValue="INCOME">
@@ -112,7 +112,7 @@ export function Topbar() {
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Description</span>
                 <input name="notes" className={inputClass} required />
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
                   <span className="block text-[12px] font-medium text-textSecondary mb-1">Date</span>
                   <input name="date" type="date" defaultValue={today()} className={inputClass} required />
@@ -129,7 +129,7 @@ export function Topbar() {
                   </select>
                 </label>
               </div>
-              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
                 <button type="button" disabled={isSaving} onClick={() => setIsOpen(false)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
                 <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Transaction'}</button>
               </div>

@@ -55,11 +55,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     <>
       <FinancialBootstrap />
       <Sidebar />
-      <main className="ml-[var(--sidebar-w)] flex-1 flex flex-col min-h-screen">
+      <main className="w-full md:ml-[var(--sidebar-w)] flex-1 flex flex-col min-h-screen">
         {isFinancialInitialized ? (
           <>
             <Topbar />
-            <div className="p-6 md:p-8 flex-1 overflow-auto">
+            <div className="px-4 py-5 pb-24 sm:px-5 md:p-8 flex-1 overflow-auto">
               {children}
             </div>
           </>

@@ -12,6 +12,9 @@
     "start": "npm run start --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
   },
+  "prisma": {
+    "schema": "apps/web/prisma/schema.prisma"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }

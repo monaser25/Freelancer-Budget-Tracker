@@ -105,8 +105,8 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-[420px] bg-card border border-border rounded-[var(--radius-xl)] shadow-sm p-7 space-y-5">
+    <main className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 sm:p-6">
+      <form onSubmit={onSubmit} className="w-full max-w-[420px] bg-card border border-border rounded-[var(--radius-xl)] shadow-sm p-5 sm:p-7 space-y-5">
         <div>
           <div className="w-10 h-10 rounded-md bg-accent text-white flex items-center justify-center font-semibold mb-4">FL</div>
           <h1 className="text-[20px] font-semibold text-textPrimary">Log in to FlowLedger</h1>

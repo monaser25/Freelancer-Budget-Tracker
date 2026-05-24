@@ -9,7 +9,7 @@ export type FinancialSnapshot = {
 };
 
 const apiBaseUrl = () => {
-  const raw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const raw = process.env.NEXT_PUBLIC_API_URL || '';
   return raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
 };
 
@@ -63,7 +63,7 @@ const userMessageForFailure = (resource: string, err: unknown) => {
     return `Unable to ${resource}. Server responded with ${err.status}.`;
   }
 
-  return `Unable to ${resource}. Check that the API is running at ${apiBaseUrl()} and try again.`;
+  return `Unable to ${resource}. Check that the API is reachable and try again.`;
 };
 
 const apiRequest = async <T>(path: string, options: RequestInit = {}, resource: string): Promise<T> => {
