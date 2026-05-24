@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription } from '@/types/finance';
+import { makeCurrencyFormatter } from '@/lib/currency';
 import { CreditCard, Info, Pencil, Plus, Trash2 } from 'lucide-react';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; subscription: Subscription } | null;
 type DeleteTarget = { subscription: Subscription; pastCount: number } | null;
 
 const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const today = () => new Date().toISOString().slice(0, 10);
 
 const makeId = () => {
@@ -25,14 +25,20 @@ const monthlyEquivalent = (subscription: Subscription) => {
 };
 
 export default function SubscriptionsPage() {
-  const { subscriptions, transactions, isInitialized, addSubscription, updateSubscription, deleteSubscription } = useFinancialStore();
+  const { subscriptions, transactions, currency, isInitialized, addSubscription, updateSubscription, deleteSubscription } = useFinancialStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const money = useMemo(() => makeCurrencyFormatter(currency), [currency]);
 
   useEffect(() => {
     if (!isInitialized) return;
     const action = new URLSearchParams(window.location.search).get('action');
     if (action === 'tool' || action === 'run') {
+      setModalError(null);
       setModal({ mode: 'add' });
       window.history.replaceState(null, '', '/subscriptions');
     }
@@ -40,7 +46,7 @@ export default function SubscriptionsPage() {
 
   const totalMonthlyCost = useMemo(() => subscriptions.reduce((sum, sub) => sum + monthlyEquivalent(sub), 0), [subscriptions]);
 
-  const saveSubscription = (formData: FormData, existing?: Subscription) => {
+  const saveSubscription = async (formData: FormData, existing?: Subscription) => {
     const name = String(formData.get('name') || '').trim();
     const amount = Number(formData.get('amount'));
     const cycle = String(formData.get('cycle') || 'MONTHLY') as Subscription['cycle'];
@@ -62,10 +68,17 @@ export default function SubscriptionsPage() {
       status: 'ACTIVE' as const,
     };
 
-    if (existing) updateSubscription(existing.id, payload);
-    else addSubscription({ id: makeId(), ...payload });
-
-    setModal(null);
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      if (existing) await updateSubscription(existing.id, payload);
+      else await addSubscription({ id: makeId(), ...payload });
+      setModal(null);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to save subscription');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const requestDelete = (subscription: Subscription) => {
@@ -73,14 +86,25 @@ export default function SubscriptionsPage() {
     const pastCount = transactions.filter(
       (tx) => (tx.subscriptionId === subscription.id || (tx.sourceType === 'subscription' && tx.sourceId === subscription.id)) && tx.date.slice(0, 10) <= t,
     ).length;
+    setDeleteError(null);
     setDeleteTarget({ subscription, pastCount });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    deleteSubscription(deleteTarget.subscription.id);
-    setDeleteTarget(null);
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteSubscription(deleteTarget.subscription.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete subscription');
+    } finally {
+      setIsDeleting(false);
+    }
   };
+
+  const closeDeleteModal = () => { if (!isDeleting) setDeleteTarget(null); };
 
   return (
     <>
@@ -91,7 +115,7 @@ export default function SubscriptionsPage() {
               <h1 className="text-[14px] font-semibold text-textPrimary">Tool Subscriptions</h1>
               <p className="text-[12px] text-textMuted mt-1">Software and services that generate recurring expenses</p>
             </div>
-            <button onClick={() => setModal({ mode: 'add' })} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
+            <button type="button" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
               <Plus size={15} /> Add Subscription
             </button>
           </div>
@@ -122,10 +146,10 @@ export default function SubscriptionsPage() {
                       <div className="text-[14px] font-mono font-semibold text-textPrimary">{money.format(monthlyEquivalent(sub))}/mo</div>
                       <div className="text-[11px] text-textMuted">{money.format(sub.amount)} billed</div>
                     </div>
-                    <button onClick={() => setModal({ mode: 'edit', subscription: sub })} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${sub.name}`}>
+                    <button type="button" onClick={() => { setModalError(null); setModal({ mode: 'edit', subscription: sub }); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${sub.name}`}>
                       <Pencil size={15} />
                     </button>
-                    <button onClick={() => requestDelete(sub)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${sub.name}`}>
+                    <button type="button" onClick={() => requestDelete(sub)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${sub.name}`}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -143,15 +167,15 @@ export default function SubscriptionsPage() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setModal(null)}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[500px] p-6" onMouseDown={(event) => event.stopPropagation()}>
-            <SubscriptionForm subscription={modal.mode === 'edit' ? modal.subscription : undefined} onCancel={() => setModal(null)} onSave={saveSubscription} />
+            <SubscriptionForm subscription={modal.mode === 'edit' ? modal.subscription : undefined} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveSubscription} />
           </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setDeleteTarget(null)}>
+        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={closeDeleteModal}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
             <h2 className="text-[16px] font-semibold text-textPrimary">Delete {deleteTarget.subscription.name}?</h2>
             <p className="text-[13px] text-textSecondary mt-2">
@@ -165,9 +189,10 @@ export default function SubscriptionsPage() {
                 </span>
               </div>
             )}
+            {deleteError && <p className="text-[13px] text-red-600 mt-3">{deleteError}</p>}
             <div className="flex justify-end gap-2 pt-5 mt-5 border-t border-border">
-              <button type="button" onClick={() => setDeleteTarget(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
-              <button type="button" onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700">Delete Subscription</button>
+              <button type="button" disabled={isDeleting} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Deleting...' : 'Delete Subscription'}</button>
             </div>
           </div>
         </div>
@@ -185,7 +210,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function SubscriptionForm({ subscription, onCancel, onSave }: { subscription?: Subscription; onCancel: () => void; onSave: (formData: FormData, existing?: Subscription) => void }) {
+function SubscriptionForm({ subscription, error, isSaving, onCancel, onSave }: { subscription?: Subscription; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Subscription) => void }) {
   const defaultBillingDate = subscription?.nextBillingDate ? String(subscription.nextBillingDate).slice(0, 10) : computeNextBillingDate(new Date().getDate());
 
   return (
@@ -193,6 +218,7 @@ function SubscriptionForm({ subscription, onCancel, onSave }: { subscription?: S
       <div>
         <h2 className="text-[16px] font-semibold text-textPrimary">{subscription ? 'Edit Subscription' : 'Add Subscription'}</h2>
         <p className="text-[13px] text-textMuted">Expenses are auto-recorded on the billing date each cycle.</p>
+        {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
       </div>
       <Field label="Service Name">
         <input name="name" defaultValue={subscription?.name} className={inputClass} placeholder="Vercel Pro" required />
@@ -216,8 +242,8 @@ function SubscriptionForm({ subscription, onCancel, onSave }: { subscription?: S
         <input name="notes" defaultValue={subscription?.notes} className={inputClass} placeholder="Optional" />
       </Field>
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
-        <button className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">Save Subscription</button>
+        <button type="button" disabled={isSaving} onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+        <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Subscription'}</button>
       </div>
     </form>
   );

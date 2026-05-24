@@ -54,3 +54,5 @@ export interface OverviewStats {
   totalClients: number;
   activeClients: number;
 }
+
+export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'EGP' | 'SAR' | 'AED';

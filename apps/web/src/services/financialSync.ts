@@ -13,15 +13,16 @@ const toIsoDate = (date: string) => new Date(`${date.slice(0, 10)}T12:00:00`).to
 
 export const getLinkedTransactionKey = (transaction: Transaction) => {
   const sourceType = normalizeSourceType(transaction.sourceType as Transaction['sourceType'] | 'client-payment');
+  const dateKey = transaction.date.slice(0, 10);
 
   if (sourceType === 'client') {
     const clientId = transaction.clientId || transaction.sourceId;
-    return clientId ? `client:${clientId}` : null;
+    return clientId ? `client:${clientId}:${dateKey}` : null;
   }
 
   if (sourceType === 'subscription') {
     const subscriptionId = transaction.subscriptionId || transaction.sourceId;
-    return subscriptionId ? `subscription:${subscriptionId}` : null;
+    return subscriptionId ? `subscription:${subscriptionId}:${dateKey}` : null;
   }
 
   return null;
@@ -79,7 +80,9 @@ export const hasBillingTransaction = (
     const sameClient = Boolean(params.clientId && transaction.clientId === params.clientId);
     const sameSubscription = Boolean(params.subscriptionId && transaction.subscriptionId === params.subscriptionId);
 
-    return sameId || sameSource || sameClient || sameSubscription;
+    const sameDate = transaction.date.slice(0, 10) === params.date.slice(0, 10);
+
+    return sameId || (sameDate && (sameSource || sameClient || sameSubscription));
   });
 };
 

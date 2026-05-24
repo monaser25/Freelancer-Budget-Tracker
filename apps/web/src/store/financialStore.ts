@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Client, Subscription, Transaction } from '@/types/finance';
+import { Client, CurrencyCode, Subscription, Transaction } from '@/types/finance';
+import { isCurrencyCode } from '@/lib/currency';
 import {
   createClientAPI,
   updateClientAPI,
@@ -14,11 +15,14 @@ import {
 } from '@/services/financialApi';
 
 const STORAGE_KEY = 'flowledger-financial-state';
+const PREFERENCES_KEY = 'flowledger-preferences';
 
 const getStorageKey = () => {
   const userId = useFinancialStore.getState().storageUserId;
   return userId ? `${STORAGE_KEY}:${userId}` : STORAGE_KEY;
 };
+
+const getPreferencesKey = (userId: string) => `${PREFERENCES_KEY}:${userId}`;
 
 export const computeNextBillingDate = (billingDay: number, from = new Date()) => {
   const safeDay = Math.max(1, Math.min(28, billingDay || 1));
@@ -35,11 +39,13 @@ interface FinancialStore {
   transactions: Transaction[];
   isInitialized: boolean;
   storageUserId: string | null;
+  currency: CurrencyCode;
   error: string | null;
 
   setInitialData: (data: { clients: Client[]; subscriptions: Subscription[]; transactions: Transaction[] }) => void;
   initializeStore: (data: { clients: Client[]; subscriptions: Subscription[]; transactions: Transaction[] }) => void;
   setStorageUserId: (userId: string) => void;
+  setCurrency: (currency: CurrencyCode) => void;
   resetStore: () => void;
   processPendingBillings: () => void;
   setError: (error: string | null) => void;
@@ -65,13 +71,45 @@ const persistLocalSnapshot = () => {
   window.localStorage.setItem(getStorageKey(), JSON.stringify({ clients, subscriptions, transactions }));
 };
 
+const persistPreferences = () => {
+  if (typeof window === 'undefined') return;
+
+  const { storageUserId, currency } = useFinancialStore.getState();
+  if (!storageUserId) return;
+
+  window.localStorage.setItem(getPreferencesKey(storageUserId), JSON.stringify({ currency }));
+};
+
+const loadCurrencyPreference = (userId: string): CurrencyCode => {
+  if (typeof window === 'undefined') return 'USD';
+
+  try {
+    const cached = window.localStorage.getItem(getPreferencesKey(userId));
+    if (!cached) return 'USD';
+    const parsed = JSON.parse(cached);
+    return isCurrencyCode(parsed.currency) ? parsed.currency : 'USD';
+  } catch {
+    return 'USD';
+  }
+};
+
 const refreshDataFromAPI = async () => {
   try {
     const data = await loadFinancialSnapshot();
     useFinancialStore.getState().setInitialData(data);
     useFinancialStore.getState().setError(null);
+    return data;
   } catch (err) {
     useFinancialStore.getState().setError('Failed to refresh data from server');
+    throw err;
+  }
+};
+
+const refreshAfterLocalMutation = async () => {
+  try {
+    await refreshDataFromAPI();
+  } catch {
+    // Keep the successful local mutation visible; the error banner tells the user sync refresh failed.
   }
 };
 
@@ -81,6 +119,7 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   transactions: [],
   isInitialized: false,
   storageUserId: null,
+  currency: 'USD',
   error: null,
 
   setInitialData: (data) => {
@@ -95,13 +134,18 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   initializeStore: (data) => {
     useFinancialStore.getState().setInitialData(data);
   },
-  setStorageUserId: (userId) => set({ storageUserId: userId }),
+  setStorageUserId: (userId) => set({ storageUserId: userId, currency: loadCurrencyPreference(userId) }),
+  setCurrency: (currency) => {
+    set({ currency });
+    persistPreferences();
+  },
   resetStore: () => set({
     clients: [],
     subscriptions: [],
     transactions: [],
     isInitialized: false,
     storageUserId: null,
+    currency: 'USD',
     error: null,
   }),
   setError: (error) => set({ error }),
@@ -112,77 +156,111 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
 
   addClient: async (client) => {
     try {
-      await createClientAPI(client);
-      await refreshDataFromAPI();
+      const created = await createClientAPI(client);
+      set((state) => ({ clients: [created, ...state.clients.filter((item) => item.id !== created.id)], error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to create client' });
+      set({ error: e?.message || 'Failed to create client' });
+      throw e;
     }
   },
   updateClient: async (id, updates) => {
     try {
-      await updateClientAPI(id, updates);
-      await refreshDataFromAPI();
+      const updated = await updateClientAPI(id, updates);
+      set((state) => ({ clients: state.clients.map((client) => (client.id === id ? updated : client)), error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      console.error('updateClient failed:', e);
-      set({ error: e.message || 'Failed to update client' });
+      set({ error: e?.message || 'Failed to update client' });
+      throw e;
     }
   },
   deleteClient: async (id) => {
     try {
       await deleteClientAPI(id);
-      await refreshDataFromAPI();
+      set((state) => ({
+        clients: state.clients.filter((client) => client.id !== id),
+        transactions: state.transactions.filter((tx) => tx.clientId !== id && !(tx.sourceType === 'client' && tx.sourceId === id)),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to delete client' });
+      set({ error: e?.message || 'Failed to delete client' });
+      throw e;
     }
   },
 
   addSubscription: async (sub) => {
     try {
-      await createSubscriptionAPI(sub);
-      await refreshDataFromAPI();
+      const created = await createSubscriptionAPI(sub);
+      set((state) => ({ subscriptions: [created, ...state.subscriptions.filter((item) => item.id !== created.id)], error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to add subscription' });
+      set({ error: e?.message || 'Failed to add subscription' });
+      throw e;
     }
   },
   updateSubscription: async (id, updates) => {
     try {
-      await updateSubscriptionAPI(id, updates);
-      await refreshDataFromAPI();
+      const updated = await updateSubscriptionAPI(id, updates);
+      set((state) => ({ subscriptions: state.subscriptions.map((sub) => (sub.id === id ? updated : sub)), error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to update subscription' });
+      set({ error: e?.message || 'Failed to update subscription' });
+      throw e;
     }
   },
   deleteSubscription: async (id) => {
     try {
       await deleteSubscriptionAPI(id);
-      await refreshDataFromAPI();
+      set((state) => ({
+        subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
+        transactions: state.transactions.filter((tx) => tx.subscriptionId !== id && !(tx.sourceType === 'subscription' && tx.sourceId === id)),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to delete subscription' });
+      set({ error: e?.message || 'Failed to delete subscription' });
+      throw e;
     }
   },
 
   addTransaction: async (tx) => {
     try {
-      await createTransactionAPI({ ...tx, isAuto: false, sourceType: 'manual' });
-      await refreshDataFromAPI();
+      const created = await createTransactionAPI({ ...tx, isAuto: false, sourceType: 'manual' });
+      set((state) => ({ transactions: [created, ...state.transactions.filter((item) => item.id !== created.id)], error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to create transaction' });
+      set({ error: e?.message || 'Failed to create transaction' });
+      throw e;
     }
   },
   updateTransaction: async (id, updates) => {
     try {
-      await updateTransactionAPI(id, updates);
-      await refreshDataFromAPI();
+      const updated = await updateTransactionAPI(id, updates);
+      set((state) => ({ transactions: state.transactions.map((tx) => (tx.id === id ? updated : tx)), error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to update transaction' });
+      set({ error: e?.message || 'Failed to update transaction' });
+      throw e;
     }
   },
   deleteTransaction: async (id) => {
     try {
       await deleteTransactionAPI(id);
-      await refreshDataFromAPI();
+      set((state) => ({ transactions: state.transactions.filter((tx) => tx.id !== id), error: null }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
     } catch (e: any) {
-      set({ error: e.message || 'Failed to delete transaction' });
+      set({ error: e?.message || 'Failed to delete transaction' });
+      throw e;
     }
   },
   setTransactions: (transactions) => {

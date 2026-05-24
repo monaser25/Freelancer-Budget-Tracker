@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { mockClients, mockSubscriptions, mockTransactions } from '@/lib/mockData';
 import { loadFinancialSnapshot } from '@/services/financialApi';
 import { useFinancialStore } from '@/store/financialStore';
 import { useAuth } from '@/components/AuthProvider';
@@ -47,17 +46,17 @@ export function FinancialBootstrap() {
         });
       })
       .catch((err) => {
-        console.warn('Backend unavailable, falling back to local data.', err);
+        console.warn('Backend unavailable.', err);
         if (loadCachedSnapshot()) {
           setError('Using locally cached data. API sync will resume when the backend is available.');
           return;
         }
 
-        setError('Using mock data. Connect the API to persist changes across devices.');
+        setError('Financial data is unavailable. Check the API connection and try again.');
         setInitialData({
-          clients: mockClients,
-          subscriptions: mockSubscriptions,
-          transactions: mockTransactions,
+          clients: [],
+          subscriptions: [],
+          transactions: [],
         });
       });
   }, [isInitialized, setError, setInitialData, setStorageUserId, user]);

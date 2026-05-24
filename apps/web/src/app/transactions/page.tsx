@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
-import { Pencil, Trash2, WalletCards } from 'lucide-react';
+import { makeCurrencyFormatter } from '@/lib/currency';
+import { Pencil, Plus, Trash2, WalletCards } from 'lucide-react';
 
 type Filter = 'all' | 'revenue' | 'expenses' | 'subscriptions' | 'client' | 'tools' | 'operations';
 
@@ -18,11 +19,25 @@ const filters: { id: Filter; label: string }[] = [
 ];
 
 const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
+const today = () => new Date().toISOString().slice(0, 10);
+
+function toIsoDate(date: string) {
+  return new Date(`${date}T12:00:00`).toISOString();
+}
+
+const makeId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
 
 export default function TransactionsPage() {
-  const { transactions, updateTransaction, deleteTransaction } = useFinancialStore();
+  const { transactions, currency, addTransaction, updateTransaction, deleteTransaction } = useFinancialStore();
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }), [currency]);
 
   useEffect(() => {
     const param = new URLSearchParams(window.location.search).get('filter') as Filter | null;
@@ -43,21 +58,65 @@ export default function TransactionsPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filter, transactions]);
 
-  const saveEdit = (formData: FormData) => {
+  const saveEdit = async (formData: FormData) => {
     if (!editing) return;
     const amount = Number(formData.get('amount'));
     const notes = String(formData.get('notes') || '').trim();
     if (!amount || amount <= 0) return;
-    updateTransaction(editing.id, { amount, notes });
-    setEditing(null);
+
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      await updateTransaction(editing.id, { amount, notes });
+      setEditing(null);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to update transaction');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveNew = async (formData: FormData) => {
+    const amount = Number(formData.get('amount'));
+    const notes = String(formData.get('notes') || '').trim();
+    const type = String(formData.get('type') || 'EXPENSE') as Transaction['type'];
+    const date = String(formData.get('date') || today());
+    const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
+
+    if (!amount || amount <= 0) return;
+
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      await addTransaction({
+        id: makeId(),
+        amount,
+        type,
+        status: 'COMPLETED',
+        date: toIsoDate(date),
+        notes,
+        sourceType: 'manual',
+        categoryId,
+      });
+      setAdding(false);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to create transaction');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-[17px] font-semibold tracking-tight text-textPrimary">Transactions</h1>
-          <p className="text-[12px] text-textMuted">Centralized ledger of all financial events</p>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-[17px] font-semibold tracking-tight text-textPrimary">Transactions</h1>
+            <p className="text-[12px] text-textMuted">Centralized ledger of all financial events</p>
+          </div>
+          <button type="button" onClick={() => { setModalError(null); setAdding(true); }} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
+            <Plus size={15} /> Add Transaction
+          </button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -111,14 +170,14 @@ export default function TransactionsPage() {
                       </div>
                     </td>
                     <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                      {tx.type === 'INCOME' ? '+' : '-'}${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
                     </td>
                     <td className="p-[12px_14px] text-right">
                       <div className="flex justify-end gap-2">
-                        <button onClick={() => setEditing(tx)} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.notes || 'transaction'}`}>
+                        <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.notes || 'transaction'}`}>
                           <Pencil size={15} />
                         </button>
-                        <button onClick={() => deleteTransaction(tx.id)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.notes || 'transaction'}`}>
+                        <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.notes || 'transaction'}`}>
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -138,6 +197,7 @@ export default function TransactionsPage() {
               <div>
                 <h2 className="text-[16px] font-semibold text-textPrimary">Edit Transaction</h2>
                 {editing.isAuto && <p className="text-[13px] text-amber-600 mt-1">This is an auto-generated transaction. Future auto-transactions still use the original client/subscription amount.</p>}
+                {modalError && <p className="text-[13px] text-red-600 mt-2">{modalError}</p>}
               </div>
               <label className="block">
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
@@ -149,7 +209,59 @@ export default function TransactionsPage() {
               </label>
               <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button type="button" onClick={() => setEditing(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
-                <button className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">Save Changes</button>
+                <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {adding && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setAdding(false); }}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
+            <form onSubmit={(event) => { event.preventDefault(); saveNew(new FormData(event.currentTarget)); }} className="space-y-4">
+              <div>
+                <h2 className="text-[16px] font-semibold text-textPrimary">Add Transaction</h2>
+                <p className="text-[13px] text-textMuted mt-1">Manual entries appear immediately after the API confirms them.</p>
+                {modalError && <p className="text-[13px] text-red-600 mt-2">{modalError}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Type</span>
+                  <select name="type" className={inputClass} defaultValue="EXPENSE">
+                    <option value="INCOME">Revenue</option>
+                    <option value="EXPENSE">Expense</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
+                  <input name="amount" type="number" min="0" step="0.01" className={inputClass} required />
+                </label>
+              </div>
+              <label className="block">
+                <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
+                <input name="notes" className={inputClass} required />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Date</span>
+                  <input name="date" type="date" defaultValue={today()} className={inputClass} required />
+                </label>
+                <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Category</span>
+                  <select name="categoryId" className={inputClass} defaultValue="TOOLS">
+                    <option value="CLIENT">Client Payment</option>
+                    <option value="PROJECT">Project Revenue</option>
+                    <option value="TOOLS">Tools</option>
+                    <option value="OPERATIONS">Operations</option>
+                    <option value="TAXES">Taxes</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </label>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button type="button" disabled={isSaving} onClick={() => setAdding(false)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+                <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Transaction'}</button>
               </div>
             </form>
           </div>

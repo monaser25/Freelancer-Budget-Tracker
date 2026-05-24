@@ -63,3 +63,13 @@ Registration flow:
 - After confirmation, the user logs in normally from the app.
 
 For local development, Supabase auth is used by default. The local dev auth bypass is disabled unless `NEXT_PUBLIC_AUTH_MODE=dev` is set for the web app and `ENABLE_DEV_AUTH=true` is set for the API.
+
+## Recurring Transactions
+
+FlowLedger currently creates and maintains one linked transaction for each active client payment or subscription at the configured billing date. The backend does not yet run a monthly rollover worker that generates future billing-cycle transactions forever.
+
+Recurring rollover is intentionally deferred. When implemented, add a scheduled backend job or protected route that finds due active retainers/subscriptions, creates one transaction per `userId + sourceType + sourceId + date`, advances `nextBillingDate`, and relies on the database unique constraint to prevent duplicates.
+
+## Currency Preferences
+
+Currency is currently a per-user frontend preference stored in local storage under the authenticated user id. It controls display formatting only through `Intl.NumberFormat`; FlowLedger does not convert historical transaction amounts between currencies yet.

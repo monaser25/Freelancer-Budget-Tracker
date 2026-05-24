@@ -13,10 +13,10 @@ import {
 } from 'recharts';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
+import { makeCurrencyFormatter } from '@/lib/currency';
 
 type Period = 'week' | 'month' | 'year';
 
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const ACCENT = '#2563EB';
 
 // ─── period helpers ────────────────────────────────────────────────────────────
@@ -97,8 +97,9 @@ function getChartBuckets(period: Period, transactions: Transaction[]) {
 // ─── page ──────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
-  const { transactions, clients, subscriptions, overview } = useFinancialStore();
+  const { transactions, clients, subscriptions, overview, currency } = useFinancialStore();
   const [period, setPeriod] = useState<Period>('month');
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
 
   const { start, end } = useMemo(() => getPeriodRange(period), [period]);
 
@@ -195,7 +196,7 @@ export default function AnalyticsPage() {
             <BarChart data={chartBuckets} barGap={4} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="label" fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-              <YAxis fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} width={55} />
+              <YAxis fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => money.format(Number(v))} width={55} />
               <Tooltip
                 formatter={(value, name) => [money.format(Number(value)), name === 'revenue' ? 'Revenue' : 'Expenses']}
                 contentStyle={{ fontSize: 12, borderColor: '#E2E8F0', borderRadius: 8 }}
@@ -274,7 +275,7 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height={Math.max(120, categoryRows.length * 38)}>
                   <BarChart data={categoryRows} layout="vertical" margin={{ left: 0, right: 24, top: 0, bottom: 0 }}>
                     <CartesianGrid stroke="#F1F5F9" horizontal={false} />
-                    <XAxis type="number" tickFormatter={v => `$${v}`} fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                    <XAxis type="number" tickFormatter={v => money.format(Number(v))} fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="category" width={86} fontSize={11} tick={{ fill: '#64748B' }} axisLine={false} tickLine={false} />
                     <Tooltip formatter={v => money.format(Number(v))} contentStyle={{ fontSize: 12, borderColor: '#E2E8F0', borderRadius: 8 }} />
                     <Bar dataKey="amount" fill={ACCENT} radius={[0, 4, 4, 0]} />
@@ -363,7 +364,7 @@ export default function AnalyticsPage() {
         <div className="mt-5 pt-5 border-t border-border grid grid-cols-2 md:grid-cols-4 gap-5">
           <SummaryBox label="Total Clients" value={String(overview.totalClients)} sub="across all statuses" valueClass="text-textPrimary" />
           <SummaryBox label="Active Clients" value={String(overview.activeClients)} sub={`${retainerClients} retainer${retainerClients !== 1 ? 's' : ''}`} valueClass="text-accent" />
-          <SummaryBox label="Avg Revenue / Client" value={overview.totalClients > 0 ? money.format(overview.totalRevenue / overview.totalClients) : '$0'} sub="total ÷ clients" valueClass="text-textPrimary" />
+          <SummaryBox label="Avg Revenue / Client" value={overview.totalClients > 0 ? money.format(overview.totalRevenue / overview.totalClients) : money.format(0)} sub="total ÷ clients" valueClass="text-textPrimary" />
           <SummaryBox label="Subscription Burden" value={`${money.format(overview.subscriptionBurden)}/mo`} sub="equivalent monthly cost" valueClass="text-textPrimary" />
         </div>
       </div>

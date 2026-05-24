@@ -2,6 +2,7 @@
 
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
+import { makeCurrencyFormatter } from '@/lib/currency';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -15,6 +16,7 @@ import {
   Target,
   TrendingDown,
   TrendingUp,
+  Users,
   UserPlus,
 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -26,12 +28,6 @@ type MonthlyChartRow = {
   revenue: number;
   expenses: number;
 };
-
-const currency = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
 
 const makeId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -52,10 +48,14 @@ export default function DashboardPage() {
     transactions,
     subscriptions,
     overview,
+    currency,
     error,
     addTransaction,
   } = useFinancialStore();
   const [modal, setModal] = useState<ModalType>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -98,7 +98,7 @@ export default function DashboardPage() {
     [transactions],
   );
 
-  const saveTransaction = (formData: FormData, type: 'INCOME' | 'EXPENSE') => {
+  const saveTransaction = async (formData: FormData, type: 'INCOME' | 'EXPENSE') => {
     const amount = Number(formData.get('amount'));
     const notes = String(formData.get('notes') || '').trim();
     const date = String(formData.get('date') || today());
@@ -117,8 +117,16 @@ export default function DashboardPage() {
       categoryId,
     };
 
-    addTransaction(tx);
-    setModal(null);
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      await addTransaction(tx);
+      setModal(null);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to create transaction');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -130,18 +138,19 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-[14px]">
-        <StatCard href="/transactions?filter=revenue" label="Total Revenue" value={currency.format(overview.totalRevenue)} icon={<TrendingUp size={14} />} detail={`This month: ${currency.format(overview.monthlyRevenue)}`} tone="green" />
-        <StatCard href="/transactions?filter=expenses" label="Total Expenses" value={currency.format(overview.totalExpenses)} icon={<TrendingDown size={14} />} detail="Global tracked" tone="red" />
-        <StatCard href="/analytics" label="Net Profit" value={currency.format(overview.netProfit)} icon={<Target size={14} />} detail="Revenue - costs" />
-        <StatCard href="/subscriptions" label="Active Subscriptions" value={`${currency.format(overview.subscriptionBurden)}/mo`} icon={<RefreshCw size={14} />} detail={`${overview.activeSubscriptionsCount} active`} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-[14px]">
+        <StatCard href="/clients" label="Total Clients" value={String(overview.activeClients || overview.totalClients)} icon={<Users size={14} />} detail={`${overview.totalClients} total records`} />
+        <StatCard href="/transactions?filter=revenue" label="Total Revenue" value={money.format(overview.totalRevenue)} icon={<TrendingUp size={14} />} detail={`This month: ${money.format(overview.monthlyRevenue)}`} tone="green" />
+        <StatCard href="/transactions?filter=expenses" label="Total Expenses" value={money.format(overview.totalExpenses)} icon={<TrendingDown size={14} />} detail="Global tracked" tone="red" />
+        <StatCard href="/analytics" label="Net Profit" value={money.format(overview.netProfit)} icon={<Target size={14} />} detail="Revenue - costs" />
+        <StatCard href="/subscriptions" label="Active Subscriptions" value={`${money.format(overview.subscriptionBurden)}/mo`} icon={<RefreshCw size={14} />} detail={`${overview.activeSubscriptionsCount} active`} />
       </div>
 
       <div>
         <div className="text-[13px] font-semibold text-textSecondary mb-[10px]">Quick Actions</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-[10px]">
-          <ActionButton icon={<PlusCircle size={18} />} label="Add Revenue" onClick={() => setModal('income')} />
-          <ActionButton icon={<ArrowDownCircle size={18} />} label="Log Expense" onClick={() => setModal('expense')} />
+          <ActionButton icon={<PlusCircle size={18} />} label="Add Revenue" onClick={() => { setModalError(null); setModal('income'); }} />
+          <ActionButton icon={<ArrowDownCircle size={18} />} label="Log Expense" onClick={() => { setModalError(null); setModal('expense'); }} />
           <ActionButton icon={<CreditCard size={18} />} label="Add Subscription" href="/subscriptions?action=tool" />
           <ActionButton icon={<UserPlus size={18} />} label="Add Client" href="/clients?action=client" />
         </div>
@@ -156,8 +165,8 @@ export default function DashboardPage() {
               <BarChart data={chartData}>
                 <CartesianGrid stroke="#F1F5F9" vertical={false} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(value) => `$${value}`} />
-                <Tooltip formatter={(value) => currency.format(Number(value))} cursor={{ fill: '#F8FAFC' }} />
+                <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(value) => money.format(Number(value))} />
+                <Tooltip formatter={(value) => money.format(Number(value))} cursor={{ fill: '#F8FAFC' }} />
                 <Bar dataKey="revenue" fill="#2563EB" radius={[5, 5, 0, 0]} />
                 <Bar dataKey="expenses" fill="#BFDBFE" radius={[5, 5, 0, 0]} />
               </BarChart>
@@ -195,7 +204,7 @@ export default function DashboardPage() {
                       <td className="p-[12px_14px] text-[13px] text-textPrimary">{tx.notes || tx.sourceType}</td>
                       <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
                       <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                        {tx.type === 'INCOME' ? '+' : '-'}{currency.format(tx.amount)}
+                        {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
                       </td>
                     </tr>
                   ))}
@@ -213,7 +222,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col gap-3">
               <Metric label="Active Clients" value={overview.activeClients.toString()} />
-              <Metric label="Average Revenue" value={currency.format(overview.totalClients ? overview.totalRevenue / overview.totalClients : 0)} />
+              <Metric label="Average Revenue" value={money.format(overview.totalClients ? overview.totalRevenue / overview.totalClients : 0)} />
             </div>
           </div>
 
@@ -222,7 +231,7 @@ export default function DashboardPage() {
               <h3 className="text-[14px] font-semibold text-textPrimary">Active Subscriptions</h3>
               <span className="text-[12px] text-accent">View all -&gt;</span>
             </div>
-            <Metric label="Monthly Tools" value={currency.format(overview.subscriptionBurden)} />
+            <Metric label="Monthly Tools" value={money.format(overview.subscriptionBurden)} />
             <div className="h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
               <div
                 className="h-full bg-accent rounded-full"
@@ -243,10 +252,10 @@ export default function DashboardPage() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setModal(null)}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[480px] p-6" onMouseDown={(event) => event.stopPropagation()}>
             {(modal === 'income' || modal === 'expense') && (
-              <TransactionForm type={modal === 'income' ? 'INCOME' : 'EXPENSE'} onCancel={() => setModal(null)} onSave={saveTransaction} />
+              <TransactionForm type={modal === 'income' ? 'INCOME' : 'EXPENSE'} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveTransaction} />
             )}
           </div>
         </div>
@@ -285,7 +294,7 @@ function ActionButton({ icon, label, onClick, href }: { icon: React.ReactNode; l
   }
 
   return (
-    <button onClick={onClick} className={className}>
+    <button type="button" onClick={onClick} className={className}>
       {content}
     </button>
   );
@@ -320,7 +329,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
 
-function TransactionForm({ type, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE'; onCancel: () => void; onSave: (formData: FormData, type: 'INCOME' | 'EXPENSE') => void }) {
+function TransactionForm({ type, error, isSaving, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE'; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, type: 'INCOME' | 'EXPENSE') => void }) {
   return (
     <form
       onSubmit={(event) => {
@@ -332,6 +341,7 @@ function TransactionForm({ type, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE
       <div>
         <h2 className="text-[16px] font-semibold text-textPrimary">{type === 'INCOME' ? 'Add Revenue' : 'Log Expense'}</h2>
         <p className="text-[13px] text-textMuted">Record a {type === 'INCOME' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
+        {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
       </div>
       <Field label="Description">
         <input name="notes" className={inputClass} placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required />
@@ -363,8 +373,8 @@ function TransactionForm({ type, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE
         </select>
       </Field>
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
-        <button className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">Save Entry</button>
+        <button type="button" disabled={isSaving} onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+        <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Entry'}</button>
       </div>
     </form>
   );

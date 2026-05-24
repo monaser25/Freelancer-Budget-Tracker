@@ -6,6 +6,7 @@ import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
 import { Client } from '@/types/finance';
+import { makeCurrencyFormatter } from '@/lib/currency';
 import { Pencil, Plus, Trash2, Users } from 'lucide-react';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; client: Client } | null;
@@ -13,7 +14,6 @@ type DeleteTarget = { client: Client; transactionCount: number; revenueTotal: nu
 
 const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
 const colors = ['#2563EB', '#16A34A', '#F59E0B', '#9333EA', '#EF4444'];
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
 const makeId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -23,15 +23,25 @@ const makeId = () => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function ClientsPage() {
-  const { clients, transactions, isInitialized, addClient, updateClient, deleteClient } = useFinancialStore();
+  const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient } = useFinancialStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+
+  const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
+  const openEditModal = (client: Client) => { setModalError(null); setModal({ mode: 'edit', client }); };
+  const closeModal = () => { if (!isSaving) setModal(null); };
+  const closeDeleteModal = () => { if (!isDeleting) setDeleteTarget(null); };
 
   useEffect(() => {
     if (!isInitialized) return;
     const action = new URLSearchParams(window.location.search).get('action');
     if (action === 'client' || action === 'payment') {
-      setModal({ mode: 'add' });
+      openAddModal();
       window.history.replaceState(null, '', '/clients');
     }
   }, [isInitialized]);
@@ -48,7 +58,7 @@ export default function ClientsPage() {
   );
   const topClient = [...clients].sort((a, b) => revenueForClient(b.id) - revenueForClient(a.id))[0];
 
-  const saveClient = (formData: FormData, existing?: Client) => {
+  const saveClient = async (formData: FormData, existing?: Client) => {
     const paymentType = String(formData.get('paymentType')) as Client['paymentType'];
     const paymentDate = String(formData.get('paymentDate') || today());
     const revenue = Number(formData.get('revenue') || 0);
@@ -75,21 +85,30 @@ export default function ClientsPage() {
 
     if (!base.name || revenue <= 0) return;
 
-    if (existing) {
-      updateClient(existing.id, base);
-    } else {
-      addClient({
-        id: makeId(),
-        ...base,
-        createdAt: new Date().toISOString(),
-      });
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      if (existing) {
+        await updateClient(existing.id, base);
+      } else {
+        await addClient({
+          id: makeId(),
+          ...base,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      setModal(null);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to save client');
+    } finally {
+      setIsSaving(false);
     }
-    setModal(null);
   };
 
   const requestDelete = (client: Client) => {
     const linkedTransactions = transactionsForClient(client.id);
     setModal(null);
+    setDeleteError(null);
     setDeleteTarget({
       client,
       transactionCount: linkedTransactions.length,
@@ -97,10 +116,18 @@ export default function ClientsPage() {
     });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    deleteClient(deleteTarget.client.id);
-    setDeleteTarget(null);
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteClient(deleteTarget.client.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete client');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -112,7 +139,7 @@ export default function ClientsPage() {
               <h1 className="text-[14px] font-semibold text-textPrimary">Clients</h1>
               <p className="text-[12px] text-textMuted mt-1">Revenue sources, payment schedules, and total earnings</p>
             </div>
-            <button onClick={() => setModal({ mode: 'add' })} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
+            <button type="button" onClick={openAddModal} className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">
               <Plus size={15} /> Add Client
             </button>
           </div>
@@ -148,10 +175,10 @@ export default function ClientsPage() {
                       <div className="text-[14px] font-mono font-semibold text-green-600">{money.format(revenueForClient(client.id))}</div>
                       <div className="text-[11px] text-textMuted">earned</div>
                     </div>
-                    <button onClick={() => setModal({ mode: 'edit', client })} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${client.name}`}>
+                    <button type="button" onClick={() => openEditModal(client)} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${client.name}`}>
                       <Pencil size={15} />
                     </button>
-                    <button onClick={() => requestDelete(client)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${client.name}`}>
+                    <button type="button" onClick={() => requestDelete(client)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${client.name}`}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -191,15 +218,15 @@ export default function ClientsPage() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setModal(null)}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={closeModal}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[520px] p-6" onMouseDown={(event) => event.stopPropagation()}>
-            <ClientForm client={modal.mode === 'edit' ? modal.client : undefined} onCancel={() => setModal(null)} onSave={saveClient} />
+            <ClientForm client={modal.mode === 'edit' ? modal.client : undefined} error={modalError} isSaving={isSaving} onCancel={closeModal} onSave={saveClient} />
           </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={() => setDeleteTarget(null)}>
+        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-center justify-center p-4" onMouseDown={closeDeleteModal}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] p-6" onMouseDown={(event) => event.stopPropagation()}>
             <h2 className="text-[16px] font-semibold text-textPrimary">Delete {deleteTarget.client.name}?</h2>
             <p className="text-[13px] text-textSecondary mt-2">
@@ -208,9 +235,10 @@ export default function ClientsPage() {
             <div className="mt-4 rounded-md bg-red-50 border border-red-100 p-3 text-[13px] text-red-700">
               This will delete {deleteTarget.transactionCount} linked transaction{deleteTarget.transactionCount === 1 ? '' : 's'} and remove {money.format(deleteTarget.revenueTotal)} from revenue totals, charts, and analytics.
             </div>
+            {deleteError && <p className="text-[13px] text-red-600 mt-3">{deleteError}</p>}
             <div className="flex justify-end gap-2 pt-5 mt-5 border-t border-border">
-              <button type="button" onClick={() => setDeleteTarget(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
-              <button type="button" onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700">Delete Permanently</button>
+              <button type="button" disabled={isDeleting} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Deleting...' : 'Delete Permanently'}</button>
             </div>
           </div>
         </div>
@@ -238,7 +266,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ClientForm({ client, onCancel, onSave }: { client?: Client; onCancel: () => void; onSave: (formData: FormData, existing?: Client) => void }) {
+function ClientForm({ client, error, isSaving, onCancel, onSave }: { client?: Client; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Client) => void }) {
   const [paymentType, setPaymentType] = useState<Client['paymentType']>(client?.paymentType || 'onetime');
 
   return (
@@ -246,6 +274,7 @@ function ClientForm({ client, onCancel, onSave }: { client?: Client; onCancel: (
       <div>
         <h2 className="text-[16px] font-semibold text-textPrimary">{client ? 'Edit Client' : 'Add Client'}</h2>
         <p className="text-[13px] text-textMuted">One-time clients record once. Retainers auto-record monthly income.</p>
+        {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Client Name">
@@ -295,8 +324,8 @@ function ClientForm({ client, onCancel, onSave }: { client?: Client; onCancel: (
         </Field>
       )}
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button type="button" onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
-        <button className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover">Save Client</button>
+        <button type="button" disabled={isSaving} onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+        <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Client'}</button>
       </div>
     </form>
   );

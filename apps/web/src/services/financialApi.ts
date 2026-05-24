@@ -8,7 +8,21 @@ export type FinancialSnapshot = {
   transactions: Transaction[];
 };
 
-const apiBaseUrl = () => (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/$/, '');
+const apiBaseUrl = () => {
+  const raw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  return raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
+};
+
+class ApiRequestError extends Error {
+  status?: number;
+  responseBody?: string;
+
+  constructor(message: string, status?: number, responseBody?: string) {
+    super(message);
+    this.status = status;
+    this.responseBody = responseBody;
+  }
+}
 
 const authHeaders = async () => {
   if (isDevAuthEnabled()) {
@@ -26,103 +40,123 @@ const authHeaders = async () => {
   return { Authorization: `Bearer ${data.session.access_token}` };
 };
 
-export const loadFinancialSnapshot = async (): Promise<FinancialSnapshot> => {
-  const response = await fetch(`${apiBaseUrl()}/api/dashboard/overview`, {
-    headers: await authHeaders(),
-    credentials: 'include',
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load financial snapshot: ${response.status}`);
+const logApiFailure = (method: string, url: string, err: unknown) => {
+  if (err instanceof ApiRequestError) {
+    console.error('FlowLedger API request failed', {
+      method,
+      url,
+      status: err.status,
+      responseBody: err.responseBody,
+    });
+    return;
   }
 
-  return response.json();
+  console.error('FlowLedger API request failed', {
+    method,
+    url,
+    error: err instanceof Error ? err.message : String(err),
+  });
+};
+
+const userMessageForFailure = (resource: string, err: unknown) => {
+  if (err instanceof ApiRequestError) {
+    return `Unable to ${resource}. Server responded with ${err.status}.`;
+  }
+
+  return `Unable to ${resource}. Check that the API is running at ${apiBaseUrl()} and try again.`;
+};
+
+const apiRequest = async <T>(path: string, options: RequestInit = {}, resource: string): Promise<T> => {
+  const method = options.method || 'GET';
+  const url = `${apiBaseUrl()}${path}`;
+
+  try {
+    const headers = {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(await authHeaders()),
+      ...(options.headers || {}),
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      method,
+      headers,
+      credentials: 'include',
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      const responseBody = await response.text().catch(() => undefined);
+      throw new ApiRequestError(`HTTP ${response.status}`, response.status, responseBody);
+    }
+
+    return response.json();
+  } catch (err) {
+    logApiFailure(method, url, err);
+    throw new Error(userMessageForFailure(resource, err));
+  }
+};
+
+export const loadFinancialSnapshot = async (): Promise<FinancialSnapshot> => {
+  return apiRequest<FinancialSnapshot>('/api/dashboard/overview', {}, 'load financial data');
 };
 
 export const createClientAPI = async (client: Partial<Client>) => {
-  const response = await fetch(`${apiBaseUrl()}/api/clients/create`, {
+  return apiRequest<Client>('/api/clients/create', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(client),
-  });
-  if (!response.ok) throw new Error(`Failed to create client: ${response.status}`);
-  return response.json();
+  }, 'create client');
 };
 
 export const updateClientAPI = async (id: string, updates: Partial<Client>) => {
-  const response = await fetch(`${apiBaseUrl()}/api/clients/update/${id}`, {
+  return apiRequest<Client>(`/api/clients/update/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(updates),
-  });
-  if (!response.ok) throw new Error(`Failed to update client: ${response.status}`);
-  return response.json();
+  }, 'update client');
 };
 
 export const deleteClientAPI = async (id: string) => {
-  const response = await fetch(`${apiBaseUrl()}/api/clients/delete/${id}`, {
+  return apiRequest<{ success: boolean }>(`/api/clients/delete/${id}`, {
     method: 'DELETE',
-    headers: await authHeaders(),
-  });
-  if (!response.ok) throw new Error(`Failed to delete client: ${response.status}`);
-  return response.json();
+  }, 'delete client');
 };
 
 export const createSubscriptionAPI = async (subscription: Partial<Subscription>) => {
-  const response = await fetch(`${apiBaseUrl()}/api/subscriptions/create`, {
+  return apiRequest<Subscription>('/api/subscriptions/create', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(subscription),
-  });
-  if (!response.ok) throw new Error(`Failed to create subscription: ${response.status}`);
-  return response.json();
+  }, 'create subscription');
 };
 
 export const updateSubscriptionAPI = async (id: string, updates: Partial<Subscription>) => {
-  const response = await fetch(`${apiBaseUrl()}/api/subscriptions/update/${id}`, {
+  return apiRequest<Subscription>(`/api/subscriptions/update/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(updates),
-  });
-  if (!response.ok) throw new Error(`Failed to update subscription: ${response.status}`);
-  return response.json();
+  }, 'update subscription');
 };
 
 export const deleteSubscriptionAPI = async (id: string) => {
-  const response = await fetch(`${apiBaseUrl()}/api/subscriptions/delete/${id}`, {
+  return apiRequest<{ success: boolean }>(`/api/subscriptions/delete/${id}`, {
     method: 'DELETE',
-    headers: await authHeaders(),
-  });
-  if (!response.ok) throw new Error(`Failed to delete subscription: ${response.status}`);
-  return response.json();
+  }, 'delete subscription');
 };
 
 export const createTransactionAPI = async (transaction: Partial<Transaction>) => {
-  const response = await fetch(`${apiBaseUrl()}/api/transactions/create`, {
+  return apiRequest<Transaction>('/api/transactions/create', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(transaction),
-  });
-  if (!response.ok) throw new Error(`Failed to create transaction: ${response.status}`);
-  return response.json();
+  }, 'create transaction');
 };
 
 export const updateTransactionAPI = async (id: string, updates: Partial<Transaction>) => {
-  const response = await fetch(`${apiBaseUrl()}/api/transactions/update/${id}`, {
+  return apiRequest<Transaction>(`/api/transactions/update/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify(updates),
-  });
-  if (!response.ok) throw new Error(`Failed to update transaction: ${response.status}`);
-  return response.json();
+  }, 'update transaction');
 };
 
 export const deleteTransactionAPI = async (id: string) => {
-  const response = await fetch(`${apiBaseUrl()}/api/transactions/delete/${id}`, {
+  return apiRequest<{ success: boolean }>(`/api/transactions/delete/${id}`, {
     method: 'DELETE',
-    headers: await authHeaders(),
-  });
-  if (!response.ok) throw new Error(`Failed to delete transaction: ${response.status}`);
-  return response.json();
+  }, 'delete transaction');
 };

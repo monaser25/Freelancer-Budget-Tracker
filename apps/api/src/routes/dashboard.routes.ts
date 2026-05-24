@@ -82,14 +82,16 @@ type Snapshot = z.infer<typeof SnapshotSchema>;
 type SnapshotTransaction = Snapshot['transactions'][number];
 
 const getLinkedTransactionKey = (transaction: SnapshotTransaction) => {
+  const dateKey = transaction.date.slice(0, 10);
+
   if (transaction.sourceType === 'client') {
     const clientId = transaction.clientId || transaction.sourceId;
-    return clientId ? `client:${clientId}` : null;
+    return clientId ? `client:${clientId}:${dateKey}` : null;
   }
 
   if (transaction.sourceType === 'subscription') {
     const subscriptionId = transaction.subscriptionId || transaction.sourceId;
-    return subscriptionId ? `subscription:${subscriptionId}` : null;
+    return subscriptionId ? `subscription:${subscriptionId}:${dateKey}` : null;
   }
 
   return null;
