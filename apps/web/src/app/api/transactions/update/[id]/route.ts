@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { HttpError, withApiError } from '@/server/errors';
-import { toDate } from '@/server/linked-transactions';
+import { toDate } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { TransactionSchema } from '@/server/validation';
 
@@ -29,6 +29,7 @@ export const PUT = async (request: Request, { params }: RouteContext) => withApi
     data: {
       ...validated,
       date: validated.date ? toDate(validated.date) : undefined,
+      sourceBillingDate: validated.sourceBillingDate ? toDate(validated.sourceBillingDate) : undefined,
       isEdited: existing.isAuto ? true : validated.isEdited ?? existing.isEdited,
     },
   });

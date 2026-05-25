@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { HttpError, withApiError } from '@/server/errors';
-import { subscriptionLinkedTransactionWhere } from '@/server/linked-transactions';
 import { prisma } from '@/server/prisma';
 
 export const runtime = "nodejs";
@@ -13,12 +12,13 @@ export const DELETE = async (request: Request, { params }: RouteContext) => with
   const user = await authenticateRequest(request);
   const userId = getUserId(user);
 
-  const result = await prisma.$transaction(async (tx) => {
-    await tx.transaction.deleteMany({ where: subscriptionLinkedTransactionWhere(userId, params.id) });
-    return tx.subscription.deleteMany({ where: { id: params.id, userId } });
+  const existing = await prisma.subscription.findFirst({ where: { id: params.id, userId } });
+  if (!existing) throw new HttpError(404, 'Subscription not found');
+
+  const subscription = await prisma.subscription.update({
+    where: { id: params.id },
+    data: { status: 'INACTIVE', archivedAt: new Date() },
   });
 
-  if (result.count === 0) throw new HttpError(404, 'Subscription not found');
-
-  return NextResponse.json({ success: true });
+  return NextResponse.json(subscription);
 });

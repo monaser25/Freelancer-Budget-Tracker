@@ -60,14 +60,15 @@ export default function TransactionsPage() {
 
   const saveEdit = async (formData: FormData) => {
     if (!editing) return;
+    const name = String(formData.get('name') || '').trim();
     const amount = Number(formData.get('amount'));
     const notes = String(formData.get('notes') || '').trim();
-    if (!amount || amount <= 0) return;
+    if (!name || !amount || amount <= 0) return;
 
     setIsSaving(true);
     setModalError(null);
     try {
-      await updateTransaction(editing.id, { amount, notes });
+      await updateTransaction(editing.id, { name, amount, notes });
       setEditing(null);
     } catch (err) {
       setModalError(err instanceof Error ? err.message : 'Failed to update transaction');
@@ -78,18 +79,20 @@ export default function TransactionsPage() {
 
   const saveNew = async (formData: FormData) => {
     const amount = Number(formData.get('amount'));
+    const name = String(formData.get('name') || '').trim();
     const notes = String(formData.get('notes') || '').trim();
     const type = String(formData.get('type') || 'EXPENSE') as Transaction['type'];
     const date = String(formData.get('date') || today());
     const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
 
-    if (!amount || amount <= 0) return;
+    if (!name || !amount || amount <= 0) return;
 
     setIsSaving(true);
     setModalError(null);
     try {
       await addTransaction({
         id: makeId(),
+        name,
         amount,
         type,
         status: 'COMPLETED',
@@ -156,7 +159,8 @@ export default function TransactionsPage() {
                   {filteredTransactions.map((tx, index) => (
                     <tr key={tx.id} className={`border-b border-slate-50 hover:bg-slate-50 ${index % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
                       <td className="p-[12px_14px] text-[13px] text-textPrimary">
-                        <div>{tx.notes || 'Unnamed Transaction'}</div>
+        <div>{tx.name || tx.notes || 'Unnamed Transaction'}</div>
+        {tx.notes && tx.notes !== tx.name && <div className="text-[12px] text-textSecondary mt-0.5">{tx.notes}</div>}
                         <div className="text-[11px] text-textMuted uppercase mt-1">{tx.sourceType}</div>
                       </td>
                       <td className="p-[12px_14px] text-[13px] text-textSecondary">
@@ -175,10 +179,10 @@ export default function TransactionsPage() {
                       </td>
                       <td className="p-[12px_14px] text-right">
                         <div className="flex justify-end gap-2">
-                          <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.notes || 'transaction'}`}>
+                          <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.name || tx.notes || 'transaction'}`}>
                             <Pencil size={15} />
                           </button>
-                          <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.notes || 'transaction'}`}>
+                          <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.name || tx.notes || 'transaction'}`}>
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -201,6 +205,10 @@ export default function TransactionsPage() {
                 {editing.isAuto && <p className="text-[13px] text-amber-600 mt-1">This is an auto-generated transaction. Future auto-transactions still use the original client/subscription amount.</p>}
                 {modalError && <p className="text-[13px] text-red-600 mt-2">{modalError}</p>}
               </div>
+              <label className="block">
+                <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
+                <input name="name" defaultValue={editing.name || editing.notes} className={inputClass} required />
+              </label>
               <label className="block">
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
                 <input name="amount" type="number" min="0" step="0.01" defaultValue={editing.amount} className={inputClass} required />
@@ -229,6 +237,10 @@ export default function TransactionsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
+                  <input name="name" className={inputClass} required />
+                </label>
+                <label className="block">
                   <span className="block text-[12px] font-medium text-textSecondary mb-1">Type</span>
                   <select name="type" className={inputClass} defaultValue="EXPENSE">
                     <option value="INCOME">Revenue</option>
@@ -242,7 +254,7 @@ export default function TransactionsPage() {
               </div>
               <label className="block">
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
-                <input name="notes" className={inputClass} required />
+                <input name="notes" className={inputClass} placeholder="Optional" />
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">

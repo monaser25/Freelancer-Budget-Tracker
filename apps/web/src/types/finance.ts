@@ -12,6 +12,7 @@ export interface Client {
   nextBillingDate?: string;
   recorded?: boolean;
   transactionId?: string;
+  archivedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,15 +22,18 @@ export interface Subscription {
   name: string;
   amount: number;
   cycle: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  billingCycle?: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
   notes?: string;
   billingDay: number;
   nextBillingDate: string;
   status: 'ACTIVE' | 'INACTIVE';
   transactionId?: string;
+  archivedAt?: string;
 }
 
 export interface Transaction {
   id: string;
+  name: string;
   amount: number;
   type: 'INCOME' | 'EXPENSE';
   status: 'COMPLETED' | 'PENDING';
@@ -37,6 +41,7 @@ export interface Transaction {
   notes?: string;
   sourceType: 'manual' | 'client' | 'subscription';
   sourceId?: string;
+  sourceBillingDate?: string;
   clientId?: string;
   subscriptionId?: string;
   categoryId: string;

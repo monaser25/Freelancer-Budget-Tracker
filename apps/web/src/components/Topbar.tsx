@@ -41,18 +41,20 @@ export function Topbar() {
 
   const saveTransaction = async (formData: FormData) => {
     const amount = Number(formData.get('amount'));
+    const name = String(formData.get('name') || '').trim();
     const notes = String(formData.get('notes') || '').trim();
     const type = String(formData.get('type') || 'INCOME') as Transaction['type'];
     const date = String(formData.get('date') || today());
     const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
 
-    if (!amount || amount <= 0) return;
+    if (!name || !amount || amount <= 0) return;
 
     setIsSaving(true);
     setError(null);
     try {
       await addTransaction({
         id: makeId(),
+        name,
         amount,
         type,
         status: 'COMPLETED',
@@ -109,8 +111,12 @@ export function Topbar() {
                 </label>
               </div>
               <label className="block">
-                <span className="block text-[12px] font-medium text-textSecondary mb-1">Description</span>
-                <input name="notes" className={inputClass} required />
+                <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
+                <input name="name" className={inputClass} required />
+              </label>
+              <label className="block">
+                <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
+                <input name="notes" className={inputClass} placeholder="Optional" />
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">

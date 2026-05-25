@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { ensureUser } from '@/server/devUser';
 import { HttpError, withApiError } from '@/server/errors';
-import { toDate } from '@/server/linked-transactions';
+import { toDate } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { TransactionSchema } from '@/server/validation';
 
@@ -24,6 +24,7 @@ export const POST = async (request: Request) => withApiError(request, async () =
     data: {
       ...validated,
       date: toDate(validated.date) || new Date(),
+      sourceBillingDate: toDate(validated.sourceBillingDate),
       userId,
     },
   });

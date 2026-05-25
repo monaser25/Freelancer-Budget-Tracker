@@ -7,8 +7,8 @@ const baseClient = (overrides: Partial<Client> = {}): Client => ({
   revenue: 100,
   clientType: 'COMPANY',
   status: 'ACTIVE',
-  paymentType: 'onetime',
-  paymentDate: '2026-05-01',
+  paymentType: 'retainer',
+  nextBillingDate: '2026-06-01',
   createdAt: '2026-05-01T00:00:00.000Z',
   updatedAt: '2026-05-01T00:00:00.000Z',
   ...overrides,
@@ -19,21 +19,23 @@ const baseSubscription = (overrides: Partial<Subscription> = {}): Subscription =
   name: 'Tool',
   amount: 25,
   cycle: 'MONTHLY',
+  billingCycle: 'MONTHLY',
   billingDay: 1,
-  nextBillingDate: '2026-05-01',
+  nextBillingDate: '2026-06-01',
   status: 'ACTIVE',
   ...overrides,
 });
 
 const baseTransaction = (overrides: Partial<Transaction> = {}): Transaction => ({
   id: 'tx-1',
+  name: 'May Acme Retainer',
   amount: 100,
   type: 'INCOME',
   status: 'COMPLETED',
   date: '2026-05-01T12:00:00.000Z',
-  notes: 'Acme one-time payment',
   sourceType: 'client',
   sourceId: 'client-1',
+  sourceBillingDate: '2026-05-01T12:00:00.000Z',
   clientId: 'client-1',
   categoryId: 'CLIENT',
   isAuto: true,
@@ -41,9 +43,9 @@ const baseTransaction = (overrides: Partial<Transaction> = {}): Transaction => (
 });
 
 describe('financial snapshot reconciliation', () => {
-  it('updates a client linked transaction from the client source of truth', () => {
+  it('does not edit historical client transactions when future client settings change', () => {
     const result = reconcileFinancialSnapshot({
-      clients: [baseClient({ revenue: 250, transactionId: 'tx-1' })],
+      clients: [baseClient({ revenue: 250, nextBillingDate: '2026-06-01' })],
       subscriptions: [],
       transactions: [baseTransaction({ amount: 100 })],
     });
@@ -51,36 +53,35 @@ describe('financial snapshot reconciliation', () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]).toEqual(expect.objectContaining({
       id: 'tx-1',
-      amount: 250,
-      sourceType: 'client',
-      sourceId: 'client-1',
-      clientId: 'client-1',
-      categoryId: 'CLIENT',
-      isAuto: true,
+      amount: 100,
+      name: 'May Acme Retainer',
+      sourceBillingDate: '2026-05-01T12:00:00.000Z',
     }));
   });
 
-  it('removes a client linked transaction when the client is deleted', () => {
+  it('keeps client payment history after the client is archived or absent from active lists', () => {
     const result = reconcileFinancialSnapshot({
-      clients: [],
+      clients: [baseClient({ archivedAt: '2026-05-15T12:00:00.000Z', status: 'INACTIVE' })],
       subscriptions: [],
       transactions: [baseTransaction()],
     });
 
-    expect(result.transactions).toEqual([]);
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0].clientId).toBe('client-1');
   });
 
-  it('updates a subscription linked transaction from the subscription source of truth', () => {
+  it('does not edit historical subscription transactions when future subscription settings change', () => {
     const result = reconcileFinancialSnapshot({
       clients: [],
-      subscriptions: [baseSubscription({ amount: 75, name: 'Tool Pro', transactionId: 'sub-tx-1' })],
+      subscriptions: [baseSubscription({ amount: 75, name: 'Tool Pro' })],
       transactions: [baseTransaction({
         id: 'sub-tx-1',
+        name: 'May Tool Payment',
         amount: 25,
         type: 'EXPENSE',
-        notes: 'Subscription: Tool',
         sourceType: 'subscription',
         sourceId: 'sub-1',
+        sourceBillingDate: '2026-05-01T12:00:00.000Z',
         clientId: undefined,
         subscriptionId: 'sub-1',
         categoryId: 'TOOLS',
@@ -90,52 +91,23 @@ describe('financial snapshot reconciliation', () => {
     expect(result.transactions).toHaveLength(1);
     expect(result.transactions[0]).toEqual(expect.objectContaining({
       id: 'sub-tx-1',
-      amount: 75,
-      type: 'EXPENSE',
-      notes: 'Subscription: Tool Pro',
-      sourceType: 'subscription',
-      sourceId: 'sub-1',
-      subscriptionId: 'sub-1',
-      categoryId: 'TOOLS',
-      isAuto: true,
+      name: 'May Tool Payment',
+      amount: 25,
+      sourceBillingDate: '2026-05-01T12:00:00.000Z',
     }));
   });
 
-  it('removes a subscription linked transaction when the subscription is deleted', () => {
+  it('dedupes generated transactions for the same source billing date only', () => {
     const result = reconcileFinancialSnapshot({
-      clients: [],
-      subscriptions: [],
-      transactions: [baseTransaction({
-        id: 'sub-tx-1',
-        type: 'EXPENSE',
-        sourceType: 'subscription',
-        sourceId: 'sub-1',
-        clientId: undefined,
-        subscriptionId: 'sub-1',
-        categoryId: 'TOOLS',
-      })],
-    });
-
-    expect(result.transactions).toEqual([]);
-  });
-
-  it('keeps one linked transaction per source and reconciles stale duplicates', () => {
-    const result = reconcileFinancialSnapshot({
-      clients: [baseClient({ revenue: 400, paymentDate: '2026-05-02', transactionId: 'tx-keep' })],
+      clients: [baseClient()],
       subscriptions: [],
       transactions: [
-        baseTransaction({ id: 'tx-drop', amount: 100, date: '2026-04-01T12:00:00.000Z' }),
-        baseTransaction({ id: 'tx-keep', amount: 150, date: '2026-04-15T12:00:00.000Z', notes: 'stale note', isAuto: false }),
+        baseTransaction({ id: 'tx-keep' }),
+        baseTransaction({ id: 'tx-drop', amount: 999 }),
+        baseTransaction({ id: 'tx-next', amount: 125, sourceBillingDate: '2026-06-01T12:00:00.000Z', date: '2026-06-01T12:00:00.000Z' }),
       ],
     });
 
-    expect(result.transactions).toHaveLength(1);
-    expect(result.transactions[0]).toEqual(expect.objectContaining({
-      id: 'tx-keep',
-      amount: 400,
-      date: expect.stringContaining('2026-05-02'),
-      notes: 'Acme one-time payment',
-      isAuto: true,
-    }));
+    expect(result.transactions.map((tx) => tx.id).sort()).toEqual(['tx-keep', 'tx-next']);
   });
 });

@@ -39,6 +39,7 @@ import { DELETE as deleteSubscription } from '@/app/api/subscriptions/delete/[id
 import { DELETE as deleteTransaction } from '@/app/api/transactions/delete/[id]/route';
 import { PUT as updateClient } from '@/app/api/clients/update/[id]/route';
 import { PUT as updateTransaction } from '@/app/api/transactions/update/[id]/route';
+import { POST as createTransaction } from '@/app/api/transactions/create/route';
 
 const tokenFor = (id: string) => `flowledger-dev:${encodeURIComponent(JSON.stringify({ id, email: `${id}@example.com` }))}`;
 
@@ -88,8 +89,7 @@ describe('Next route handler safeguards', () => {
   });
 
   it('prevents deleting another user client', async () => {
-    mockPrisma.client.deleteMany.mockResolvedValue({ count: 0 });
-    mockPrisma.transaction.deleteMany.mockResolvedValue({ count: 0 });
+    mockPrisma.client.findFirst.mockResolvedValue(null);
 
     const response = await deleteClient(
       request('DELETE', '/api/clients/delete/client-b'),
@@ -97,7 +97,7 @@ describe('Next route handler safeguards', () => {
     );
 
     expect(response.status).toBe(404);
-    expect(mockPrisma.client.deleteMany).toHaveBeenCalledWith({ where: { id: 'client-b', userId: 'user-a' } });
+    expect(mockPrisma.client.update).not.toHaveBeenCalled();
   });
 
   it('prevents linked transactions from being edited directly', async () => {
@@ -128,9 +128,9 @@ describe('Next route handler safeguards', () => {
     expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalledWith({ where: { id: 'tx-1', userId: 'user-a' } });
   });
 
-  it('deletes linked client transactions before deleting a client', async () => {
-    mockPrisma.transaction.deleteMany.mockResolvedValue({ count: 1 });
-    mockPrisma.client.deleteMany.mockResolvedValue({ count: 1 });
+  it('archives clients without deleting historical transactions', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue({ id: 'client-a', userId: 'user-a' });
+    mockPrisma.client.update.mockResolvedValue({ id: 'client-a', userId: 'user-a', status: 'INACTIVE', archivedAt: new Date() });
 
     const response = await deleteClient(
       request('DELETE', '/api/clients/delete/client-a'),
@@ -138,21 +138,16 @@ describe('Next route handler safeguards', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mockPrisma.transaction.deleteMany).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-a',
-        OR: [
-          { clientId: 'client-a' },
-          { sourceType: 'client', sourceId: 'client-a' },
-          { sourceType: 'client-payment', sourceId: 'client-a' },
-        ],
-      },
+    expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
+    expect(mockPrisma.client.update).toHaveBeenCalledWith({
+      where: { id: 'client-a' },
+      data: expect.objectContaining({ status: 'INACTIVE', archivedAt: expect.any(Date) }),
     });
   });
 
-  it('deletes linked subscription transactions before deleting a subscription', async () => {
-    mockPrisma.transaction.deleteMany.mockResolvedValue({ count: 1 });
-    mockPrisma.subscription.deleteMany.mockResolvedValue({ count: 1 });
+  it('archives subscriptions without deleting historical transactions', async () => {
+    mockPrisma.subscription.findFirst.mockResolvedValue({ id: 'sub-a', userId: 'user-a' });
+    mockPrisma.subscription.update.mockResolvedValue({ id: 'sub-a', userId: 'user-a', status: 'INACTIVE', archivedAt: new Date() });
 
     const response = await deleteSubscription(
       request('DELETE', '/api/subscriptions/delete/sub-a'),
@@ -160,14 +155,74 @@ describe('Next route handler safeguards', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mockPrisma.transaction.deleteMany).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-a',
-        OR: [
-          { subscriptionId: 'sub-a' },
-          { sourceType: 'subscription', sourceId: 'sub-a' },
-        ],
-      },
+    expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
+    expect(mockPrisma.subscription.update).toHaveBeenCalledWith({
+      where: { id: 'sub-a' },
+      data: expect.objectContaining({ status: 'INACTIVE', archivedAt: expect.any(Date) }),
     });
+  });
+
+  it('creates manual transactions with a required name', async () => {
+    mockPrisma.transaction.create.mockResolvedValue({ id: 'tx-manual', name: 'Manual income', sourceType: 'manual' });
+
+    const response = await createTransaction(request('POST', '/api/transactions/create', 'user-a', {
+      name: 'Manual income',
+      amount: 100,
+      type: 'INCOME',
+      status: 'COMPLETED',
+      date: '2026-05-01',
+      sourceType: 'manual',
+      categoryId: 'CLIENT',
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mockPrisma.transaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ name: 'Manual income', userId: 'user-a' }),
+    }));
+  });
+
+  it('returns 400 when manual transaction name is missing', async () => {
+    const response = await createTransaction(request('POST', '/api/transactions/create', 'user-a', {
+      amount: 100,
+      type: 'INCOME',
+      status: 'COMPLETED',
+      date: '2026-05-01',
+      sourceType: 'manual',
+      categoryId: 'CLIENT',
+    }));
+
+    expect(response.status).toBe(400);
+    expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('updates client billing settings without touching historical transactions', async () => {
+    mockPrisma.client.findFirst.mockResolvedValue({ id: 'client-a', userId: 'user-a' });
+    mockPrisma.client.update.mockResolvedValue({ id: 'client-a', name: 'Updated', revenue: 200, userId: 'user-a' });
+
+    const response = await updateClient(
+      request('PUT', '/api/clients/update/client-a', 'user-a', {
+        name: 'Updated',
+        revenue: 200,
+        nextBillingDate: '2026-06-01',
+        paymentType: 'retainer',
+        clientType: 'INDIVIDUAL',
+        status: 'ACTIVE',
+      }),
+      { params: { id: 'client-a' } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.transaction.update).not.toHaveBeenCalled();
+    expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 validation errors for invalid client update payloads', async () => {
+    const response = await updateClient(
+      request('PUT', '/api/clients/update/client-a', 'user-a', { nextBillingDate: 'not-a-date' }),
+      { params: { id: 'client-a' } },
+    );
+
+    expect(response.status).toBe(400);
+    expect(mockPrisma.client.update).not.toHaveBeenCalled();
   });
 });

@@ -116,9 +116,16 @@ export const updateClientAPI = async (id: string, updates: Partial<Client>) => {
 };
 
 export const deleteClientAPI = async (id: string) => {
-  return apiRequest<{ success: boolean }>(`/api/clients/delete/${id}`, {
+  return apiRequest<Client>(`/api/clients/delete/${id}`, {
     method: 'DELETE',
   }, 'delete client');
+};
+
+export const recordClientPaymentAPI = async (id: string) => {
+  return apiRequest<{ client: Client; transaction: Transaction }>(`/api/clients/${id}/record-payment`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, 'record client payment');
 };
 
 export const createSubscriptionAPI = async (subscription: Partial<Subscription>) => {
@@ -136,9 +143,16 @@ export const updateSubscriptionAPI = async (id: string, updates: Partial<Subscri
 };
 
 export const deleteSubscriptionAPI = async (id: string) => {
-  return apiRequest<{ success: boolean }>(`/api/subscriptions/delete/${id}`, {
+  return apiRequest<Subscription>(`/api/subscriptions/delete/${id}`, {
     method: 'DELETE',
   }, 'delete subscription');
+};
+
+export const recordSubscriptionPaymentAPI = async (id: string) => {
+  return apiRequest<{ subscription: Subscription; transaction: Transaction }>(`/api/subscriptions/${id}/record-payment`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, 'record subscription payment');
 };
 
 export const createTransactionAPI = async (transaction: Partial<Transaction>) => {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { ensureUser } from '@/server/devUser';
 import { withApiError } from '@/server/errors';
-import { reconcileSubscriptionLinkedTransaction, toDate } from '@/server/linked-transactions';
+import { toDate } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { SubscriptionSchema } from '@/server/validation';
 
@@ -16,17 +16,16 @@ export const POST = async (request: Request) => withApiError(request, async () =
 
   await ensureUser(user);
 
-  const subscription = await prisma.$transaction(async (tx) => {
-    const newSub = await tx.subscription.create({
-      data: {
-        ...validated,
-        nextBillingDate: toDate(validated.nextBillingDate) || new Date(),
-        userId,
-      },
-    });
-
-    await reconcileSubscriptionLinkedTransaction(tx, userId, newSub);
-    return tx.subscription.findUniqueOrThrow({ where: { id: newSub.id } });
+  const billingCycle = validated.billingCycle || validated.cycle;
+  const subscription = await prisma.subscription.create({
+    data: {
+      ...validated,
+      cycle: billingCycle,
+      billingCycle,
+      nextBillingDate: toDate(validated.nextBillingDate) || new Date(),
+      archivedAt: toDate(validated.archivedAt),
+      userId,
+    },
   });
 
   return NextResponse.json(subscription, { status: 201 });
