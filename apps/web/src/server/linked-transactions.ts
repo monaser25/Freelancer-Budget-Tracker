@@ -62,3 +62,160 @@ export const subscriptionLinkedTransactionWhere = (userId: string, subscriptionI
     { sourceType: 'subscription', sourceId: subscriptionId },
   ],
 });
+
+type SubscriptionLike = {
+  id: string;
+  name: string;
+  amount: number;
+  status: string;
+  nextBillingDate: Date | string;
+  transactionId: string | null;
+};
+
+type LinkedTransaction = {
+  id: string;
+};
+
+const preferredLinkedTransaction = <T extends LinkedTransaction>(transactions: T[], transactionId?: string | null) => (
+  (transactionId ? transactions.find((transaction) => transaction.id === transactionId) : undefined) || transactions[0]
+);
+
+const deleteDuplicateLinkedTransactions = async (
+  tx: Prisma.TransactionClient,
+  userId: string,
+  transactions: LinkedTransaction[],
+  primaryId?: string,
+) => {
+  const duplicateIds = transactions
+    .filter((transaction) => transaction.id !== primaryId)
+    .map((transaction) => transaction.id);
+
+  if (duplicateIds.length === 0) return;
+
+  await tx.transaction.deleteMany({
+    where: {
+      userId,
+      id: { in: duplicateIds },
+    },
+  });
+};
+
+export const reconcileClientLinkedTransaction = async (
+  tx: Prisma.TransactionClient,
+  userId: string,
+  client: ClientLike,
+) => {
+  if (!shouldHaveClientTransaction(client)) {
+    await tx.transaction.deleteMany({ where: clientLinkedTransactionWhere(userId, client.id) });
+    if (client.transactionId) {
+      await tx.client.update({ where: { id: client.id }, data: { transactionId: null } });
+    }
+    return;
+  }
+
+  const linkedTransactions = await tx.transaction.findMany({
+    where: clientLinkedTransactionWhere(userId, client.id),
+    orderBy: [{ createdAt: 'asc' }],
+  });
+  const primary = preferredLinkedTransaction(linkedTransactions, client.transactionId);
+  const dateKey = getClientTransactionDate(client);
+  const data = {
+    amount: client.revenue,
+    type: 'INCOME',
+    status: client.paymentType === 'onetime' && dateKey <= todayKey() ? 'COMPLETED' : 'PENDING',
+    date: toDate(dateKey) || new Date(),
+    notes: client.paymentType === 'retainer' ? `${client.name} retainer` : `${client.name} one-time payment`,
+    sourceType: 'client',
+    sourceId: client.id,
+    clientId: client.id,
+    categoryId: 'CLIENT',
+    isAuto: true,
+    deletedAt: null,
+  };
+
+  if (primary) {
+    await deleteDuplicateLinkedTransactions(tx, userId, linkedTransactions, primary.id);
+    await tx.transaction.update({ where: { id: primary.id }, data });
+    if (client.transactionId !== primary.id) {
+      await tx.client.update({ where: { id: client.id }, data: { transactionId: primary.id } });
+    }
+    return;
+  }
+
+  const created = await tx.transaction.create({
+    data: {
+      ...data,
+      id: client.paymentType === 'retainer' ? `auto-client-retainer-${client.id}` : `auto-client-onetime-${client.id}`,
+      userId,
+    },
+  });
+  await tx.client.update({ where: { id: client.id }, data: { transactionId: created.id } });
+};
+
+export const reconcileSubscriptionLinkedTransaction = async (
+  tx: Prisma.TransactionClient,
+  userId: string,
+  subscription: SubscriptionLike,
+) => {
+  if (subscription.status !== 'ACTIVE') {
+    await tx.transaction.deleteMany({ where: subscriptionLinkedTransactionWhere(userId, subscription.id) });
+    if (subscription.transactionId) {
+      await tx.subscription.update({ where: { id: subscription.id }, data: { transactionId: null } });
+    }
+    return;
+  }
+
+  const linkedTransactions = await tx.transaction.findMany({
+    where: subscriptionLinkedTransactionWhere(userId, subscription.id),
+    orderBy: [{ createdAt: 'asc' }],
+  });
+  const primary = preferredLinkedTransaction(linkedTransactions, subscription.transactionId);
+  const nextBillingDate = typeof subscription.nextBillingDate === 'string' ? toDate(subscription.nextBillingDate) || new Date() : subscription.nextBillingDate;
+  const data = {
+    amount: subscription.amount,
+    type: 'EXPENSE',
+    status: 'COMPLETED',
+    date: nextBillingDate,
+    notes: `Subscription: ${subscription.name}`,
+    sourceType: 'subscription',
+    sourceId: subscription.id,
+    subscriptionId: subscription.id,
+    categoryId: 'TOOLS',
+    isAuto: true,
+    deletedAt: null,
+  };
+
+  if (primary) {
+    await deleteDuplicateLinkedTransactions(tx, userId, linkedTransactions, primary.id);
+    await tx.transaction.update({ where: { id: primary.id }, data });
+    if (subscription.transactionId !== primary.id) {
+      await tx.subscription.update({ where: { id: subscription.id }, data: { transactionId: primary.id } });
+    }
+    return;
+  }
+
+  const dateKey = nextBillingDate.toISOString().slice(0, 10);
+  const created = await tx.transaction.create({
+    data: {
+      ...data,
+      id: `auto-sub-${subscription.id}-${dateKey}`,
+      userId,
+    },
+  });
+  await tx.subscription.update({ where: { id: subscription.id }, data: { transactionId: created.id } });
+};
+
+export const reconcileLinkedTransactions = async (tx: Prisma.TransactionClient, userId: string) => {
+  const [clients, subscriptions] = await Promise.all([
+    tx.client.findMany({ where: { userId } }),
+    tx.subscription.findMany({ where: { userId } }),
+  ]);
+
+  for (const client of clients) {
+    await reconcileClientLinkedTransaction(tx, userId, client);
+  }
+
+  for (const subscription of subscriptions) {
+    await reconcileSubscriptionLinkedTransaction(tx, userId, subscription);
+  }
+};

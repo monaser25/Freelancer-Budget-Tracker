@@ -1,7 +1,8 @@
 import { chromium } from 'playwright';
 
 const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000';
+const API_URL = process.env.API_URL || WEB_URL;
+const TOKEN_PREFIX = 'flowledger-dev:';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const tomorrow = () => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -52,6 +53,18 @@ const linkedSubscriptionTransactions = (data, subscriptionId) => {
 
 const findClient = (data, name) => data.clients.find((client) => client.name === name);
 const findSubscription = (data, name) => data.subscriptions.find((subscription) => subscription.name === name);
+
+const devAuthUserFor = (qaId) => {
+  const email = `${qaId.toLowerCase().replace(/[^a-z0-9._-]/g, '-')}@flowledger.local`;
+  return {
+    id: `dev-${email.replace(/[^a-z0-9._-]/g, '-')}`,
+    email,
+  };
+};
+
+const devAuthHeaderFor = (user) => {
+  return `Bearer ${TOKEN_PREFIX}${encodeURIComponent(JSON.stringify(user))}`;
+};
 
 const deleteIfPresent = async (page, path) => {
   const response = await page.request.delete(`${API_URL}${path}`);
@@ -113,9 +126,15 @@ const run = async () => {
   const manualNote = `${qaId} Manual Revenue`;
   const manualNoteUpdated = `${qaId} Manual Revenue Updated`;
 
+  const devUser = devAuthUserFor(qaId);
   const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  await context.addInitScript(() => window.localStorage.clear());
+  const context = await browser.newContext({
+    extraHTTPHeaders: { Authorization: devAuthHeaderFor(devUser) },
+  });
+  await context.addInitScript((user) => {
+    window.localStorage.clear();
+    window.localStorage.setItem('flowledger-dev-auth-user', JSON.stringify(user));
+  }, devUser);
   const page = await context.newPage();
   page.on('response', async (response) => {
     if (!response.url().includes('/api/dashboard/snapshot') || response.ok()) return;
@@ -258,7 +277,7 @@ const run = async () => {
 
     // Manual transaction flow.
     await page.goto(WEB_URL);
-    await page.getByRole('button', { name: 'Add Revenue' }).click();
+    await page.getByRole('button', { name: 'Add Revenue' }).first().click();
     await page.getByLabel('Description', { exact: true }).fill(manualNote);
     await page.getByLabel('Amount', { exact: true }).fill('555');
     await page.getByLabel('Date', { exact: true }).fill(today());

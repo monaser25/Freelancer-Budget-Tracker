@@ -13,6 +13,7 @@ import {
   deleteTransactionAPI,
   loadFinancialSnapshot
 } from '@/services/financialApi';
+import { reconcileFinancialSnapshot } from '@/services/financialSync';
 
 const STORAGE_KEY = 'flowledger-financial-state';
 const PREFERENCES_KEY = 'flowledger-preferences';
@@ -123,10 +124,11 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   error: null,
 
   setInitialData: (data) => {
+    const normalized = reconcileFinancialSnapshot(data);
     set({
-      clients: data.clients,
-      subscriptions: data.subscriptions,
-      transactions: data.transactions,
+      clients: normalized.clients,
+      subscriptions: normalized.subscriptions,
+      transactions: normalized.transactions,
       isInitialized: true,
     });
     persistLocalSnapshot();
@@ -157,7 +159,14 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   addClient: async (client) => {
     try {
       const created = await createClientAPI(client);
-      set((state) => ({ clients: [created, ...state.clients.filter((item) => item.id !== created.id)], error: null }));
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: [created, ...state.clients.filter((item) => item.id !== created.id)],
+          subscriptions: state.subscriptions,
+          transactions: state.transactions,
+        }),
+        error: null,
+      }));
       persistLocalSnapshot();
       await refreshAfterLocalMutation();
     } catch (e: any) {
@@ -168,7 +177,14 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   updateClient: async (id, updates) => {
     try {
       const updated = await updateClientAPI(id, updates);
-      set((state) => ({ clients: state.clients.map((client) => (client.id === id ? updated : client)), error: null }));
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients.map((client) => (client.id === id ? updated : client)),
+          subscriptions: state.subscriptions,
+          transactions: state.transactions,
+        }),
+        error: null,
+      }));
       persistLocalSnapshot();
       await refreshAfterLocalMutation();
     } catch (e: any) {
@@ -180,8 +196,11 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
     try {
       await deleteClientAPI(id);
       set((state) => ({
-        clients: state.clients.filter((client) => client.id !== id),
-        transactions: state.transactions.filter((tx) => tx.clientId !== id && !(tx.sourceType === 'client' && tx.sourceId === id)),
+        ...reconcileFinancialSnapshot({
+          clients: state.clients.filter((client) => client.id !== id),
+          subscriptions: state.subscriptions,
+          transactions: state.transactions,
+        }),
         error: null,
       }));
       persistLocalSnapshot();
@@ -195,7 +214,14 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   addSubscription: async (sub) => {
     try {
       const created = await createSubscriptionAPI(sub);
-      set((state) => ({ subscriptions: [created, ...state.subscriptions.filter((item) => item.id !== created.id)], error: null }));
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients,
+          subscriptions: [created, ...state.subscriptions.filter((item) => item.id !== created.id)],
+          transactions: state.transactions,
+        }),
+        error: null,
+      }));
       persistLocalSnapshot();
       await refreshAfterLocalMutation();
     } catch (e: any) {
@@ -206,7 +232,14 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   updateSubscription: async (id, updates) => {
     try {
       const updated = await updateSubscriptionAPI(id, updates);
-      set((state) => ({ subscriptions: state.subscriptions.map((sub) => (sub.id === id ? updated : sub)), error: null }));
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients,
+          subscriptions: state.subscriptions.map((sub) => (sub.id === id ? updated : sub)),
+          transactions: state.transactions,
+        }),
+        error: null,
+      }));
       persistLocalSnapshot();
       await refreshAfterLocalMutation();
     } catch (e: any) {
@@ -218,8 +251,11 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
     try {
       await deleteSubscriptionAPI(id);
       set((state) => ({
-        subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
-        transactions: state.transactions.filter((tx) => tx.subscriptionId !== id && !(tx.sourceType === 'subscription' && tx.sourceId === id)),
+        ...reconcileFinancialSnapshot({
+          clients: state.clients,
+          subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
+          transactions: state.transactions,
+        }),
         error: null,
       }));
       persistLocalSnapshot();
@@ -264,7 +300,8 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
     }
   },
   setTransactions: (transactions) => {
-    set({ transactions });
+    const { clients, subscriptions } = useFinancialStore.getState();
+    set(reconcileFinancialSnapshot({ clients, subscriptions, transactions }));
     persistLocalSnapshot();
   }
 }));

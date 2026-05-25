@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { HttpError, withApiError } from '@/server/errors';
-import { subscriptionLinkedTransactionWhere, toDate } from '@/server/linked-transactions';
+import { reconcileSubscriptionLinkedTransaction, toDate } from '@/server/linked-transactions';
 import { prisma } from '@/server/prisma';
 import { SubscriptionSchema } from '@/server/validation';
 
@@ -29,55 +29,8 @@ export const PUT = async (request: Request, { params }: RouteContext) => withApi
       data: dataToUpdate,
     });
 
-    if (updatedSub.status === 'ACTIVE') {
-      const txData = {
-        amount: updatedSub.amount,
-        date: updatedSub.nextBillingDate,
-        notes: `Subscription: ${updatedSub.name}`,
-        deletedAt: null,
-      };
-
-      const existingTx = await tx.transaction.findFirst({
-        where: subscriptionLinkedTransactionWhere(userId, updatedSub.id),
-      });
-
-      if (existingTx) {
-        await tx.transaction.update({
-          where: { id: existingTx.id },
-          data: txData,
-        });
-        if (!updatedSub.transactionId || updatedSub.transactionId !== existingTx.id) {
-          await tx.subscription.update({ where: { id: updatedSub.id }, data: { transactionId: existingTx.id } });
-          updatedSub.transactionId = existingTx.id;
-        }
-      } else {
-        const transactionId = updatedSub.transactionId || `auto-sub-${updatedSub.id}-${updatedSub.nextBillingDate.toISOString().slice(0, 10)}`;
-        const newTx = await tx.transaction.create({
-          data: {
-            ...txData,
-            id: transactionId,
-            userId,
-            type: 'EXPENSE',
-            sourceType: 'subscription',
-            sourceId: updatedSub.id,
-            subscriptionId: updatedSub.id,
-            categoryId: 'TOOLS',
-            isAuto: true,
-            status: 'COMPLETED',
-          },
-        });
-        await tx.subscription.update({ where: { id: updatedSub.id }, data: { transactionId: newTx.id } });
-        updatedSub.transactionId = newTx.id;
-      }
-    } else {
-      await tx.transaction.deleteMany({ where: subscriptionLinkedTransactionWhere(userId, updatedSub.id) });
-      if (updatedSub.transactionId) {
-        await tx.subscription.update({ where: { id: updatedSub.id }, data: { transactionId: null } });
-        updatedSub.transactionId = null;
-      }
-    }
-
-    return updatedSub;
+    await reconcileSubscriptionLinkedTransaction(tx, userId, updatedSub);
+    return tx.subscription.findUniqueOrThrow({ where: { id: updatedSub.id } });
   });
 
   return NextResponse.json(subscription);
