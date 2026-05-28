@@ -41,8 +41,11 @@ import { PUT as updateClient } from '@/app/api/clients/update/[id]/route';
 import { PUT as updateSubscription } from '@/app/api/subscriptions/update/[id]/route';
 import { PUT as updateTransaction } from '@/app/api/transactions/update/[id]/route';
 import { POST as createTransaction } from '@/app/api/transactions/create/route';
+<<<<<<< HEAD
 import { PATCH as restoreClient } from '@/app/api/clients/restore/[id]/route';
 import { PATCH as restoreSubscription } from '@/app/api/subscriptions/restore/[id]/route';
+=======
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 
 const tokenFor = (id: string) => `flowledger-dev:${encodeURIComponent(JSON.stringify({ id, email: `${id}@example.com` }))}`;
 
@@ -103,7 +106,39 @@ describe('Next route handler safeguards', () => {
     expect(mockPrisma.client.update).not.toHaveBeenCalled();
   });
 
+<<<<<<< HEAD
   it('soft-removes clients without deleting historical transactions', async () => {
+=======
+  it('prevents linked transactions from being edited directly', async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValue({ id: 'tx-1', userId: 'user-a', sourceType: 'client' });
+
+    const response = await updateTransaction(
+      request('PUT', '/api/transactions/update/tx-1', 'user-a', { amount: 20 }),
+      { params: { id: 'tx-1' } },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe('Linked transactions cannot be edited directly');
+    expect(mockPrisma.transaction.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('prevents linked transactions from being deleted directly', async () => {
+    mockPrisma.transaction.findFirst.mockResolvedValue({ id: 'tx-1', userId: 'user-a', sourceType: 'subscription' });
+
+    const response = await deleteTransaction(
+      request('DELETE', '/api/transactions/delete/tx-1'),
+      { params: { id: 'tx-1' } },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe('Linked transactions cannot be deleted directly');
+    expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalledWith({ where: { id: 'tx-1', userId: 'user-a' } });
+  });
+
+  it('archives clients without deleting historical transactions', async () => {
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
     mockPrisma.client.findFirst.mockResolvedValue({ id: 'client-a', userId: 'user-a' });
     mockPrisma.client.update.mockResolvedValue({ id: 'client-a', userId: 'user-a', status: 'INACTIVE', archivedAt: new Date() });
 
@@ -120,7 +155,11 @@ describe('Next route handler safeguards', () => {
     });
   });
 
+<<<<<<< HEAD
   it('soft-removes subscriptions without deleting historical transactions', async () => {
+=======
+  it('archives subscriptions without deleting historical transactions', async () => {
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
     mockPrisma.subscription.findFirst.mockResolvedValue({ id: 'sub-a', userId: 'user-a' });
     mockPrisma.subscription.update.mockResolvedValue({ id: 'sub-a', userId: 'user-a', status: 'INACTIVE', archivedAt: new Date() });
 
@@ -137,6 +176,7 @@ describe('Next route handler safeguards', () => {
     });
   });
 
+<<<<<<< HEAD
   it('allows editing an auto-generated transaction as a historical record and marks it edited', async () => {
     mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 'tx-1', userId: 'user-a', sourceType: 'client', isAuto: true, isEdited: false });
     mockPrisma.transaction.findFirst.mockResolvedValueOnce({ id: 'tx-1', userId: 'user-a', sourceType: 'client', isAuto: true, isEdited: true, amount: 250 });
@@ -208,6 +248,8 @@ describe('Next route handler safeguards', () => {
     expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
   });
 
+=======
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   it('creates manual transactions with a required name', async () => {
     mockPrisma.transaction.create.mockResolvedValue({ id: 'tx-manual', name: 'Manual income', sourceType: 'manual' });
 
@@ -259,6 +301,7 @@ describe('Next route handler safeguards', () => {
 
     expect(response.status).toBe(200);
     expect(mockPrisma.transaction.update).not.toHaveBeenCalled();
+<<<<<<< HEAD
     expect(mockPrisma.transaction.updateMany).not.toHaveBeenCalled();
     expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
   });
@@ -281,6 +324,8 @@ describe('Next route handler safeguards', () => {
     expect(response.status).toBe(200);
     expect(mockPrisma.transaction.update).not.toHaveBeenCalled();
     expect(mockPrisma.transaction.updateMany).not.toHaveBeenCalled();
+=======
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
     expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
   });
 
@@ -293,6 +338,7 @@ describe('Next route handler safeguards', () => {
     expect(response.status).toBe(400);
     expect(mockPrisma.client.update).not.toHaveBeenCalled();
   });
+<<<<<<< HEAD
 
   it('returns 400 validation errors for invalid subscription update payloads', async () => {
     const response = await updateSubscription(
@@ -415,4 +461,6 @@ describe('Next route handler safeguards', () => {
     expect(mockPrisma.transaction.deleteMany).not.toHaveBeenCalled();
     expect(mockPrisma.transaction.updateMany).not.toHaveBeenCalled();
   });
+=======
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 });

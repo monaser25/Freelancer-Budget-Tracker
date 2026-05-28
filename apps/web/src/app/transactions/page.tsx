@@ -68,19 +68,27 @@ export default function TransactionsPage() {
     const name = String(formData.get('name') || '').trim();
     const amount = Number(formData.get('amount'));
     const notes = String(formData.get('notes') || '').trim();
+<<<<<<< HEAD
     const dateValue = String(formData.get('date') || '').trim();
 
     if (!name || !amount || amount <= 0) {
       setModalError('Name and a positive amount are required.');
       return;
     }
+=======
+    if (!name || !amount || amount <= 0) return;
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 
     setIsSaving(true);
     setModalError(null);
     try {
+<<<<<<< HEAD
       const payload: Partial<Transaction> = { name, amount, notes };
       if (dateValue) payload.date = toIsoDate(dateValue);
       await updateTransaction(editing.id, payload);
+=======
+      await updateTransaction(editing.id, { name, amount, notes });
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
       setEditing(null);
     } catch (err) {
       setModalError(err instanceof Error ? err.message : 'Failed to update transaction');
@@ -97,10 +105,14 @@ export default function TransactionsPage() {
     const date = String(formData.get('date') || today());
     const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
 
+<<<<<<< HEAD
     if (!name || !amount || amount <= 0) {
       setModalError('Name and a positive amount are required.');
       return;
     }
+=======
+    if (!name || !amount || amount <= 0) return;
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 
     setIsSaving(true);
     setModalError(null);
@@ -218,7 +230,11 @@ export default function TransactionsPage() {
                           <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.name || tx.notes || 'transaction'}`}>
                             <Pencil size={15} />
                           </button>
+<<<<<<< HEAD
                           <button type="button" onClick={() => requestDelete(tx)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.name || tx.notes || 'transaction'}`}>
+=======
+                          <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.name || tx.notes || 'transaction'}`}>
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -248,6 +264,13 @@ export default function TransactionsPage() {
               <label className="block">
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
                 <input name="name" defaultValue={editing.name || editing.notes} className={inputClass} required />
+<<<<<<< HEAD
+=======
+              </label>
+              <label className="block">
+                <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
+                <input name="amount" type="number" min="0" step="0.01" defaultValue={editing.amount} className={inputClass} required />
+>>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
