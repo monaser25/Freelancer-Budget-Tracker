@@ -8,16 +8,17 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: { id: string } };
 
-export const DELETE = async (request: Request, { params }: RouteContext) => withApiError(request, async () => {
+export const PATCH = async (request: Request, { params }: RouteContext) => withApiError(request, async () => {
   const user = await authenticateRequest(request);
   const userId = getUserId(user);
 
   const existing = await prisma.subscription.findFirst({ where: { id: params.id, userId } });
   if (!existing) throw new HttpError(404, 'Subscription not found');
+  if (!existing.archivedAt) throw new HttpError(400, 'Subscription is not archived');
 
   const subscription = await prisma.subscription.update({
     where: { id: params.id },
-    data: { status: 'INACTIVE', archivedAt: new Date() },
+    data: { status: 'ACTIVE', archivedAt: null },
   });
 
   return NextResponse.json(subscription);

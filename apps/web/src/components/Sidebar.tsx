@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, CreditCard, LayoutDashboard, LogOut, Settings, Users, WalletCards } from 'lucide-react';
+import { Archive, BarChart3, CreditCard, LayoutDashboard, LogOut, Settings, Users, WalletCards } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
   { href: '/clients', label: 'Clients & Revenue', icon: Users },
   { href: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/archive', label: 'Archive', icon: Archive },
 ];
 
 export function Sidebar() {

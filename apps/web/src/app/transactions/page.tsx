@@ -30,13 +30,18 @@ const makeId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const isAutoTransaction = (tx: Transaction) => Boolean(tx.isAuto) || tx.sourceType !== 'manual';
+
 export default function TransactionsPage() {
   const { transactions, currency, addTransaction, updateTransaction, deleteTransaction } = useFinancialStore();
   const [filter, setFilter] = useState<Filter>('all');
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [adding, setAdding] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const money = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }), [currency]);
 
   useEffect(() => {
@@ -60,14 +65,22 @@ export default function TransactionsPage() {
 
   const saveEdit = async (formData: FormData) => {
     if (!editing) return;
+    const name = String(formData.get('name') || '').trim();
     const amount = Number(formData.get('amount'));
     const notes = String(formData.get('notes') || '').trim();
-    if (!amount || amount <= 0) return;
+    const dateValue = String(formData.get('date') || '').trim();
+
+    if (!name || !amount || amount <= 0) {
+      setModalError('Name and a positive amount are required.');
+      return;
+    }
 
     setIsSaving(true);
     setModalError(null);
     try {
-      await updateTransaction(editing.id, { amount, notes });
+      const payload: Partial<Transaction> = { name, amount, notes };
+      if (dateValue) payload.date = toIsoDate(dateValue);
+      await updateTransaction(editing.id, payload);
       setEditing(null);
     } catch (err) {
       setModalError(err instanceof Error ? err.message : 'Failed to update transaction');
@@ -78,18 +91,23 @@ export default function TransactionsPage() {
 
   const saveNew = async (formData: FormData) => {
     const amount = Number(formData.get('amount'));
+    const name = String(formData.get('name') || '').trim();
     const notes = String(formData.get('notes') || '').trim();
     const type = String(formData.get('type') || 'EXPENSE') as Transaction['type'];
     const date = String(formData.get('date') || today());
     const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
 
-    if (!amount || amount <= 0) return;
+    if (!name || !amount || amount <= 0) {
+      setModalError('Name and a positive amount are required.');
+      return;
+    }
 
     setIsSaving(true);
     setModalError(null);
     try {
       await addTransaction({
         id: makeId(),
+        name,
         amount,
         type,
         status: 'COMPLETED',
@@ -103,6 +121,27 @@ export default function TransactionsPage() {
       setModalError(err instanceof Error ? err.message : 'Failed to create transaction');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const requestDelete = (tx: Transaction) => {
+    setDeleteError(null);
+    setDeleting(tx);
+  };
+
+  const closeDeleteModal = () => { if (!isDeleting) setDeleting(null); };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteTransaction(deleting.id);
+      setDeleting(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete transaction');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -156,7 +195,8 @@ export default function TransactionsPage() {
                   {filteredTransactions.map((tx, index) => (
                     <tr key={tx.id} className={`border-b border-slate-50 hover:bg-slate-50 ${index % 2 === 1 ? 'bg-slate-50/50' : ''}`}>
                       <td className="p-[12px_14px] text-[13px] text-textPrimary">
-                        <div>{tx.notes || 'Unnamed Transaction'}</div>
+        <div>{tx.name || tx.notes || 'Unnamed Transaction'}</div>
+        {tx.notes && tx.notes !== tx.name && <div className="text-[12px] text-textSecondary mt-0.5">{tx.notes}</div>}
                         <div className="text-[11px] text-textMuted uppercase mt-1">{tx.sourceType}</div>
                       </td>
                       <td className="p-[12px_14px] text-[13px] text-textSecondary">
@@ -175,10 +215,10 @@ export default function TransactionsPage() {
                       </td>
                       <td className="p-[12px_14px] text-right">
                         <div className="flex justify-end gap-2">
-                          <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.notes || 'transaction'}`}>
+                          <button type="button" onClick={() => { setModalError(null); setEditing(tx); }} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${tx.name || tx.notes || 'transaction'}`}>
                             <Pencil size={15} />
                           </button>
-                          <button type="button" onClick={() => { deleteTransaction(tx.id).catch(() => { /* store.error surfaces the failure */ }); }} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.notes || 'transaction'}`}>
+                          <button type="button" onClick={() => requestDelete(tx)} className="text-red-500 hover:text-red-700 p-1 inline-flex" aria-label={`Delete ${tx.name || tx.notes || 'transaction'}`}>
                             <Trash2 size={15} />
                           </button>
                         </div>
@@ -193,27 +233,63 @@ export default function TransactionsPage() {
       </div>
 
       {editing && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => setEditing(null)}>
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setEditing(null); }}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
             <form onSubmit={(event) => { event.preventDefault(); saveEdit(new FormData(event.currentTarget)); }} className="space-y-4">
               <div>
                 <h2 className="text-[16px] font-semibold text-textPrimary">Edit Transaction</h2>
-                {editing.isAuto && <p className="text-[13px] text-amber-600 mt-1">This is an auto-generated transaction. Future auto-transactions still use the original client/subscription amount.</p>}
+                {isAutoTransaction(editing) && (
+                  <p className="text-[13px] text-amber-600 mt-1">
+                    You are editing this historical payment record only. Future billing settings will not change.
+                  </p>
+                )}
                 {modalError && <p className="text-[13px] text-red-600 mt-2">{modalError}</p>}
               </div>
               <label className="block">
-                <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
-                <input name="amount" type="number" min="0" step="0.01" defaultValue={editing.amount} className={inputClass} required />
+                <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
+                <input name="name" defaultValue={editing.name || editing.notes} className={inputClass} required />
               </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
+                  <input name="amount" type="number" min="0" step="0.01" defaultValue={editing.amount} className={inputClass} required />
+                </label>
+                <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Date</span>
+                  <input name="date" type="date" defaultValue={editing.date ? editing.date.slice(0, 10) : today()} className={inputClass} />
+                </label>
+              </div>
               <label className="block">
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
                 <input name="notes" defaultValue={editing.notes} className={inputClass} />
               </label>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-                <button type="button" onClick={() => setEditing(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100">Cancel</button>
+                <button type="button" disabled={isSaving} onClick={() => setEditing(null)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
                 <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleting && (
+        <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
+          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
+            <h2 className="text-[16px] font-semibold text-textPrimary">Delete this transaction?</h2>
+            <p className="text-[13px] text-textSecondary mt-2">
+              {isAutoTransaction(deleting)
+                ? 'This will delete this payment record only. It will not delete the client/subscription.'
+                : 'This will remove the manual transaction from your ledger.'}
+            </p>
+            <div className="mt-4 rounded-md bg-slate-50 border border-slate-100 p-3 text-[13px] text-textSecondary">
+              <div className="font-medium text-textPrimary">{deleting.name || deleting.notes || 'Untitled transaction'}</div>
+              <div className="mt-1">{new Date(deleting.date).toLocaleDateString()} · {deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</div>
+            </div>
+            {deleteError && <p className="text-[13px] text-red-600 mt-3">{deleteError}</p>}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
+              <button type="button" disabled={isDeleting} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Deleting...' : 'Delete Transaction'}</button>
+            </div>
           </div>
         </div>
       )}
@@ -229,6 +305,10 @@ export default function TransactionsPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">
+                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
+                  <input name="name" className={inputClass} required />
+                </label>
+                <label className="block">
                   <span className="block text-[12px] font-medium text-textSecondary mb-1">Type</span>
                   <select name="type" className={inputClass} defaultValue="EXPENSE">
                     <option value="INCOME">Revenue</option>
@@ -242,7 +322,7 @@ export default function TransactionsPage() {
               </div>
               <label className="block">
                 <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
-                <input name="notes" className={inputClass} required />
+                <input name="notes" className={inputClass} placeholder="Optional" />
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className="block">

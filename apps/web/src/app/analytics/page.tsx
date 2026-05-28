@@ -142,6 +142,11 @@ export default function AnalyticsPage() {
     }).filter(s => s.cost > 0).sort((a, b) => b.cost - a.cost);
   }, [subscriptions, periodTxs]);
 
+  const recentPeriodTransactions = useMemo(
+    () => [...periodTxs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    [periodTxs],
+  );
+
   const activeClients = clients.filter(c => c.status === 'ACTIVE').length;
   const retainerClients = clients.filter(c => c.paymentType === 'retainer').length;
   const activeSubscriptions = subscriptions.filter(s => s.status === 'ACTIVE').length;
@@ -352,6 +357,23 @@ export default function AnalyticsPage() {
       )}
 
       {/* ── all-time summary ── */}
+      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
+        <h2 className="text-[14px] font-semibold text-textPrimary">Recent Transactions</h2>
+        <p className="text-[12px] text-textMuted mt-0.5 mb-3">{periodLabel} · named ledger entries</p>
+        {recentPeriodTransactions.length === 0 ? (
+          <div className="text-[13px] text-textMuted">No transactions recorded {periodLabel.toLowerCase()}</div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {recentPeriodTransactions.map((tx) => (
+              <div key={tx.id} className="py-2 flex items-center justify-between gap-3 text-[13px]">
+                <span className="min-w-0 truncate text-textPrimary">{tx.name || tx.notes || tx.sourceType}</span>
+                <span className={tx.type === 'INCOME' ? 'shrink-0 font-medium text-green-600' : 'shrink-0 font-medium text-red-500'}>{money.format(tx.amount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
         <h2 className="text-[14px] font-semibold text-textPrimary mb-5">All-Time Summary</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">

@@ -5,6 +5,13 @@ const optionalString = z.preprocess(
   z.string().optional(),
 );
 
+const dateString = z.string().min(1).refine((value) => !Number.isNaN(new Date(value).getTime()), 'Invalid date');
+
+const optionalDateString = z.preprocess(
+  (value) => (value === '' || value === null ? undefined : value),
+  dateString.optional(),
+);
+
 const optionalEmail = z.preprocess(
   (value) => (value === '' || value === null ? undefined : value),
   z.string().email().optional(),
@@ -32,34 +39,39 @@ export const ClientSchema = z.object({
   clientType: z.enum(['INDIVIDUAL', 'COMPANY']).default('COMPANY'),
   status: z.enum(['ACTIVE', 'COMPLETED', 'PROSPECT', 'INACTIVE']).default('ACTIVE'),
   paymentType: z.enum(['onetime', 'retainer']).default('onetime'),
-  paymentDate: optionalString,
+  paymentDate: optionalDateString,
   billingDay: optionalBillingDay,
-  nextBillingDate: optionalString,
+  nextBillingDate: optionalDateString,
   recorded: z.boolean().optional(),
   transactionId: optionalString,
+  archivedAt: optionalDateString,
 });
 
 export const SubscriptionSchema = z.object({
   name: z.string().trim().min(1),
   amount: z.coerce.number().positive(),
   cycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).default('MONTHLY'),
+  billingCycle: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']).optional(),
   notes: optionalString,
   billingDay,
-  nextBillingDate: z.string().min(1),
+  nextBillingDate: dateString,
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
   transactionId: optionalString,
+  archivedAt: optionalDateString,
 });
 
 export const TransactionSchema = z.object({
+  name: z.string().trim().min(1),
   amount: z.coerce.number().positive(),
   type: z.enum(['INCOME', 'EXPENSE']),
   status: z.enum(['COMPLETED', 'PENDING']).default('COMPLETED'),
-  date: z.string().min(1),
+  date: dateString,
   notes: optionalString,
   sourceType: sourceTypeSchema,
   sourceId: optionalString,
   clientId: optionalString,
   subscriptionId: optionalString,
+  sourceBillingDate: optionalDateString,
   categoryId: z.string().min(1),
   isAuto: z.boolean().optional(),
   isEdited: z.boolean().optional(),

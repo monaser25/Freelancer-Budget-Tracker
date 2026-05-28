@@ -5,9 +5,13 @@ import {
   createClientAPI,
   updateClientAPI,
   deleteClientAPI,
+  restoreClientAPI,
+  recordClientPaymentAPI,
   createSubscriptionAPI,
   updateSubscriptionAPI,
   deleteSubscriptionAPI,
+  restoreSubscriptionAPI,
+  recordSubscriptionPaymentAPI,
   createTransactionAPI,
   updateTransactionAPI,
   deleteTransactionAPI,
@@ -54,10 +58,14 @@ interface FinancialStore {
   addClient: (client: Client) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  restoreClient: (id: string) => Promise<void>;
+  recordClientPayment: (id: string) => Promise<void>;
 
   addSubscription: (subscription: Subscription) => Promise<void>;
   updateSubscription: (id: string, updates: Partial<Subscription>) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
+  restoreSubscription: (id: string) => Promise<void>;
+  recordSubscriptionPayment: (id: string) => Promise<void>;
 
   addTransaction: (transaction: Transaction) => Promise<void>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<void>;
@@ -194,10 +202,10 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   },
   deleteClient: async (id) => {
     try {
-      await deleteClientAPI(id);
+      const archived = await deleteClientAPI(id);
       set((state) => ({
         ...reconcileFinancialSnapshot({
-          clients: state.clients.filter((client) => client.id !== id),
+          clients: state.clients.map((client) => (client.id === id ? archived : client)),
           subscriptions: state.subscriptions,
           transactions: state.transactions,
         }),
@@ -207,6 +215,42 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       await refreshAfterLocalMutation();
     } catch (e: any) {
       set({ error: e?.message || 'Failed to delete client' });
+      throw e;
+    }
+  },
+  restoreClient: async (id) => {
+    try {
+      const restored = await restoreClientAPI(id);
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients.map((client) => (client.id === id ? restored : client)),
+          subscriptions: state.subscriptions,
+          transactions: state.transactions,
+        }),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
+    } catch (e: any) {
+      set({ error: e?.message || 'Failed to restore client' });
+      throw e;
+    }
+  },
+  recordClientPayment: async (id) => {
+    try {
+      const { client, transaction } = await recordClientPaymentAPI(id);
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients.map((item) => (item.id === id ? client : item)),
+          subscriptions: state.subscriptions,
+          transactions: [transaction, ...state.transactions.filter((item) => item.id !== transaction.id)],
+        }),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
+    } catch (e: any) {
+      set({ error: e?.message || 'Failed to record client payment' });
       throw e;
     }
   },
@@ -249,11 +293,11 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
   },
   deleteSubscription: async (id) => {
     try {
-      await deleteSubscriptionAPI(id);
+      const archived = await deleteSubscriptionAPI(id);
       set((state) => ({
         ...reconcileFinancialSnapshot({
           clients: state.clients,
-          subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
+          subscriptions: state.subscriptions.map((sub) => (sub.id === id ? archived : sub)),
           transactions: state.transactions,
         }),
         error: null,
@@ -262,6 +306,42 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       await refreshAfterLocalMutation();
     } catch (e: any) {
       set({ error: e?.message || 'Failed to delete subscription' });
+      throw e;
+    }
+  },
+  restoreSubscription: async (id) => {
+    try {
+      const restored = await restoreSubscriptionAPI(id);
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients,
+          subscriptions: state.subscriptions.map((sub) => (sub.id === id ? restored : sub)),
+          transactions: state.transactions,
+        }),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
+    } catch (e: any) {
+      set({ error: e?.message || 'Failed to restore subscription' });
+      throw e;
+    }
+  },
+  recordSubscriptionPayment: async (id) => {
+    try {
+      const { subscription, transaction } = await recordSubscriptionPaymentAPI(id);
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients,
+          subscriptions: state.subscriptions.map((item) => (item.id === id ? subscription : item)),
+          transactions: [transaction, ...state.transactions.filter((item) => item.id !== transaction.id)],
+        }),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
+    } catch (e: any) {
+      set({ error: e?.message || 'Failed to record subscription payment' });
       throw e;
     }
   },

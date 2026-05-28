@@ -7,7 +7,7 @@ import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
 import { Client } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
-import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { DollarSign, Pencil, Plus, Trash2, Users } from 'lucide-react';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; client: Client } | null;
 type DeleteTarget = { client: Client; transactionCount: number; revenueTotal: number } | null;
@@ -23,13 +23,15 @@ const makeId = () => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function ClientsPage() {
-  const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient } = useFinancialStore();
+  const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient, recordClientPayment } = useFinancialStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
 
   const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
@@ -50,13 +52,30 @@ export default function ClientsPage() {
     getClientRevenue(transactions, clientId);
 
   const transactionsForClient = (clientId: string) =>
-    transactions.filter((tx) => tx.clientId === clientId);
+    transactions.filter((tx) => tx.clientId === clientId || (tx.sourceType === 'client' && tx.sourceId === clientId));
+
+  const visibleClients = useMemo(
+    () => clients.filter((client) => !client.archivedAt),
+    [clients],
+  );
 
   const chartData = useMemo(
-    () => clients.map((client) => ({ name: client.name, value: revenueForClient(client.id) })).filter((row) => row.value > 0),
-    [clients, transactions],
+    () => visibleClients.map((client) => ({ name: client.name, value: revenueForClient(client.id) })).filter((row) => row.value > 0),
+    [visibleClients, transactions],
   );
-  const topClient = [...clients].sort((a, b) => revenueForClient(b.id) - revenueForClient(a.id))[0];
+  const topClient = [...visibleClients].sort((a, b) => revenueForClient(b.id) - revenueForClient(a.id))[0];
+
+  const recordPayment = async (client: Client) => {
+    setRecordingId(client.id);
+    setActionError(null);
+    try {
+      await recordClientPayment(client.id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to record client payment');
+    } finally {
+      setRecordingId(null);
+    }
+  };
 
   const saveClient = async (formData: FormData, existing?: Client) => {
     const paymentType = String(formData.get('paymentType')) as Client['paymentType'];
@@ -143,16 +162,21 @@ export default function ClientsPage() {
               <Plus size={15} /> Add Client
             </button>
           </div>
+          {actionError && <div className="mx-4 mt-4 rounded-md bg-red-50 border border-red-100 px-3 py-2 text-[13px] text-red-600 sm:mx-5">{actionError}</div>}
 
-          {clients.length === 0 ? (
+          {visibleClients.length === 0 ? (
             <div className="text-center py-10 text-textMuted">
               <div className="flex justify-center mb-3 text-slate-300"><Users size={34} /></div>
               <p className="text-[13px]">No clients yet. Add a one-time payment or monthly retainer client.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-50">
-              {clients.map((client) => (
-                <div key={client.id} className="p-4 flex flex-col gap-4 hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between">
+              {visibleClients.map((client) => {
+                const clientTransactions = transactionsForClient(client.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const totalPaid = clientTransactions.filter((tx) => tx.type === 'INCOME').reduce((sum, tx) => sum + tx.amount, 0);
+                return (
+                <div key={client.id} className="p-4 flex flex-col gap-4 hover:bg-slate-50">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-3 min-w-0 sm:items-center">
                     <div className="w-9 h-9 rounded-full bg-accent text-white flex items-center justify-center text-[13px] font-semibold shrink-0">
                       {client.name.slice(0, 2).toUpperCase()}
@@ -162,6 +186,7 @@ export default function ClientsPage() {
                         <span className="text-[13.5px] font-medium text-textPrimary">{client.name}</span>
                         <Badge tone={client.paymentType === 'retainer' ? 'blue' : 'green'}>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
                         <Badge tone={client.status === 'ACTIVE' ? 'green' : client.status === 'PROSPECT' ? 'amber' : 'slate'}>{client.status}</Badge>
+
                       </div>
                       <div className="text-[12px] text-textMuted mt-1">
                         {client.paymentType === 'retainer'
@@ -172,10 +197,15 @@ export default function ClientsPage() {
                   </div>
                   <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <div className="text-left sm:text-right">
-                      <div className="text-[14px] font-mono font-semibold text-green-600">{money.format(revenueForClient(client.id))}</div>
-                      <div className="text-[11px] text-textMuted">earned</div>
+                      <div className="text-[14px] font-mono font-semibold text-green-600">{money.format(totalPaid)}</div>
+                      <div className="text-[11px] text-textMuted">total paid</div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {client.paymentType === 'retainer' && client.status === 'ACTIVE' && !client.archivedAt && (
+                        <button type="button" disabled={recordingId === client.id} onClick={() => recordPayment(client)} className="text-green-600 hover:text-green-700 p-1 inline-flex disabled:opacity-60" aria-label={`Record payment for ${client.name}`}>
+                          <DollarSign size={15} />
+                        </button>
+                      )}
                       <button type="button" onClick={() => openEditModal(client)} className="text-textSecondary hover:text-accent p-1 inline-flex" aria-label={`Edit ${client.name}`}>
                         <Pencil size={15} />
                       </button>
@@ -184,8 +214,27 @@ export default function ClientsPage() {
                       </button>
                     </div>
                   </div>
+                  </div>
+                  <div className="rounded-md bg-slate-50 border border-slate-100 p-3">
+                    <div className="flex flex-col gap-1 text-[12px] text-textSecondary sm:flex-row sm:items-center sm:justify-between">
+                      <span>Payment history</span>
+                      {client.paymentType === 'retainer' && <span>Next billing: {client.nextBillingDate ? new Date(client.nextBillingDate).toLocaleDateString() : 'not scheduled'}</span>}
+                    </div>
+                    {clientTransactions.length === 0 ? (
+                      <div className="text-[12px] text-textMuted mt-2">No payments recorded yet.</div>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        {clientTransactions.slice(0, 3).map((tx) => (
+                          <div key={tx.id} className="flex items-center justify-between gap-3 text-[12px]">
+                            <span className="truncate text-textPrimary">{tx.name || tx.notes || 'Payment'}</span>
+                            <span className="shrink-0 text-textMuted">{new Date(tx.date).toLocaleDateString()} · {money.format(tx.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ))}
+              );})}
             </div>
           )}
         </div>
@@ -230,17 +279,17 @@ export default function ClientsPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
-            <h2 className="text-[16px] font-semibold text-textPrimary">Delete {deleteTarget.client.name}?</h2>
+            <h2 className="text-[16px] font-semibold text-textPrimary">Remove {deleteTarget.client.name}?</h2>
             <p className="text-[13px] text-textSecondary mt-2">
-              Deleting this client will permanently remove all related transactions and revenue history.
+              This will move the client to Archive and stop future billing. Past transactions will remain in history.
             </p>
-            <div className="mt-4 rounded-md bg-red-50 border border-red-100 p-3 text-[13px] text-red-700">
-              This will delete {deleteTarget.transactionCount} linked transaction{deleteTarget.transactionCount === 1 ? '' : 's'} and remove {money.format(deleteTarget.revenueTotal)} from revenue totals, charts, and analytics.
+            <div className="mt-4 rounded-md bg-blue-50 border border-blue-100 p-3 text-[13px] text-blue-700">
+              {deleteTarget.transactionCount} historical transaction{deleteTarget.transactionCount === 1 ? '' : 's'} totaling {money.format(deleteTarget.revenueTotal)} will stay in reports and payment history.
             </div>
             {deleteError && <p className="text-[13px] text-red-600 mt-3">{deleteError}</p>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
               <button type="button" disabled={isDeleting} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
-              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Deleting...' : 'Delete Permanently'}</button>
+              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Removing...' : 'Remove Client'}</button>
             </div>
           </div>
         </div>
@@ -276,6 +325,7 @@ function ClientForm({ client, error, isSaving, onCancel, onSave }: { client?: Cl
       <div>
         <h2 className="text-[16px] font-semibold text-textPrimary">{client ? 'Edit Client' : 'Add Client'}</h2>
         <p className="text-[13px] text-textMuted">One-time clients record once. Retainers auto-record monthly income.</p>
+        {client && <p className="text-[13px] text-amber-600 mt-1">Changes to amount or billing date only affect future billings. Past transactions remain unchanged.</p>}
         {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

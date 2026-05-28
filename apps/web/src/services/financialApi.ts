@@ -16,13 +16,32 @@ const apiBaseUrl = () => {
 class ApiRequestError extends Error {
   status?: number;
   responseBody?: string;
+  serverMessage?: string;
 
-  constructor(message: string, status?: number, responseBody?: string) {
+  constructor(message: string, status?: number, responseBody?: string, serverMessage?: string) {
     super(message);
     this.status = status;
     this.responseBody = responseBody;
+    this.serverMessage = serverMessage;
   }
 }
+
+const parseServerError = (body?: string) => {
+  if (!body) return undefined;
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed && typeof parsed === 'object') {
+      if (typeof parsed.error === 'string') return parsed.error;
+      if (Array.isArray(parsed.details) && parsed.details.length > 0) {
+        const first = parsed.details[0];
+        if (first && typeof first.message === 'string') return first.message;
+      }
+    }
+  } catch {
+    // Body wasn't JSON; fall through to undefined and use the default message.
+  }
+  return undefined;
+};
 
 const authHeaders = async () => {
   if (isDevAuthEnabled()) {
@@ -60,6 +79,9 @@ const logApiFailure = (method: string, url: string, err: unknown) => {
 
 const userMessageForFailure = (resource: string, err: unknown) => {
   if (err instanceof ApiRequestError) {
+    if (err.serverMessage) return err.serverMessage;
+    if (err.status === 404) return `${resource[0].toUpperCase()}${resource.slice(1)} target was not found.`;
+    if (err.status === 400) return `Unable to ${resource}. The server rejected the request as invalid.`;
     return `Unable to ${resource}. Server responded with ${err.status}.`;
   }
 
@@ -87,7 +109,7 @@ const apiRequest = async <T>(path: string, options: RequestInit = {}, resource: 
 
     if (!response.ok) {
       const responseBody = await response.text().catch(() => undefined);
-      throw new ApiRequestError(`HTTP ${response.status}`, response.status, responseBody);
+      throw new ApiRequestError(`HTTP ${response.status}`, response.status, responseBody, parseServerError(responseBody));
     }
 
     return response.json();
@@ -116,9 +138,22 @@ export const updateClientAPI = async (id: string, updates: Partial<Client>) => {
 };
 
 export const deleteClientAPI = async (id: string) => {
-  return apiRequest<{ success: boolean }>(`/api/clients/delete/${id}`, {
+  return apiRequest<Client>(`/api/clients/delete/${id}`, {
     method: 'DELETE',
   }, 'delete client');
+};
+
+export const restoreClientAPI = async (id: string) => {
+  return apiRequest<Client>(`/api/clients/restore/${id}`, {
+    method: 'PATCH',
+  }, 'restore client');
+};
+
+export const recordClientPaymentAPI = async (id: string) => {
+  return apiRequest<{ client: Client; transaction: Transaction }>(`/api/clients/${id}/record-payment`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, 'record client payment');
 };
 
 export const createSubscriptionAPI = async (subscription: Partial<Subscription>) => {
@@ -136,9 +171,22 @@ export const updateSubscriptionAPI = async (id: string, updates: Partial<Subscri
 };
 
 export const deleteSubscriptionAPI = async (id: string) => {
-  return apiRequest<{ success: boolean }>(`/api/subscriptions/delete/${id}`, {
+  return apiRequest<Subscription>(`/api/subscriptions/delete/${id}`, {
     method: 'DELETE',
   }, 'delete subscription');
+};
+
+export const restoreSubscriptionAPI = async (id: string) => {
+  return apiRequest<Subscription>(`/api/subscriptions/restore/${id}`, {
+    method: 'PATCH',
+  }, 'restore subscription');
+};
+
+export const recordSubscriptionPaymentAPI = async (id: string) => {
+  return apiRequest<{ subscription: Subscription; transaction: Transaction }>(`/api/subscriptions/${id}/record-payment`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, 'record subscription payment');
 };
 
 export const createTransactionAPI = async (transaction: Partial<Transaction>) => {

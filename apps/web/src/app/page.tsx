@@ -97,17 +97,23 @@ export default function DashboardPage() {
     () => [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
     [transactions],
   );
+  const activeSubscriptions = useMemo(
+    () => subscriptions.filter((sub) => sub.status === 'ACTIVE' && !sub.archivedAt),
+    [subscriptions],
+  );
 
   const saveTransaction = async (formData: FormData, type: 'INCOME' | 'EXPENSE') => {
     const amount = Number(formData.get('amount'));
+    const name = String(formData.get('name') || '').trim();
     const notes = String(formData.get('notes') || '').trim();
     const date = String(formData.get('date') || today());
     const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
 
-    if (!amount || amount <= 0) return;
+    if (!name || !amount || amount <= 0) return;
 
     const tx: Transaction = {
       id: makeId(),
+      name,
       amount,
       type,
       status: 'COMPLETED',
@@ -202,7 +208,7 @@ export default function DashboardPage() {
                   <tbody>
                     {recentTransactions.map((tx) => (
                       <tr key={tx.id} onClick={() => router.push('/transactions')} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
-                        <td className="p-[12px_14px] text-[13px] text-textPrimary">{tx.notes || tx.sourceType}</td>
+                        <td className="p-[12px_14px] text-[13px] text-textPrimary">{tx.name || tx.notes || tx.sourceType}</td>
                         <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
                         <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
                           {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
@@ -241,13 +247,13 @@ export default function DashboardPage() {
               />
             </div>
             <div className="mt-4 divide-y divide-slate-50 border-t border-slate-50">
-              {subscriptions.slice(0, 4).map((sub) => (
+              {activeSubscriptions.slice(0, 4).map((sub) => (
                 <div key={sub.id} className="py-2 flex items-center justify-between gap-3 text-[12px]">
                   <span className="min-w-0 truncate text-textSecondary">{sub.name}</span>
                   <span className="text-textMuted">{new Date(sub.nextBillingDate).toLocaleDateString()}</span>
                 </div>
               ))}
-              {subscriptions.length > 4 && <div className="pt-2 text-[12px] text-textMuted">... and {subscriptions.length - 4} more</div>}
+              {activeSubscriptions.length > 4 && <div className="pt-2 text-[12px] text-textMuted">... and {activeSubscriptions.length - 4} more</div>}
             </div>
           </Link>
         </div>
@@ -345,8 +351,11 @@ function TransactionForm({ type, error, isSaving, onCancel, onSave }: { type: 'I
         <p className="text-[13px] text-textMuted">Record a {type === 'INCOME' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
         {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
       </div>
-      <Field label="Description">
-        <input name="notes" className={inputClass} placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required />
+      <Field label="Transaction Name">
+        <input name="name" className={inputClass} placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required />
+      </Field>
+      <Field label="Notes">
+        <input name="notes" className={inputClass} placeholder="Optional" />
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Amount">

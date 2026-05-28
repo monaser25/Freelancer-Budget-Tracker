@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { ensureUser } from '@/server/devUser';
 import { withApiError } from '@/server/errors';
-import { reconcileClientLinkedTransaction, toDate } from '@/server/linked-transactions';
+import { toDate } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { ClientSchema } from '@/server/validation';
 
@@ -16,18 +16,14 @@ export const POST = async (request: Request) => withApiError(request, async () =
 
   await ensureUser(user);
 
-  const client = await prisma.$transaction(async (tx) => {
-    const newClient = await tx.client.create({
-      data: {
-        ...validated,
-        paymentDate: toDate(validated.paymentDate),
-        nextBillingDate: toDate(validated.nextBillingDate),
-        userId,
-      },
-    });
-
-    await reconcileClientLinkedTransaction(tx, userId, newClient);
-    return tx.client.findUniqueOrThrow({ where: { id: newClient.id } });
+  const client = await prisma.client.create({
+    data: {
+      ...validated,
+      paymentDate: toDate(validated.paymentDate),
+      nextBillingDate: toDate(validated.nextBillingDate),
+      archivedAt: toDate(validated.archivedAt),
+      userId,
+    },
   });
 
   return NextResponse.json(client, { status: 201 });

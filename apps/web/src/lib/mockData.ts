@@ -31,19 +31,21 @@ export const mockClients: Client[] = [
 ];
 
 export const mockSubscriptions: Subscription[] = [
-  { id: 's1', name: 'Adobe CC', amount: 55, cycle: 'MONTHLY', billingDay: 17, nextBillingDate: new Date().toISOString().slice(0, 10), status: 'ACTIVE', notes: 'Design tools' },
-  { id: 's2', name: 'Vercel Pro', amount: 20, cycle: 'MONTHLY', billingDay: 22, nextBillingDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), status: 'ACTIVE', notes: 'Hosting' },
+  { id: 's1', name: 'Adobe CC', amount: 55, cycle: 'MONTHLY', billingCycle: 'MONTHLY', billingDay: 17, nextBillingDate: new Date().toISOString().slice(0, 10), status: 'ACTIVE', notes: 'Design tools' },
+  { id: 's2', name: 'Vercel Pro', amount: 20, cycle: 'MONTHLY', billingCycle: 'MONTHLY', billingDay: 22, nextBillingDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), status: 'ACTIVE', notes: 'Hosting' },
 ];
 
 export const mockTransactions: Transaction[] = [
   {
     id: 'tx1',
+    name: 'Acme Retainer',
     amount: 1500,
     type: 'INCOME',
     status: 'COMPLETED',
     date: new Date().toISOString(),
     sourceType: 'client',
     sourceId: 'c1',
+    sourceBillingDate: new Date().toISOString(),
     clientId: 'c1',
     categoryId: 'CLIENT',
     notes: 'Acme Retainer',
@@ -51,12 +53,14 @@ export const mockTransactions: Transaction[] = [
   },
   {
     id: 'tx2',
+    name: 'Adobe CC',
     amount: 55,
     type: 'EXPENSE',
     status: 'COMPLETED',
     date: new Date().toISOString(),
     sourceType: 'subscription',
     sourceId: 's1',
+    sourceBillingDate: new Date().toISOString(),
     subscriptionId: 's1',
     categoryId: 'TOOLS',
     notes: 'Adobe CC',

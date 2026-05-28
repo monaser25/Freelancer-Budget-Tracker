@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
-import { reconcileLinkedTransactions } from '@/server/linked-transactions';
+import { runDueRecurringPaymentsInTransaction } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { withApiError } from '@/server/errors';
 
@@ -12,7 +12,7 @@ export const GET = async (request: Request) => withApiError(request, async () =>
   const userId = getUserId(user);
 
   const { clients, subscriptions, transactions } = await prisma.$transaction(async (tx) => {
-    await reconcileLinkedTransactions(tx, userId);
+    await runDueRecurringPaymentsInTransaction(tx, userId, new Date());
 
     const [nextClients, nextSubscriptions, nextTransactions] = await Promise.all([
       tx.client.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } }),

@@ -31,15 +31,17 @@ const shouldHaveClientTransaction = (client: Client) => client.status !== 'PROSP
 
 export const getLinkedTransactionKey = (transaction: Transaction) => {
   const sourceType = normalizeSourceType(transaction.sourceType as Transaction['sourceType'] | 'client-payment');
+  const billingDate = transaction.sourceBillingDate?.slice(0, 10);
+  if (!billingDate || sourceType === 'manual') return null;
 
   if (sourceType === 'client') {
     const clientId = transaction.clientId || transaction.sourceId;
-    return clientId ? `client:${clientId}` : null;
+    return clientId ? `client:${clientId}:${billingDate}` : null;
   }
 
   if (sourceType === 'subscription') {
     const subscriptionId = transaction.subscriptionId || transaction.sourceId;
-    return subscriptionId ? `subscription:${subscriptionId}` : null;
+    return subscriptionId ? `subscription:${subscriptionId}:${billingDate}` : null;
   }
 
   return null;
@@ -105,6 +107,7 @@ export const hasBillingTransaction = (
 
 export const createClientTransaction = (client: Client, date: string, id?: string): Transaction => ({
   id: id || (client.paymentType === 'retainer' ? `auto-client-retainer-${client.id}` : `auto-client-onetime-${client.id}`),
+  name: client.paymentType === 'retainer' ? `${client.name} retainer payment` : `${client.name} one-time payment`,
   amount: client.revenue,
   type: 'INCOME',
   status: client.paymentType === 'onetime' && date.slice(0, 10) <= todayKey() ? 'COMPLETED' : 'PENDING',
@@ -112,6 +115,7 @@ export const createClientTransaction = (client: Client, date: string, id?: strin
   notes: client.paymentType === 'retainer' ? `${client.name} retainer` : `${client.name} one-time payment`,
   sourceType: 'client',
   sourceId: client.id,
+  sourceBillingDate: date,
   clientId: client.id,
   categoryId: 'CLIENT',
   isAuto: true,
@@ -119,6 +123,7 @@ export const createClientTransaction = (client: Client, date: string, id?: strin
 
 export const createSubscriptionTransaction = (subscription: Subscription, date: string, id = `auto-sub-${subscription.id}-${date.slice(0, 10)}`): Transaction => ({
   id,
+  name: `${subscription.name} subscription payment`,
   amount: subscription.amount,
   type: 'EXPENSE',
   status: 'COMPLETED',
@@ -126,6 +131,7 @@ export const createSubscriptionTransaction = (subscription: Subscription, date: 
   notes: `Subscription: ${subscription.name}`,
   sourceType: 'subscription',
   sourceId: subscription.id,
+  sourceBillingDate: date,
   subscriptionId: subscription.id,
   categoryId: 'TOOLS',
   isAuto: true,
@@ -223,56 +229,17 @@ const normalizeLinkedTransaction = (transaction: Transaction): Transaction => {
   return normalizeManualTransaction(transaction);
 };
 
-const pickLinkedTransaction = (transactions: Transaction[], preferredId?: string) => (
-  (preferredId ? transactions.find((transaction) => transaction.id === preferredId) : undefined) || transactions[0]
-);
-
 export const reconcileFinancialSnapshot = (data: { clients: Client[]; subscriptions: Subscription[]; transactions: Transaction[] }) => {
-  const clients = data.clients.map((client) => ({ ...client }));
-  const subscriptions = data.subscriptions.map((subscription) => ({ ...subscription }));
-  const normalizedTransactions = data.transactions.map(normalizeLinkedTransaction);
-  const linkedTransactions = normalizedTransactions.filter((transaction) => getLinkedTransactionKey(transaction));
-  const transactions = normalizedTransactions.filter((transaction) => !getLinkedTransactionKey(transaction));
-
-  clients.forEach((client) => {
-    const matches = linkedTransactions.filter((transaction) => isLinkedClientTransaction(transaction, client));
-
-    if (!shouldHaveClientTransaction(client)) {
-      client.transactionId = undefined;
-      return;
-    }
-
-    const date = toIsoDate(getClientTransactionDate(client));
-    const primary = pickLinkedTransaction(matches, client.transactionId);
-    const linked = primary
-      ? syncClientTransactions([primary], client)[0]
-      : createClientTransaction(client, date);
-
-    client.transactionId = linked.id;
-    transactions.push(linked);
-  });
-
-  subscriptions.forEach((subscription) => {
-    const matches = linkedTransactions.filter((transaction) => isLinkedSubscriptionTransaction(transaction, subscription));
-
-    if (subscription.status !== 'ACTIVE') {
-      subscription.transactionId = undefined;
-      return;
-    }
-
-    const date = toIsoDate(subscription.nextBillingDate);
-    const primary = pickLinkedTransaction(matches, subscription.transactionId);
-    const linked = primary
-      ? syncSubscriptionTransactions([primary], subscription)[0]
-      : createSubscriptionTransaction(subscription, date);
-
-    subscription.transactionId = linked.id;
-    transactions.push(linked);
-  });
-
   return {
-    clients,
-    subscriptions,
-    transactions: dedupeLinkedTransactions(transactions),
+    clients: data.clients.map((client) => ({ ...client })),
+    subscriptions: data.subscriptions.map((subscription) => ({
+      ...subscription,
+      billingCycle: subscription.billingCycle || subscription.cycle,
+      cycle: subscription.billingCycle || subscription.cycle,
+    })),
+    transactions: dedupeLinkedTransactions(data.transactions.map((transaction) => ({
+      ...normalizeLinkedTransaction(transaction),
+      name: transaction.name || transaction.notes || 'Untitled transaction',
+    }))),
   };
 };

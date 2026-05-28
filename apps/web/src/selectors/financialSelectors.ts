@@ -31,7 +31,7 @@ export const getMonthlyRevenue = (transactions: Transaction[]) => {
 
 export const getClientRevenue = (transactions: Transaction[], clientId: string) => {
   return transactions
-    .filter(tx => tx.type === 'INCOME' && tx.status === 'COMPLETED' && tx.clientId === clientId)
+    .filter(tx => tx.type === 'INCOME' && tx.status === 'COMPLETED' && (tx.clientId === clientId || (tx.sourceType === 'client' && tx.sourceId === clientId)))
     .reduce((sum, tx) => sum + tx.amount, 0);
 };
 
@@ -64,15 +64,16 @@ export const getRevenueBreakdown = (transactions: Transaction[]) => {
 };
 
 export const getActiveSubscriptionsCount = (subscriptions: Subscription[]) => {
-  return subscriptions.filter(s => s.status === 'ACTIVE').length;
+  return subscriptions.filter(s => s.status === 'ACTIVE' && !s.archivedAt).length;
 };
 
 export const getSubscriptionBurden = (subscriptions: Subscription[]) => {
   return subscriptions
-    .filter(s => s.status === 'ACTIVE')
+    .filter(s => s.status === 'ACTIVE' && !s.archivedAt)
     .reduce((sum, subscription) => {
-      if (subscription.cycle === 'YEARLY') return sum + subscription.amount / 12;
-      if (subscription.cycle === 'QUARTERLY') return sum + subscription.amount / 3;
+      const cycle = subscription.billingCycle || subscription.cycle;
+      if (cycle === 'YEARLY') return sum + subscription.amount / 12;
+      if (cycle === 'QUARTERLY') return sum + subscription.amount / 3;
       return sum + subscription.amount;
     }, 0);
 };
@@ -88,7 +89,7 @@ export const getOverviewStats = (transactions: Transaction[], clients: Client[],
     netProfit: totalRevenue - totalExpenses,
     activeSubscriptionsCount: getActiveSubscriptionsCount(subscriptions),
     subscriptionBurden: getSubscriptionBurden(subscriptions),
-    totalClients: clients.length,
-    activeClients: clients.filter((client) => client.status === 'ACTIVE').length,
+    totalClients: clients.filter((client) => !client.archivedAt).length,
+    activeClients: clients.filter((client) => client.status === 'ACTIVE' && !client.archivedAt).length,
   };
 };

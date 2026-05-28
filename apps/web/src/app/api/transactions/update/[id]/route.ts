@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { HttpError, withApiError } from '@/server/errors';
-import { toDate } from '@/server/linked-transactions';
+import { toDate } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { TransactionSchema } from '@/server/validation';
 
@@ -10,6 +10,11 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: { id: string } };
 
+// Editing a transaction only edits THIS single historical ledger row.
+// It never rewrites past auto-generated rows or changes future billing
+// settings on the source client / subscription. For auto rows, we still
+// allow edits (name / amount / notes / date) but mark isEdited = true so
+// it is visible that the row diverged from its generator.
 export const PUT = async (request: Request, { params }: RouteContext) => withApiError(request, async () => {
   const user = await authenticateRequest(request);
   const userId = getUserId(user);
@@ -20,16 +25,29 @@ export const PUT = async (request: Request, { params }: RouteContext) => withApi
   });
 
   if (!existing) throw new HttpError(404, 'Transaction not found');
-  if (existing.sourceType !== 'manual') {
-    throw new HttpError(400, 'Linked transactions cannot be edited directly');
-  }
+
+  // For auto-generated rows we accept edits but lock down the linkage
+  // fields so the row keeps pointing at its source client/subscription.
+  const isAuto = Boolean(existing.isAuto) || existing.sourceType !== 'manual';
+  const safeUpdate = isAuto
+    ? {
+        name: validated.name,
+        amount: validated.amount,
+        notes: validated.notes,
+        date: validated.date ? toDate(validated.date) : undefined,
+        status: validated.status,
+      }
+    : {
+        ...validated,
+        date: validated.date ? toDate(validated.date) : undefined,
+        sourceBillingDate: validated.sourceBillingDate ? toDate(validated.sourceBillingDate) : undefined,
+      };
 
   await prisma.transaction.updateMany({
     where: { id: params.id, userId, deletedAt: null },
     data: {
-      ...validated,
-      date: validated.date ? toDate(validated.date) : undefined,
-      isEdited: existing.isAuto ? true : validated.isEdited ?? existing.isEdited,
+      ...safeUpdate,
+      isEdited: isAuto ? true : validated.isEdited ?? existing.isEdited,
     },
   });
 

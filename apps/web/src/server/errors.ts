@@ -40,6 +40,10 @@ export const handleApiError = (err: unknown, request: Request) => {
     return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
   }
 
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+    return NextResponse.json({ error: 'Duplicate generated transaction for this billing date' }, { status: 400 });
+  }
+
   if (process.env.NODE_ENV !== 'test') {
     console.error(`Unhandled API error on ${request.method} ${requestPath(request)}`, err);
   }

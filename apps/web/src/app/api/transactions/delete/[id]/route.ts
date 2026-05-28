@@ -8,6 +8,12 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: { id: string } };
 
+// Deletes a single transaction row, manual or auto-generated.
+// - For manual rows: removes the ledger entry as expected.
+// - For auto-generated rows: removes the specific historical payment record
+//   only. The source client/subscription stays active and future billing is
+//   not affected because the source's nextBillingDate has already advanced
+//   past this row's billing date by the time we get here.
 export const DELETE = async (request: Request, { params }: RouteContext) => withApiError(request, async () => {
   const user = await authenticateRequest(request);
   const userId = getUserId(user);
@@ -17,9 +23,6 @@ export const DELETE = async (request: Request, { params }: RouteContext) => with
   });
 
   if (!existing) throw new HttpError(404, 'Transaction not found');
-  if (existing.sourceType !== 'manual') {
-    throw new HttpError(400, 'Linked transactions cannot be deleted directly');
-  }
 
   await prisma.transaction.deleteMany({
     where: { id: params.id, userId },
