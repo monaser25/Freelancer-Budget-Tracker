@@ -5,25 +5,20 @@ import {
   createClientAPI,
   updateClientAPI,
   deleteClientAPI,
-<<<<<<< HEAD
+  deleteClientPermanentAPI,
   restoreClientAPI,
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   recordClientPaymentAPI,
   createSubscriptionAPI,
   updateSubscriptionAPI,
   deleteSubscriptionAPI,
-<<<<<<< HEAD
   restoreSubscriptionAPI,
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   recordSubscriptionPaymentAPI,
   createTransactionAPI,
   updateTransactionAPI,
   deleteTransactionAPI,
   loadFinancialSnapshot
 } from '@/services/financialApi';
-import { reconcileFinancialSnapshot } from '@/services/financialSync';
+import { reconcileFinancialSnapshot, removeClientTransactions } from '@/services/financialSync';
 
 const STORAGE_KEY = 'flowledger-financial-state';
 const PREFERENCES_KEY = 'flowledger-preferences';
@@ -64,19 +59,14 @@ interface FinancialStore {
   addClient: (client: Client) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
-<<<<<<< HEAD
+  deleteClientPermanently: (id: string) => Promise<void>;
   restoreClient: (id: string) => Promise<void>;
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   recordClientPayment: (id: string) => Promise<void>;
 
   addSubscription: (subscription: Subscription) => Promise<void>;
   updateSubscription: (id: string, updates: Partial<Subscription>) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
-<<<<<<< HEAD
   restoreSubscription: (id: string) => Promise<void>;
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   recordSubscriptionPayment: (id: string) => Promise<void>;
 
   addTransaction: (transaction: Transaction) => Promise<void>;
@@ -230,7 +220,24 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       throw e;
     }
   },
-<<<<<<< HEAD
+  deleteClientPermanently: async (id) => {
+    try {
+      await deleteClientPermanentAPI(id);
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients.filter((client) => client.id !== id),
+          subscriptions: state.subscriptions,
+          transactions: removeClientTransactions(state.transactions, id),
+        }),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
+    } catch (e: any) {
+      set({ error: e?.message || 'Failed to permanently delete client' });
+      throw e;
+    }
+  },
   restoreClient: async (id) => {
     try {
       const restored = await restoreClientAPI(id);
@@ -249,8 +256,6 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       throw e;
     }
   },
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   recordClientPayment: async (id) => {
     try {
       const { client, transaction } = await recordClientPaymentAPI(id);
@@ -324,7 +329,6 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       throw e;
     }
   },
-<<<<<<< HEAD
   restoreSubscription: async (id) => {
     try {
       const restored = await restoreSubscriptionAPI(id);
@@ -343,8 +347,6 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       throw e;
     }
   },
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   recordSubscriptionPayment: async (id) => {
     try {
       const { subscription, transaction } = await recordSubscriptionPaymentAPI(id);

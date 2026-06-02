@@ -143,15 +143,18 @@ export const deleteClientAPI = async (id: string) => {
   }, 'delete client');
 };
 
-<<<<<<< HEAD
+export const deleteClientPermanentAPI = async (id: string) => {
+  return apiRequest<{ id: string }>(`/api/clients/delete-permanent/${id}`, {
+    method: 'DELETE',
+  }, 'permanently delete client');
+};
+
 export const restoreClientAPI = async (id: string) => {
   return apiRequest<Client>(`/api/clients/restore/${id}`, {
     method: 'PATCH',
   }, 'restore client');
 };
 
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 export const recordClientPaymentAPI = async (id: string) => {
   return apiRequest<{ client: Client; transaction: Transaction }>(`/api/clients/${id}/record-payment`, {
     method: 'POST',
@@ -179,15 +182,12 @@ export const deleteSubscriptionAPI = async (id: string) => {
   }, 'delete subscription');
 };
 
-<<<<<<< HEAD
 export const restoreSubscriptionAPI = async (id: string) => {
   return apiRequest<Subscription>(`/api/subscriptions/restore/${id}`, {
     method: 'PATCH',
   }, 'restore subscription');
 };
 
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 export const recordSubscriptionPaymentAPI = async (id: string) => {
   return apiRequest<{ subscription: Subscription; transaction: Transaction }>(`/api/subscriptions/${id}/record-payment`, {
     method: 'POST',

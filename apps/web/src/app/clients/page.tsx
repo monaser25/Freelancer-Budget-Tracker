@@ -23,17 +23,15 @@ const makeId = () => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function ClientsPage() {
-  const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient, recordClientPayment } = useFinancialStore();
+  const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient, deleteClientPermanently, recordClientPayment } = useFinancialStore();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-<<<<<<< HEAD
-=======
+  const [isDeletingPermanent, setIsDeletingPermanent] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
@@ -41,7 +39,7 @@ export default function ClientsPage() {
   const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
   const openEditModal = (client: Client) => { setModalError(null); setModal({ mode: 'edit', client }); };
   const closeModal = () => { if (!isSaving) setModal(null); };
-  const closeDeleteModal = () => { if (!isDeleting) setDeleteTarget(null); };
+  const closeDeleteModal = () => { if (!isDeleting && !isDeletingPermanent) setDeleteTarget(null); };
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -59,13 +57,8 @@ export default function ClientsPage() {
     transactions.filter((tx) => tx.clientId === clientId || (tx.sourceType === 'client' && tx.sourceId === clientId));
 
   const visibleClients = useMemo(
-<<<<<<< HEAD
-    () => clients.filter((client) => !client.archivedAt),
-    [clients],
-=======
     () => clients.filter((client) => showArchived || !client.archivedAt),
     [clients, showArchived],
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
   );
 
   const chartData = useMemo(
@@ -158,6 +151,20 @@ export default function ClientsPage() {
     }
   };
 
+  const confirmDeletePermanently = async () => {
+    if (!deleteTarget) return;
+    setIsDeletingPermanent(true);
+    setDeleteError(null);
+    try {
+      await deleteClientPermanently(deleteTarget.client.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to permanently delete client');
+    } finally {
+      setIsDeletingPermanent(false);
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
@@ -201,11 +208,7 @@ export default function ClientsPage() {
                         <span className="text-[13.5px] font-medium text-textPrimary">{client.name}</span>
                         <Badge tone={client.paymentType === 'retainer' ? 'blue' : 'green'}>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
                         <Badge tone={client.status === 'ACTIVE' ? 'green' : client.status === 'PROSPECT' ? 'amber' : 'slate'}>{client.status}</Badge>
-<<<<<<< HEAD
-
-=======
                         {client.archivedAt && <Badge tone="slate">Archived</Badge>}
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
                       </div>
                       <div className="text-[12px] text-textMuted mt-1">
                         {client.paymentType === 'retainer'
@@ -298,29 +301,23 @@ export default function ClientsPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[220] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
           <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
-<<<<<<< HEAD
             <h2 className="text-[16px] font-semibold text-textPrimary">Remove {deleteTarget.client.name}?</h2>
             <p className="text-[13px] text-textSecondary mt-2">
-              This will move the client to Archive and stop future billing. Past transactions will remain in history.
+              Choose how to remove this client. Archiving keeps past payments in history. Deleting permanently wipes the client and every linked transaction.
             </p>
-            <div className="mt-4 rounded-md bg-blue-50 border border-blue-100 p-3 text-[13px] text-blue-700">
-=======
-            <h2 className="text-[16px] font-semibold text-textPrimary">Archive {deleteTarget.client.name}?</h2>
-            <p className="text-[13px] text-textSecondary mt-2">
-              Archiving this client stops future recurring billings. Past transactions remain unchanged.
-            </p>
-            <div className="mt-4 rounded-md bg-red-50 border border-red-100 p-3 text-[13px] text-red-700">
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
-              {deleteTarget.transactionCount} historical transaction{deleteTarget.transactionCount === 1 ? '' : 's'} totaling {money.format(deleteTarget.revenueTotal)} will stay in reports and payment history.
+            <div className="mt-4 space-y-2">
+              <div className="rounded-md bg-blue-50 border border-blue-100 p-3 text-[13px] text-blue-700">
+                <span className="font-medium">Archive:</span> {deleteTarget.transactionCount} historical transaction{deleteTarget.transactionCount === 1 ? '' : 's'} totaling {money.format(deleteTarget.revenueTotal)} will stay in reports and payment history.
+              </div>
+              <div className="rounded-md bg-red-50 border border-red-100 p-3 text-[13px] text-red-700">
+                <span className="font-medium">Delete permanently:</span> {deleteTarget.transactionCount} historical transaction{deleteTarget.transactionCount === 1 ? '' : 's'} totaling {money.format(deleteTarget.revenueTotal)} will be removed from reports and the ledger. This cannot be undone.
+              </div>
             </div>
             {deleteError && <p className="text-[13px] text-red-600 mt-3">{deleteError}</p>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
-              <button type="button" disabled={isDeleting} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
-<<<<<<< HEAD
-              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Removing...' : 'Remove Client'}</button>
-=======
-              <button type="button" disabled={isDeleting} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeleting ? 'Archiving...' : 'Archive Client'}</button>
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
+              <button type="button" disabled={isDeleting || isDeletingPermanent} onClick={closeDeleteModal} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
+              <button type="button" disabled={isDeleting || isDeletingPermanent} onClick={confirmDelete} className="px-4 py-2 rounded-md bg-slate-700 text-white text-[13px] font-medium hover:bg-slate-800 disabled:opacity-60">{isDeleting ? 'Archiving...' : 'Archive'}</button>
+              <button type="button" disabled={isDeleting || isDeletingPermanent} onClick={confirmDeletePermanently} className="px-4 py-2 rounded-md bg-red-600 text-white text-[13px] font-medium hover:bg-red-700 disabled:opacity-60">{isDeletingPermanent ? 'Deleting...' : 'Delete permanently'}</button>
             </div>
           </div>
         </div>
@@ -356,11 +353,7 @@ function ClientForm({ client, error, isSaving, onCancel, onSave }: { client?: Cl
       <div>
         <h2 className="text-[16px] font-semibold text-textPrimary">{client ? 'Edit Client' : 'Add Client'}</h2>
         <p className="text-[13px] text-textMuted">One-time clients record once. Retainers auto-record monthly income.</p>
-<<<<<<< HEAD
         {client && <p className="text-[13px] text-amber-600 mt-1">Changes to amount or billing date only affect future billings. Past transactions remain unchanged.</p>}
-=======
-        {client && <p className="text-[13px] text-amber-600 mt-1">Changing this will only affect future billings. Past transactions will remain unchanged.</p>}
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
         {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
