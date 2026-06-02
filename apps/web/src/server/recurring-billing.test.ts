@@ -98,7 +98,6 @@ describe('recurring billing', () => {
     expect(state.transactions[0].sourceBillingDate.toISOString().slice(0, 10)).toBe('2026-05-01');
     expect(state.clients[0].nextBillingDate.toISOString().slice(0, 10)).toBe('2026-06-01');
   });
-<<<<<<< HEAD
 
   it('skips removed (archived) clients when running due recurring payments', async () => {
     const state = makeTx();
@@ -140,6 +139,4 @@ describe('recurring billing', () => {
     expect(state.transactions).toHaveLength(0);
     expect(state.subscriptions[0].nextBillingDate.toISOString().slice(0, 10)).toBe('2026-05-01');
   });
-=======
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
 });

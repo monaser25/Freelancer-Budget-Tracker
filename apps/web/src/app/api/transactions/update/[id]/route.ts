@@ -46,15 +46,8 @@ export const PUT = async (request: Request, { params }: RouteContext) => withApi
   await prisma.transaction.updateMany({
     where: { id: params.id, userId, deletedAt: null },
     data: {
-<<<<<<< HEAD
       ...safeUpdate,
       isEdited: isAuto ? true : validated.isEdited ?? existing.isEdited,
-=======
-      ...validated,
-      date: validated.date ? toDate(validated.date) : undefined,
-      sourceBillingDate: validated.sourceBillingDate ? toDate(validated.sourceBillingDate) : undefined,
-      isEdited: existing.isAuto ? true : validated.isEdited ?? existing.isEdited,
->>>>>>> 8dff0d787412a023feb47cd94d0d5457c2fb31c8
     },
   });
 
