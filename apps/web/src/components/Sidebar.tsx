@@ -8,13 +8,17 @@ import { useAuth } from '@/components/AuthProvider';
 import { Icon } from '@/components/ui/Icon';
 import { Avatar } from '@/components/ui/Avatar';
 
-const navItems = [
+const primaryNavItems = [
   { href: '/', label: 'Overview', icon: 'layoutDashboard' },
   { href: '/transactions', label: 'Transactions', icon: 'walletCards' },
-  { href: '/subscriptions', label: 'Subscriptions', icon: 'creditCard' },
   { href: '/clients', label: 'Clients & Revenue', icon: 'users' },
+  { href: '/subscriptions', label: 'Subscriptions', icon: 'creditCard' },
   { href: '/analytics', label: 'Analytics', icon: 'barChart3' },
+];
+
+const secondaryNavItems = [
   { href: '/archive', label: 'Archive', icon: 'archive' },
+  { href: '/settings', label: 'Settings', icon: 'settings' },
 ];
 
 export function Sidebar() {
@@ -46,7 +50,7 @@ export function Sidebar() {
 
         {/* nav */}
         <nav className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">
-          {navItems.map((item) => {
+          {primaryNavItems.map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (
               <Link
@@ -70,20 +74,26 @@ export function Sidebar() {
           <div className="flex-1 min-h-[12px]" />
           <div className="h-[1px] bg-border my-[6px] mx-1" />
           
-          <Link
-            href="/settings"
-            className={`relative flex items-center gap-[11px] h-[38px] px-[11px] rounded-md text-[14px] transition-colors duration-fast focus-ring ${
-              pathname.startsWith('/settings') 
-                ? 'bg-accent-tint text-accent font-semibold' 
-                : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text font-medium'
-            }`}
-          >
-            {pathname.startsWith('/settings') && (
-              <span className="absolute left-0 top-2 bottom-2 w-[2.5px] rounded-full bg-accent" />
-            )}
-            <Icon name="settings" size={18} />
-            <span>Settings</span>
-          </Link>
+          {secondaryNavItems.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`relative flex items-center gap-[11px] h-[38px] px-[11px] rounded-md text-[14px] transition-colors duration-fast focus-ring ${
+                  active
+                    ? 'bg-accent-tint text-accent font-semibold'
+                    : 'bg-transparent text-text-secondary hover:bg-surface-hover hover:text-text font-medium'
+                }`}
+              >
+                {active && (
+                  <span className="absolute left-0 top-2 bottom-2 w-[2.5px] rounded-full bg-accent" />
+                )}
+                <Icon name={item.icon} size={18} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* user card */}
@@ -110,7 +120,7 @@ export function Sidebar() {
       {/* Mobile nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[150] border-t border-border bg-surface shadow-[0_-8px_24px_rgba(15,23,42,0.08)] overflow-x-auto pb-[env(safe-area-inset-bottom)]">
         <div className="flex min-w-max px-2 py-2">
-          {[...navItems, { href: '/settings', label: 'Settings', icon: 'settings' }].map((item) => {
+          {[...primaryNavItems, ...secondaryNavItems].map((item) => {
             const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
             return (
               <Link

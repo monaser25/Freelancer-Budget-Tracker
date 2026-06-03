@@ -1,9 +1,10 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/financialStore';
 import { Transaction } from '@/types/finance';
+import { makeCurrencyFormatter } from '@/lib/currency';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Field } from '@/components/ui/Form';
 
@@ -29,10 +30,12 @@ const toIsoDate = (date: string) => new Date(`${date}T12:00:00`).toISOString();
 export function Topbar() {
   const pathname = usePathname();
   const copy = pageCopy[pathname] || pageCopy['/'];
-  const { addTransaction } = useFinancialStore();
+  const { addTransaction, currency } = useFinancialStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const money = useMemo(() => makeCurrencyFormatter(currency), [currency]);
+  const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   const openModal = () => {
     setError(null);
@@ -80,7 +83,7 @@ export function Topbar() {
         </div>
         <div className="flex-1" />
 
-        <Button onClick={openModal} icon="plus" size="md">
+        <Button onClick={openModal} icon="plus" size="md" variant="secondary">
           New Transaction
         </Button>
       </header>
@@ -103,7 +106,7 @@ export function Topbar() {
                   </Select>
                 </Field>
                 <Field label="Amount">
-                  <Input name="amount" type="number" min="0" step="0.01" required />
+                  <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
                 </Field>
               </div>
               

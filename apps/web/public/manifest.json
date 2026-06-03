@@ -1,12 +1,12 @@
 {
-  "name": "FlowLedger - Freelancer Budget Tracker",
-  "short_name": "FlowLedger",
+  "name": "Haseela - Freelancer Budget Tracker",
+  "short_name": "Haseela",
   "description": "Track clients, retainers, subscriptions, and cashflow as a freelancer.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#2563EB",
+  "background_color": "#09090B",
+  "theme_color": "#6D5EFC",
   "orientation": "portrait-primary",
   "categories": ["finance", "productivity", "business"],
   "icons": [

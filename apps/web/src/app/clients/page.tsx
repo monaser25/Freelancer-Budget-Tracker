@@ -34,6 +34,8 @@ export default function ClientsPage() {
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  const moneyWithCents = useMemo(() => makeCurrencyFormatter(currency), [currency]);
+  const currencyPrefix = useMemo(() => moneyWithCents.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, moneyWithCents]);
 
   const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
   const openEditModal = (client: Client) => { setModalError(null); setModal({ mode: 'edit', client }); };
@@ -300,7 +302,7 @@ export default function ClientsPage() {
       {modal && (
         <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeModal}>
           <Card role="dialog" aria-modal="true" className="w-full max-w-[520px] max-h-[calc(100vh-2rem)] overflow-y-auto shadow-xl my-8" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <ClientForm client={modal.mode === 'edit' ? modal.client : undefined} error={modalError} isSaving={isSaving} onCancel={closeModal} onSave={saveClient} />
+            <ClientForm client={modal.mode === 'edit' ? modal.client : undefined} currencyPrefix={currencyPrefix} error={modalError} isSaving={isSaving} onCancel={closeModal} onSave={saveClient} />
           </Card>
         </div>
       )}
@@ -333,7 +335,7 @@ export default function ClientsPage() {
   );
 }
 
-function ClientForm({ client, error, isSaving, onCancel, onSave }: { client?: Client; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Client) => void }) {
+function ClientForm({ client, currencyPrefix, error, isSaving, onCancel, onSave }: { client?: Client; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Client) => void }) {
   const [paymentType, setPaymentType] = useState<Client['paymentType']>(client?.paymentType || 'onetime');
 
   return (
@@ -349,7 +351,7 @@ function ClientForm({ client, error, isSaving, onCancel, onSave }: { client?: Cl
           <Input name="name" defaultValue={client?.name} required />
         </Field>
         <Field label="Amount">
-          <Input name="revenue" type="number" min="0" step="0.01" defaultValue={client?.revenue} required />
+          <Input name="revenue" type="number" min="0" step="0.01" defaultValue={client?.revenue} required prefix={currencyPrefix} />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

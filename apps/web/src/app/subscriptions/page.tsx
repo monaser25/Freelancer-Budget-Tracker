@@ -36,6 +36,7 @@ export default function SubscriptionsPage() {
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const money = useMemo(() => makeCurrencyFormatter(currency), [currency]);
+  const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -215,7 +216,7 @@ export default function SubscriptionsPage() {
       {modal && (
         <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
           <Card role="dialog" aria-modal="true" className="w-full max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto shadow-xl my-8" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <SubscriptionForm subscription={modal.mode === 'edit' ? modal.subscription : undefined} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveSubscription} />
+            <SubscriptionForm subscription={modal.mode === 'edit' ? modal.subscription : undefined} currencyPrefix={currencyPrefix} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveSubscription} />
           </Card>
         </div>
       )}
@@ -247,7 +248,7 @@ export default function SubscriptionsPage() {
   );
 }
 
-function SubscriptionForm({ subscription, error, isSaving, onCancel, onSave }: { subscription?: Subscription; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Subscription) => void }) {
+function SubscriptionForm({ subscription, currencyPrefix, error, isSaving, onCancel, onSave }: { subscription?: Subscription; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Subscription) => void }) {
   const defaultBillingDate = subscription?.nextBillingDate ? String(subscription.nextBillingDate).slice(0, 10) : computeNextBillingDate(new Date().getDate());
 
   return (
@@ -263,7 +264,7 @@ function SubscriptionForm({ subscription, error, isSaving, onCancel, onSave }: {
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Cost">
-          <Input name="amount" type="number" min="0" step="0.01" defaultValue={subscription?.amount} required />
+          <Input name="amount" type="number" min="0" step="0.01" defaultValue={subscription?.amount} required prefix={currencyPrefix} />
         </Field>
         <Field label="Next billing date">
           <Input name="nextBillingDate" type="date" defaultValue={defaultBillingDate} required />

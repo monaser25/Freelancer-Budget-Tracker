@@ -97,7 +97,7 @@ export default function ArchivePage() {
                           <Badge>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
                         </div>
                         <div className="text-sm text-text-muted mt-0.5">
-                          {money.format(client.revenue)}/mo
+                          {client.paymentType === 'retainer' ? `${money.format(client.revenue)}/mo` : money.format(client.revenue)}
                           {' · '}
                           {clientTransactionCount(client.id)} historical transaction{clientTransactionCount(client.id) === 1 ? '' : 's'}
                           {client.archivedAt && (

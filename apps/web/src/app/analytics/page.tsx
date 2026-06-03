@@ -22,6 +22,13 @@ type Period = 'week' | 'month' | 'year';
 
 const ACCENT = 'var(--accent)';
 
+const formatEnumLabel = (value: string) => value
+  .toLowerCase()
+  .split(/[_\s-]+/)
+  .filter(Boolean)
+  .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+  .join(' ');
+
 // ─── period helpers ────────────────────────────────────────────────────────────
 
 function getPeriodRange(period: Period): { start: Date; end: Date } {
@@ -132,7 +139,7 @@ export default function AnalyticsPage() {
     periodTxs.filter(t => t.type === 'EXPENSE').forEach(t => {
       map[t.categoryId] = (map[t.categoryId] || 0) + t.amount;
     });
-    return Object.entries(map).map(([cat, amt]) => ({ category: cat, amount: amt })).sort((a, b) => b.amount - a.amount);
+    return Object.entries(map).map(([cat, amt]) => ({ category: formatEnumLabel(cat), amount: amt })).sort((a, b) => b.amount - a.amount);
   }, [periodTxs]);
 
   const clientRows = useMemo(() => {
@@ -143,6 +150,7 @@ export default function AnalyticsPage() {
       return { client, revenue: rev };
     }).sort((a, b) => b.revenue - a.revenue);
   }, [clients, periodTxs]);
+  const revenueClientRows = useMemo(() => clientRows.filter((row) => row.revenue > 0), [clientRows]);
   
   const totalClientRev = useMemo(() => clientRows.reduce((a, c) => a + c.revenue, 0), [clientRows]);
 
@@ -231,7 +239,7 @@ export default function AnalyticsPage() {
             <div className="py-10 text-center text-sm text-text-muted">No client income recorded {periodLabel.toLowerCase()}</div>
           ) : (
             <div className="flex flex-col gap-3 mt-4">
-              {clientRows.map(({ client, revenue }, i) => {
+              {revenueClientRows.map(({ client, revenue }, i) => {
                 const pct = totalClientRev > 0 ? Math.round((revenue / totalClientRev) * 100) : 0;
                 return (
                   <div key={client.id} className="flex items-center gap-3">
@@ -304,7 +312,7 @@ export default function AnalyticsPage() {
                     <Avatar name={sub.name} size={32} />
                     <div className="flex-1 min-w-0">
                       <div className="t-body-m truncate">{sub.name}</div>
-                      <div className="text-xs text-text-muted">{pct}% of expenses · {sub.cycle.toLowerCase()} billing</div>
+                      <div className="text-xs text-text-muted">{pct}% of expenses · {formatEnumLabel(sub.billingCycle || sub.cycle)} billing</div>
                     </div>
                     <span className="t-body-m font-mono text-negative">{money.format(cost)}</span>
                   </div>
