@@ -237,7 +237,9 @@ export default function ClientsPage() {
                         <IconButton icon="DollarSign" size="sm" disabled={recordingId === client.id} onClick={() => recordPayment(client)} title={`Record payment for ${client.name}`} className="text-positive hover:text-positive" />
                       )}
                       <IconButton icon="Pencil" size="sm" onClick={() => openEditModal(client)} title={`Edit ${client.name}`} />
-                      <IconButton icon="Trash2" size="sm" onClick={() => requestDelete(client)} title={`Delete ${client.name}`} className="text-negative hover:text-negative" />
+                      <Button type="button" variant="secondary" size="sm" icon="Archive" onClick={() => requestDelete(client)}>
+                        Archive
+                      </Button>
                     </div>
                   </div>
                   </div>
@@ -306,9 +308,9 @@ export default function ClientsPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[220] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
           <Card role="dialog" aria-modal="true" className="w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto shadow-xl my-8" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <h2 className="t-h3">Remove {deleteTarget.client.name}?</h2>
+            <h2 className="t-h3">Archive {deleteTarget.client.name}?</h2>
             <p className="text-sm text-text-secondary mt-2">
-              Choose how to remove this client. Archiving keeps past payments in history. Deleting permanently wipes the client and every linked transaction.
+              Archiving keeps past payments in history and stops future billing. Permanent delete is still available if you need to wipe the client and linked transactions.
             </p>
             <div className="mt-4 space-y-2">
               <div className="rounded-md bg-info-tint border border-info-border p-3 text-sm text-info">

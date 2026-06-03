@@ -37,12 +37,12 @@ export function Sidebar() {
     <>
       <aside className="hidden md:flex w-[var(--sidebar-w)] bg-surface border-r border-border flex-col fixed top-0 left-0 h-screen z-[100] p-0 transition-[width] duration-base ease-out">
         {/* brand */}
-        <div className="flex items-center gap-[10px] h-[var(--header-h)] px-[18px] border-b border-border shrink-0">
+        <Link href="/" className="focus-ring flex items-center gap-[10px] h-[var(--header-h)] px-[18px] border-b border-border shrink-0 hover:bg-surface-hover transition-colors">
           <div className="w-[30px] h-[30px] rounded-[9px] bg-accent flex items-center justify-center shrink-0 shadow-[0_2px_8px_color-mix(in_srgb,var(--accent)_40%,transparent)]">
             <Icon name="wallet" size={18} className="text-white" />
           </div>
           <span className="text-[16px] font-semibold tracking-[-0.02em] text-text">Haseela</span>
-        </div>
+        </Link>
 
         {/* nav */}
         <nav className="flex-1 overflow-y-auto p-3 flex flex-col gap-0.5">

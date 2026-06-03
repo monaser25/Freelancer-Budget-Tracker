@@ -194,7 +194,9 @@ export default function SubscriptionsPage() {
                         <IconButton icon="DollarSign" size="sm" disabled={recordingId === sub.id} onClick={() => recordPayment(sub)} title={`Record payment for ${sub.name}`} className="text-positive hover:text-positive" />
                       )}
                       <IconButton icon="Pencil" size="sm" onClick={() => { setModalError(null); setModal({ mode: 'edit', subscription: sub }); }} title={`Edit ${sub.name}`} />
-                      <IconButton icon="Trash2" size="sm" onClick={() => requestDelete(sub)} title={`Delete ${sub.name}`} className="text-negative hover:text-negative" />
+                      <Button type="button" variant="secondary" size="sm" icon="Archive" onClick={() => requestDelete(sub)}>
+                        Archive
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -221,7 +223,7 @@ export default function SubscriptionsPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[220] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
           <Card role="dialog" aria-modal="true" className="w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto shadow-xl my-8" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <h2 className="t-h3">Remove {deleteTarget.subscription.name}?</h2>
+            <h2 className="t-h3">Archive {deleteTarget.subscription.name}?</h2>
             <p className="text-sm text-text-secondary mt-2">
               This will move the subscription to Archive and stop future billing. Past transactions will remain in history.
             </p>
@@ -236,7 +238,7 @@ export default function SubscriptionsPage() {
             {deleteError && <div className="mt-3"><InlineAlert tone="negative">{deleteError}</InlineAlert></div>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
               <Button type="button" variant="ghost" disabled={isDeleting} onClick={closeDeleteModal}>Cancel</Button>
-              <Button type="button" variant="destructive" loading={isDeleting} onClick={confirmDelete}>{isDeleting ? 'Removing...' : 'Remove subscription'}</Button>
+              <Button type="button" variant="destructive" loading={isDeleting} onClick={confirmDelete}>{isDeleting ? 'Archiving...' : 'Archive subscription'}</Button>
             </div>
           </Card>
         </div>

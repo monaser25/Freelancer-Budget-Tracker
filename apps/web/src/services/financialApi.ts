@@ -61,7 +61,7 @@ const authHeaders = async () => {
 
 const logApiFailure = (method: string, url: string, err: unknown) => {
   if (err instanceof ApiRequestError) {
-    console.error('FlowLedger API request failed', {
+    console.error('Haseela API request failed', {
       method,
       url,
       status: err.status,
@@ -70,7 +70,7 @@ const logApiFailure = (method: string, url: string, err: unknown) => {
     return;
   }
 
-  console.error('FlowLedger API request failed', {
+  console.error('Haseela API request failed', {
     method,
     url,
     error: err instanceof Error ? err.message : String(err),
@@ -85,7 +85,19 @@ const userMessageForFailure = (resource: string, err: unknown) => {
     return `Unable to ${resource}. Server responded with ${err.status}.`;
   }
 
-  return `Unable to ${resource}. Check that the API is reachable and try again.`;
+  if (err instanceof Error) {
+    if (err.message.includes('Missing authenticated Supabase session') || err.message.includes('Invalid or expired session')) {
+      return `Unable to ${resource}. Your session expired. Please log in again.`;
+    }
+    if (err.message.includes('Missing local development session')) {
+      return `Unable to ${resource}. Sign in again to restore the local development session.`;
+    }
+    if (err.message.includes('Failed to fetch')) {
+      return `Unable to ${resource}. Check that the API is reachable and try again.`;
+    }
+  }
+
+  return `Unable to ${resource}. ${err instanceof Error ? err.message : 'Check that the API is reachable and try again.'}`;
 };
 
 const apiRequest = async <T>(path: string, options: RequestInit = {}, resource: string): Promise<T> => {

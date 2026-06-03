@@ -1,7 +1,8 @@
 'use client';
 
 import { useFinancialStore } from '@/store/useFinancialStore';
-import { Transaction } from '@/types/finance';
+import { Client, Subscription, Transaction } from '@/types/finance';
+import { computeNextBillingDate } from '@/store/financialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -14,7 +15,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Field, Input, Select } from '@/components/ui/Form';
 import { InlineAlert } from '@/components/ui/InlineAlert';
 
-type ModalType = 'income' | 'expense' | null;
+type ModalType = 'income' | 'expense' | 'client' | 'subscription' | null;
 type MonthlyChartRow = {
   key: string;
   month: string;
@@ -56,6 +57,8 @@ export default function DashboardPage() {
     currency,
     error,
     addTransaction,
+    addClient,
+    addSubscription,
   } = useFinancialStore();
   const [modal, setModal] = useState<ModalType>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -156,6 +159,80 @@ export default function DashboardPage() {
     }
   };
 
+  const saveClient = async (formData: FormData) => {
+    const paymentType = String(formData.get('paymentType') || 'onetime') as Client['paymentType'];
+    const revenue = Number(formData.get('revenue') || 0);
+    const name = String(formData.get('name') || '').trim();
+    const paymentDate = String(formData.get('paymentDate') || today());
+    const nextBillingDate = paymentType === 'retainer'
+      ? String(formData.get('nextBillingDate') || computeNextBillingDate(new Date().getDate()))
+      : undefined;
+
+    if (!name || revenue <= 0) {
+      setModalError('Name and a positive amount are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      await addClient({
+        id: makeId(),
+        name,
+        company: String(formData.get('company') || '').trim(),
+        email: String(formData.get('email') || '').trim(),
+        revenue,
+        clientType: String(formData.get('clientType') || 'COMPANY') as Client['clientType'],
+        status: 'ACTIVE',
+        paymentType,
+        paymentDate: paymentType === 'onetime' ? paymentDate : undefined,
+        billingDay: nextBillingDate ? Math.max(1, Math.min(28, new Date(`${nextBillingDate}T12:00:00`).getDate())) : undefined,
+        nextBillingDate,
+        recorded: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      setModal(null);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to create client');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveSubscription = async (formData: FormData) => {
+    const name = String(formData.get('name') || '').trim();
+    const amount = Number(formData.get('amount') || 0);
+    const cycle = String(formData.get('billingCycle') || 'MONTHLY') as Subscription['cycle'];
+    const nextBillingDate = String(formData.get('nextBillingDate') || computeNextBillingDate(new Date().getDate()));
+
+    if (!name || amount <= 0 || !nextBillingDate) {
+      setModalError('Name, amount, and next billing date are required.');
+      return;
+    }
+
+    setIsSaving(true);
+    setModalError(null);
+    try {
+      await addSubscription({
+        id: makeId(),
+        name,
+        amount,
+        cycle,
+        billingCycle: cycle,
+        notes: String(formData.get('notes') || '').trim(),
+        billingDay: Math.max(1, Math.min(28, new Date(`${nextBillingDate}T12:00:00`).getDate())),
+        nextBillingDate,
+        status: 'ACTIVE',
+      });
+      setModal(null);
+    } catch (err) {
+      setModalError(err instanceof Error ? err.message : 'Failed to create subscription');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const chartRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
   const chartExpenses = chartData.reduce((sum, item) => sum + item.expenses, 0);
   const chartMargin = chartRevenue > 0 ? Math.round(((chartRevenue - chartExpenses) / chartRevenue) * 100) : 0;
@@ -173,8 +250,8 @@ export default function DashboardPage() {
       <div className="flex flex-wrap gap-2.5">
         <Button icon="TrendingUp" onClick={() => { setModalError(null); setModal('income'); }}>Add revenue</Button>
         <Button variant="secondary" icon="Receipt" onClick={() => { setModalError(null); setModal('expense'); }}>Log expense</Button>
-        <Button variant="secondary" icon="RefreshCw" onClick={() => router.push('/subscriptions?action=tool')}>Add subscription</Button>
-        <Button variant="secondary" icon="Users" onClick={() => router.push('/clients?action=client')}>Add client</Button>
+        <Button variant="secondary" icon="RefreshCw" onClick={() => { setModalError(null); setModal('subscription'); }}>Add subscription</Button>
+        <Button variant="secondary" icon="Users" onClick={() => { setModalError(null); setModal('client'); }}>Add client</Button>
       </div>
 
       {/* Stat Cards */}
@@ -351,64 +428,186 @@ export default function DashboardPage() {
 
       {modal && (
         <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" onMouseDown={() => { if (!isSaving) setModal(null); }}>
-          <Card role="dialog" aria-modal="true" aria-labelledby="dashboard-transaction-title" className="w-full max-w-md my-8 relative shadow-xl" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                saveTransaction(new FormData(event.currentTarget), modal === 'income' ? 'INCOME' : 'EXPENSE');
-              }}
-              className="flex flex-col gap-4"
-            >
-              <div>
-                <h2 id="dashboard-transaction-title" className="t-h3">{modal === 'income' ? 'Add revenue' : 'Log expense'}</h2>
-                <p className="text-sm text-text-muted mt-1">Record a {modal === 'income' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
-                {modalError && <p className="text-sm text-negative mt-2">{modalError}</p>}
-              </div>
-              
-              <Field label="Transaction Name">
-                <Input name="name" placeholder={modal === 'income' ? 'Website design project' : 'Adobe Creative Cloud'} required autoFocus />
-              </Field>
-              
-              <Field label="Notes">
-                <Input name="notes" placeholder="Optional details" />
-              </Field>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Amount">
-                  <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
-                </Field>
-                <Field label="Date">
-                  <Input name="date" type="date" defaultValue={today()} required />
-                </Field>
-              </div>
-              
-              <Field label="Category">
-                <Select name="categoryId">
-                  {modal === 'income' ? (
-                    <>
-                      <option value="CLIENT">Client Payment</option>
-                      <option value="PROJECT">Project Revenue</option>
-                      <option value="OTHER">Other Income</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="TOOLS">Tools</option>
-                      <option value="OPERATIONS">Operations</option>
-                      <option value="TAXES">Taxes</option>
-                      <option value="OTHER">Other Expense</option>
-                    </>
-                  )}
-                </Select>
-              </Field>
-              
-              <div className="flex justify-end gap-2 pt-2 mt-2">
-                <Button type="button" variant="ghost" disabled={isSaving} onClick={() => setModal(null)}>Cancel</Button>
-                <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save Entry'}</Button>
-              </div>
-            </form>
+          <Card role="dialog" aria-modal="true" aria-labelledby="dashboard-modal-title" className="w-full max-w-md my-8 relative shadow-xl" pad={24} onMouseDown={(event) => event.stopPropagation()}>
+            {(modal === 'income' || modal === 'expense') && (
+              <DashboardTransactionForm
+                type={modal === 'income' ? 'INCOME' : 'EXPENSE'}
+                currencyPrefix={currencyPrefix}
+                error={modalError}
+                isSaving={isSaving}
+                onCancel={() => setModal(null)}
+                onSave={saveTransaction}
+              />
+            )}
+            {modal === 'client' && (
+              <DashboardClientForm
+                currencyPrefix={currencyPrefix}
+                error={modalError}
+                isSaving={isSaving}
+                onCancel={() => setModal(null)}
+                onSave={saveClient}
+              />
+            )}
+            {modal === 'subscription' && (
+              <DashboardSubscriptionForm
+                currencyPrefix={currencyPrefix}
+                error={modalError}
+                isSaving={isSaving}
+                onCancel={() => setModal(null)}
+                onSave={saveSubscription}
+              />
+            )}
           </Card>
         </div>
       )}
     </div>
+  );
+}
+
+function DashboardTransactionForm({ type, currencyPrefix, error, isSaving, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE'; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, type: 'INCOME' | 'EXPENSE') => void }) {
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(new FormData(event.currentTarget), type);
+      }}
+      className="flex flex-col gap-4"
+    >
+      <div>
+        <h2 id="dashboard-modal-title" className="t-h3">{type === 'INCOME' ? 'Add revenue' : 'Log expense'}</h2>
+        <p className="text-sm text-text-muted mt-1">Record a {type === 'INCOME' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
+        {error && <p className="text-sm text-negative mt-2">{error}</p>}
+      </div>
+      <Field label="Transaction name">
+        <Input name="name" placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required autoFocus />
+      </Field>
+      <Field label="Notes">
+        <Input name="notes" placeholder="Optional details" />
+      </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Amount">
+          <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
+        </Field>
+        <Field label="Date">
+          <Input name="date" type="date" defaultValue={today()} required />
+        </Field>
+      </div>
+      <Field label="Category">
+        <Select name="categoryId">
+          {type === 'INCOME' ? (
+            <>
+              <option value="CLIENT">Client Payment</option>
+              <option value="PROJECT">Project Revenue</option>
+              <option value="OTHER">Other Income</option>
+            </>
+          ) : (
+            <>
+              <option value="TOOLS">Tools</option>
+              <option value="OPERATIONS">Operations</option>
+              <option value="TAXES">Taxes</option>
+              <option value="OTHER">Other Expense</option>
+            </>
+          )}
+        </Select>
+      </Field>
+      <div className="flex justify-end gap-2 pt-2 mt-2">
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save entry'}</Button>
+      </div>
+    </form>
+  );
+}
+
+function DashboardClientForm({ currencyPrefix, error, isSaving, onCancel, onSave }: { currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData) => void }) {
+  const [paymentType, setPaymentType] = useState<Client['paymentType']>('onetime');
+
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
+      <div>
+        <h2 id="dashboard-modal-title" className="t-h3">Add client</h2>
+        <p className="text-sm text-text-muted mt-1">Create a one-time client or monthly retainer from here.</p>
+        {error && <p className="text-sm text-negative mt-2">{error}</p>}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Client name">
+          <Input name="name" required autoFocus />
+        </Field>
+        <Field label="Amount">
+          <Input name="revenue" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Company">
+          <Input name="company" />
+        </Field>
+        <Field label="Email">
+          <Input name="email" type="email" />
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Client type">
+          <Select name="clientType" defaultValue="COMPANY">
+            <option value="COMPANY">Company</option>
+            <option value="INDIVIDUAL">Individual</option>
+          </Select>
+        </Field>
+        <Field label="Payment type">
+          <Select name="paymentType" value={paymentType} onChange={(event) => setPaymentType(event.target.value as Client['paymentType'])}>
+            <option value="onetime">One-time payment</option>
+            <option value="retainer">Monthly retainer</option>
+          </Select>
+        </Field>
+      </div>
+      {paymentType === 'retainer' ? (
+        <Field label="Next billing date">
+          <Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required />
+        </Field>
+      ) : (
+        <Field label="Payment date">
+          <Input name="paymentDate" type="date" defaultValue={today()} required />
+        </Field>
+      )}
+      <div className="flex justify-end gap-2 pt-2 mt-2">
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save client'}</Button>
+      </div>
+    </form>
+  );
+}
+
+function DashboardSubscriptionForm({ currencyPrefix, error, isSaving, onCancel, onSave }: { currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData) => void }) {
+  return (
+    <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
+      <div>
+        <h2 id="dashboard-modal-title" className="t-h3">Add subscription</h2>
+        <p className="text-sm text-text-muted mt-1">Track a recurring software or service cost.</p>
+        {error && <p className="text-sm text-negative mt-2">{error}</p>}
+      </div>
+      <Field label="Service name">
+        <Input name="name" placeholder="Vercel Pro" required autoFocus />
+      </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Field label="Cost">
+          <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
+        </Field>
+        <Field label="Next billing date">
+          <Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required />
+        </Field>
+      </div>
+      <Field label="Billing cycle">
+        <Select name="billingCycle" defaultValue="MONTHLY">
+          <option value="MONTHLY">Monthly</option>
+          <option value="QUARTERLY">Quarterly</option>
+          <option value="YEARLY">Yearly</option>
+        </Select>
+      </Field>
+      <Field label="Notes">
+        <Input name="notes" placeholder="Optional" />
+      </Field>
+      <div className="flex justify-end gap-2 pt-2 mt-2">
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save subscription'}</Button>
+      </div>
+    </form>
   );
 }
