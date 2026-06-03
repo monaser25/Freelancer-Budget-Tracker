@@ -10,7 +10,13 @@ export type FinancialSnapshot = {
 
 const apiBaseUrl = () => {
   const raw = process.env.NEXT_PUBLIC_API_URL || '';
-  return raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
+  const value = raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
+
+  // The production app uses Next.js Route Handlers on the same origin. Older
+  // local environments may still point to the removed Express API on :4000.
+  if (!value || /localhost:4000|127\.0\.0\.1:4000/.test(value)) return '';
+
+  return value;
 };
 
 class ApiRequestError extends Error {
