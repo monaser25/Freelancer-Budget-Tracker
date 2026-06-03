@@ -1,0 +1,190 @@
+/* ============================================================
+   FlowLedger — "Calm Fintech" design tokens
+   Dark-mode-first. Light derived. Values per brief §2.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ---- Brand / accent (indigo-violet) ---- */
+  --accent:        #6D5EFC;
+  --accent-hover:  #5B4FE0;
+  --accent-tint:   #EEEDFE;
+  --accent-fg:     #FFFFFF;
+
+  /* ---- Neutrals & surfaces (LIGHT) ---- */
+  --bg:              #FBFBFD;
+  --surface:         #FFFFFF;
+  --surface-elevated:#FFFFFF;
+  --surface-hover:   #F4F4F6;
+  --border:          #E7E7EC;
+  --border-strong:   #D4D4D8;
+  --text:            #18181B;
+  --text-secondary:  #52525B;
+  --text-muted:      #A1A1AA;
+
+  /* ---- Semantic (finance) ---- */
+  --positive:      #10B981;
+  --positive-tint: #ECFDF5;
+  --negative:      #EF4444;
+  --negative-tint: #FEF2F2;
+  --warning:       #F59E0B;
+  --warning-tint:  #FFFBEB;
+  --info:          #0EA5E9;
+
+  /* ---- Data-viz palette ---- */
+  --viz-1:#6D5EFC; --viz-2:#10B981; --viz-3:#F59E0B; --viz-4:#0EA5E9;
+  --viz-5:#F43F5E; --viz-6:#8B5CF6; --viz-7:#14B8A6;
+
+  /* ---- Radius ---- */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px; --r-full:999px;
+
+  /* ---- Shadows (light) ---- */
+  --shadow-sm: 0 1px 2px rgba(16,24,40,.06);
+  --shadow-md: 0 4px 12px rgba(16,24,40,.08);
+  --shadow-lg: 0 12px 32px rgba(16,24,40,.12);
+  --ring: 0 0 0 1px var(--border);
+
+  /* ---- Motion ---- */
+  --dur-fast:120ms; --dur-base:180ms; --dur-slow:240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in:  cubic-bezier(0.4, 0, 1, 1);
+
+  /* ---- Layout ---- */
+  --sidebar-w:260px; --sidebar-rail:72px; --header-h:60px; --content-max:1280px;
+
+  --font: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+.dark {
+  --accent:        #7C6FFF;
+  --accent-hover:  #8B7FFF;
+  --accent-tint:   #1C1A33;
+  --accent-fg:     #FFFFFF;
+
+  --bg:              #09090B;
+  --surface:         #18181B;
+  --surface-elevated:#1F1F23;
+  --surface-hover:   #222226;
+  --border:          #27272A;
+  --border-strong:   #3F3F46;
+  --text:            #FAFAFA;
+  --text-secondary:  #A1A1AA;
+  --text-muted:      #71717A;
+
+  --positive:      #34D399;
+  --positive-tint: #0E2A22;
+  --negative:      #F87171;
+  --negative-tint: #2A1414;
+  --warning:       #FBBF24;
+  --warning-tint:  #2A2010;
+  --info:          #38BDF8;
+
+  --viz-1:#7C6FFF; --viz-2:#34D399; --viz-3:#FBBF24; --viz-4:#38BDF8;
+  --viz-5:#FB7185; --viz-6:#A78BFA; --viz-7:#2DD4BF;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.5);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.6);
+  --ring: 0 0 0 1px var(--border);
+  color-scheme: dark;
+}
+
+/* ============================================================
+   Base reset
+   ============================================================ */
+*,*::before,*::after { box-sizing:border-box; }
+html,body { margin:0; padding:0; height:100%; }
+body {
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px; line-height:20px; font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  transition: background var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+}
+#root { height:100%; }
+button { font-family:inherit; }
+input,select,textarea,button { font-family:inherit; font-size:inherit; }
+a { color:inherit; text-decoration:none; }
+::selection { background:var(--accent-tint); }
+
+/* tabular numerals everywhere numbers live */
+.tnum { font-feature-settings:"tnum" 1, "cv01" 1; font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   Type ramp (web) — brief §2.2
+   ============================================================ */
+.t-display { font-size:32px; line-height:40px; font-weight:600; letter-spacing:-0.02em; }
+.t-h1      { font-size:24px; line-height:32px; font-weight:600; letter-spacing:-0.015em; }
+.t-h2      { font-size:20px; line-height:28px; font-weight:600; letter-spacing:-0.01em; }
+.t-h3      { font-size:17px; line-height:24px; font-weight:600; }
+.t-body    { font-size:14px; line-height:20px; font-weight:400; }
+.t-body-m  { font-size:14px; line-height:20px; font-weight:500; }
+.t-small   { font-size:13px; line-height:18px; font-weight:400; }
+.t-caption { font-size:12px; line-height:16px; font-weight:500; text-transform:uppercase; letter-spacing:0.04em; }
+.t-micro   { font-size:11px; line-height:14px; font-weight:500; }
+
+.text-secondary{ color:var(--text-secondary); }
+.text-muted{ color:var(--text-muted); }
+.pos{ color:var(--positive); }
+.neg{ color:var(--negative); }
+
+/* ============================================================
+   Focus ring — brief §2.5
+   ============================================================ */
+.focus-ring:focus-visible,
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline:none;
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background:var(--border-strong); border-radius:99px; border:3px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover{ background:var(--text-muted); }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* ============================================================
+   Animations / keyframes
+   ============================================================ */
+@keyframes fl-fade { from{opacity:0} to{opacity:1} }
+@keyframes fl-rise { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
+@keyframes fl-slide-right { from{transform:translateX(100%)} to{transform:translateX(0)} }
+@keyframes fl-shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+@keyframes fl-spin { to{ transform:rotate(360deg) } }
+@keyframes fl-scale-in { from{opacity:0; transform:scale(.96)} to{opacity:1; transform:scale(1)} }
+@keyframes fl-pop { 0%{transform:scale(.8); opacity:0} 60%{transform:scale(1.05)} 100%{transform:scale(1); opacity:1} }
+
+.anim-fade { animation: fl-fade var(--dur-base) var(--ease-out) both; }
+.anim-rise { animation: fl-rise var(--dur-base) var(--ease-out) both; }
+.anim-scale{ animation: fl-scale-in var(--dur-base) var(--ease-out) both; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-hover) 25%, var(--border) 37%, var(--surface-hover) 63%);
+  background-size:800px 100%;
+  animation: fl-shimmer 1.4s linear infinite;
+  border-radius:8px;
+}
+
+.spinner {
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid currentColor; border-top-color:transparent;
+  animation: fl-spin .7s linear infinite; display:inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
+
+/* generic helpers */
+.flex{display:flex;} .col{flex-direction:column;} .items-center{align-items:center;}
+.justify-between{justify-content:space-between;} .gap-4{gap:4px;} .gap-8{gap:8px;}
+.gap-12{gap:12px;} .gap-16{gap:16px;} .gap-24{gap:24px;}
+.right{ text-align:right; } .center{ text-align:center; }
+.w-full{ width:100%; } .grow{ flex:1; }

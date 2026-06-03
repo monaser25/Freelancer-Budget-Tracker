@@ -51,6 +51,7 @@ export default function RegisterPage() {
     setNotice(null);
     setConfirmationEmail(null);
     const formData = new FormData(event.currentTarget);
+    const name = String(formData.get('name') || '').trim();
     const email = String(formData.get('email') || '').trim();
     const submittedPassword = String(formData.get('password') || password);
     const cooldownSeconds = getAuthEmailCooldownSeconds(email);
@@ -64,7 +65,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await signUp(email, submittedPassword);
+      await signUp(email, submittedPassword, name);
       setAuthEmailCooldown(email);
       setConfirmationEmail(email);
       setNotice('Check your email to confirm your account before logging in.');
@@ -170,8 +171,12 @@ export default function RegisterPage() {
       )}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Field label="Name">
+          <Input name="name" type="text" placeholder="Your name" required autoFocus />
+        </Field>
+
         <Field label="Email">
-          <Input name="email" type="email" placeholder="you@email.com" required autoFocus />
+          <Input name="email" type="email" placeholder="you@email.com" required />
         </Field>
 
         <Field label="Password" hint="Minimum 8 characters">

@@ -60,6 +60,26 @@ export const SubscriptionSchema = z.object({
   archivedAt: optionalDateString,
 });
 
+export const InvoiceLineItemSchema = z.object({
+  description: z.string().trim().min(1),
+  quantity: z.coerce.number().nonnegative().default(1),
+  rate: z.coerce.number().default(0),
+});
+
+export const InvoiceSchema = z.object({
+  number: optionalString,
+  clientId: optionalString,
+  issueDate: dateString,
+  dueDate: dateString,
+  status: z.enum(['DRAFT', 'SENT', 'PAID', 'OVERDUE']).default('DRAFT'),
+  currency: z.enum(['USD', 'EUR', 'GBP', 'EGP', 'SAR', 'AED']).default('USD'),
+  taxRate: z.coerce.number().min(0).max(100).default(0),
+  discount: z.coerce.number().min(0).default(0),
+  notes: optionalString,
+  terms: optionalString,
+  lineItems: z.array(InvoiceLineItemSchema).min(1, 'Add at least one line item'),
+});
+
 export const TransactionSchema = z.object({
   name: z.string().trim().min(1),
   amount: z.coerce.number().positive(),

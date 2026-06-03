@@ -162,6 +162,17 @@
   }
 }
 
+/* Print: isolate the invoice/report document so "Print" yields a clean PDF */
+@media print {
+  body * { visibility: hidden; }
+  #invoice-document, #invoice-document *,
+  #report-document, #report-document * { visibility: visible; }
+  #invoice-document, #report-document {
+    position: absolute; left: 0; top: 0; width: 100%;
+    border: none !important; border-radius: 0 !important; box-shadow: none !important;
+  }
+}
+
 @keyframes fl-fade { from{opacity:0} to{opacity:1} }
 @keyframes fl-rise { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)} }
 @keyframes fl-slide-right { from{transform:translateX(100%)} to{transform:translateX(0)} }

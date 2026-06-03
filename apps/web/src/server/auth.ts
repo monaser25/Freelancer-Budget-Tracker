@@ -5,6 +5,7 @@ import { getSupabaseAuthClient } from './supabase';
 export type AuthenticatedUser = {
   id: string;
   email?: string;
+  name?: string;
 };
 
 export const extractBearerToken = (authorizationHeader?: string | null) => {
@@ -40,6 +41,7 @@ const parseDevToken = (token: string): AuthenticatedUser | null => {
 export const mapSupabaseUser = (user: User): AuthenticatedUser => ({
   id: user.id,
   email: user.email ?? undefined,
+  name: (user.user_metadata?.name as string | undefined) ?? undefined,
 });
 
 export const authenticateRequest = async (request: Request) => {

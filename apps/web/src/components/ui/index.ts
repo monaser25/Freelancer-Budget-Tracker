@@ -7,3 +7,8 @@ export * from './Form';
 export * from './EmptyState';
 export * from './InlineAlert';
 export * from './Skeleton';
+export * from './Menu';
+export * from './Modal';
+export * from './Drawer';
+export * from './Toast';
+export * from './ConfirmDialog';

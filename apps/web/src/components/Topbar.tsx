@@ -1,147 +1,88 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { useFinancialStore } from '@/store/financialStore';
-import { Transaction } from '@/types/finance';
-import { makeCurrencyFormatter } from '@/lib/currency';
-import { Button } from '@/components/ui/Button';
-import { Input, Select, Field } from '@/components/ui/Form';
+import { usePathname, useRouter } from 'next/navigation';
+import { useUiStore } from '@/store/uiStore';
+import { useNotificationStore } from '@/store/notificationStore';
+import { useTheme } from '@/components/ThemeProvider';
+import { Icon } from '@/components/ui/Icon';
+import { Button, IconButton } from '@/components/ui/Button';
+import { Menu } from '@/components/ui/Menu';
 
-const pageCopy: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'Overview', subtitle: 'Your financial snapshot at a glance' },
+const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
+  '/': { title: 'Overview', subtitle: 'Your money at a glance' },
   '/transactions': { title: 'Transactions', subtitle: 'Every dollar in and out' },
-  '/subscriptions': { title: 'Subscriptions', subtitle: 'Recurring tools and software' },
+  '/invoices': { title: 'Invoices', subtitle: 'Bill clients and track payment' },
   '/clients': { title: 'Clients & Revenue', subtitle: 'Who pays you, and how much' },
+  '/subscriptions': { title: 'Subscriptions', subtitle: 'Recurring tools & software' },
   '/analytics': { title: 'Analytics', subtitle: 'Trends across periods' },
-  '/archive': { title: 'Archive', subtitle: 'Restore past clients and tools' },
-  '/settings': { title: 'Settings', subtitle: 'Account and workspace' },
+  '/reports': { title: 'Reports', subtitle: 'Generate & export statements' },
+  '/archive': { title: 'Archive', subtitle: 'Restore past clients & tools' },
+  '/settings': { title: 'Settings', subtitle: 'Account & workspace' },
+  '/profile': { title: 'Profile', subtitle: 'Your personal details' },
+  '/notifications': { title: 'Notifications', subtitle: 'Reminders & events' },
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-
-const makeId = () => {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const toIsoDate = (date: string) => new Date(`${date}T12:00:00`).toISOString();
+function copyFor(pathname: string) {
+  if (PAGE_COPY[pathname]) return PAGE_COPY[pathname];
+  // Match nested routes (e.g. /invoices/new) to their section.
+  const section = `/${pathname.split('/')[1] || ''}`;
+  return PAGE_COPY[section] || { title: 'Haseela', subtitle: '' };
+}
 
 export function Topbar() {
   const pathname = usePathname();
-  const copy = pageCopy[pathname] || pageCopy['/'];
-  const { addTransaction, currency } = useFinancialStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency), [currency]);
-  const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
-
-  const openModal = () => {
-    setError(null);
-    setIsOpen(true);
-  };
-
-  const saveTransaction = async (formData: FormData) => {
-    const amount = Number(formData.get('amount'));
-    const name = String(formData.get('name') || '').trim();
-    const notes = String(formData.get('notes') || '').trim();
-    const type = String(formData.get('type') || 'INCOME') as Transaction['type'];
-    const date = String(formData.get('date') || today());
-    const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
-
-    if (!name || !amount || amount <= 0) return;
-
-    setIsSaving(true);
-    setError(null);
-    try {
-      await addTransaction({
-        id: makeId(),
-        name,
-        amount,
-        type,
-        status: 'COMPLETED',
-        date: toIsoDate(date),
-        notes,
-        sourceType: 'manual',
-        categoryId,
-      });
-      setIsOpen(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create transaction');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const router = useRouter();
+  const { setPaletteOpen, setMobileNavOpen, openNewModal } = useUiStore();
+  const unreadCount = useNotificationStore((s) => s.unread);
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const copy = copyFor(pathname);
 
   return (
-    <>
-      <header className="h-[var(--header-h)] shrink-0 border-b border-border bg-surface flex items-center gap-[14px] px-5 sticky top-0 z-40">
-        <div className="min-w-0">
-          <h1 className="t-h2 truncate">{copy.title}</h1>
-          <p className="hidden sm:block t-small text-text-muted truncate">{copy.subtitle}</p>
-        </div>
-        <div className="flex-1" />
+    <header className="h-[var(--header-h)] shrink-0 border-b border-border bg-surface flex items-center gap-3.5 px-5 sticky top-0 z-40">
+      <button
+        onClick={() => setMobileNavOpen(true)}
+        aria-label="Open navigation"
+        className="lg:hidden text-text-secondary hover:text-text p-1 focus-ring rounded-sm transition-colors"
+      >
+        <Icon name="menu" size={20} />
+      </button>
 
-        <Button onClick={openModal} icon="plus" size="md" variant="secondary">
-          New Transaction
-        </Button>
-      </header>
+      <div className="min-w-0">
+        <h1 className="t-h2 truncate">{copy.title}</h1>
+      </div>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4 backdrop-blur-sm" onMouseDown={() => { if (!isSaving) setIsOpen(false); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="topbar-new-transaction-title" className="bg-surface-elevated rounded-[var(--r-xl)] border border-border shadow-lg w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6 anim-rise" onMouseDown={(event) => event.stopPropagation()}>
-            <form onSubmit={(event) => { event.preventDefault(); saveTransaction(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
-              <div>
-                <h2 id="topbar-new-transaction-title" className="text-[16px] font-semibold text-text">New Transaction</h2>
-                <p className="text-[13px] text-text-muted mt-1">Create a manual revenue or expense entry.</p>
-                {error && <p className="text-[13px] text-negative mt-2">{error}</p>}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Type">
-                  <Select name="type" defaultValue="INCOME">
-                    <option value="INCOME">Revenue</option>
-                    <option value="EXPENSE">Expense</option>
-                  </Select>
-                </Field>
-                <Field label="Amount">
-                  <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
-                </Field>
-              </div>
-              
-              <Field label="Transaction Name">
-                <Input name="name" required />
-              </Field>
-              
-              <Field label="Notes">
-                <Input name="notes" placeholder="Optional" />
-              </Field>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Date">
-                  <Input name="date" type="date" defaultValue={today()} required />
-                </Field>
-                <Field label="Category">
-                  <Select name="categoryId" defaultValue="CLIENT">
-                    <option value="CLIENT">Client Payment</option>
-                    <option value="PROJECT">Project Revenue</option>
-                    <option value="TOOLS">Tools</option>
-                    <option value="OPERATIONS">Operations</option>
-                    <option value="TAXES">Taxes</option>
-                    <option value="OTHER">Other</option>
-                  </Select>
-                </Field>
-              </div>
-              
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 mt-2 border-t border-border">
-                <Button type="button" variant="secondary" disabled={isSaving} onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button type="submit" loading={isSaving}>Save Transaction</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
+      <div className="flex-1" />
+
+      {/* Search → command palette */}
+      <button
+        onClick={() => setPaletteOpen(true)}
+        className="hidden sm:flex items-center gap-2.5 h-9 px-3 min-w-[200px] rounded-md border border-border bg-background text-text-muted hover:border-border-strong focus-ring transition-colors"
+      >
+        <Icon name="search" size={16} />
+        <span className="t-body flex-1 text-left">Search…</span>
+        <kbd className="text-[11px] px-1.5 py-0.5 rounded border border-border bg-surface">⌘K</kbd>
+      </button>
+      <IconButton icon="search" title="Search" className="sm:hidden" onClick={() => setPaletteOpen(true)} />
+
+      <IconButton icon={resolvedTheme === 'dark' ? 'sun' : 'moon'} title="Toggle theme" onClick={toggleTheme} />
+      <IconButton
+        icon="bell"
+        title="Notifications"
+        badge={unreadCount > 0}
+        onClick={() => router.push('/notifications')}
+      />
+
+      <Menu
+        align="right"
+        trigger={<Button icon="plus" iconRight="chevronDown" size="md">New</Button>}
+        items={[
+          { icon: 'trendingUp', label: 'Add revenue', onClick: () => openNewModal('income') },
+          { icon: 'receipt', label: 'Log expense', onClick: () => openNewModal('expense') },
+          { icon: 'fileText', label: 'New invoice', onClick: () => router.push('/invoices/new') },
+          { icon: 'users', label: 'Add client', onClick: () => openNewModal('client') },
+          { icon: 'creditCard', label: 'Add subscription', onClick: () => openNewModal('subscription') },
+        ]}
+      />
+    </header>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AppShell } from '@/components/AppShell';
+import { themeNoFlashScript } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Haseela - Freelancer Budget Tracker',
@@ -26,7 +27,6 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   themeColor: '#6D5EFC',
-  colorScheme: 'light',
 };
 
 export default function RootLayout({
@@ -35,13 +35,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Set the theme class before first paint to avoid a light/dark flash. */}
+        <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
       </head>
-      <body className="flex min-h-screen">
+      <body>
         <AppShell>{children}</AppShell>
       </body>
     </html>

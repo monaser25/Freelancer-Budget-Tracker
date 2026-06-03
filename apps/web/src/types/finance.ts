@@ -49,6 +49,41 @@ export interface Transaction {
   isEdited?: boolean;
 }
 
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE';
+
+export interface InvoiceLineItem {
+  id?: string;
+  description: string;
+  quantity: number;
+  rate: number;
+  amount?: number;
+  position?: number;
+}
+
+export interface Invoice {
+  id: string;
+  number: string;
+  clientId?: string | null;
+  client?: { id: string; name: string; company?: string | null; email?: string | null } | null;
+  issueDate: string;
+  dueDate: string;
+  status: InvoiceStatus;
+  currency: CurrencyCode;
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  discount: number;
+  total: number;
+  notes?: string | null;
+  terms?: string | null;
+  sentAt?: string | null;
+  paidAt?: string | null;
+  transactionId?: string | null;
+  lineItems: InvoiceLineItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OverviewStats {
   totalRevenue: number;
   monthlyRevenue: number;

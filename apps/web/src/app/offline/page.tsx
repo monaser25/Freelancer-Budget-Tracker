@@ -1,31 +1,26 @@
 'use client';
 
-import { WifiOff } from 'lucide-react';
+import { Icon } from '@/components/ui/Icon';
+import { Button } from '@/components/ui/Button';
 
 export const dynamic = 'force-static';
 
 export default function OfflinePage() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-        <WifiOff size={26} />
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center bg-background text-text">
+      <div className="w-16 h-16 rounded-full bg-warning-tint text-warning flex items-center justify-center">
+        <Icon name="wifiOff" size={28} />
       </div>
-      <div className="space-y-1">
-        <h1 className="text-[16px] font-semibold text-textPrimary">You&rsquo;re offline</h1>
-        <p className="max-w-md text-[13px] text-textMuted">
-          Haseela needs a connection to load the latest clients, subscriptions, and
-          transactions. Anything you already opened in this session stays available.
+      <div className="space-y-1.5">
+        <h1 className="t-h2">You&rsquo;re offline</h1>
+        <p className="max-w-md t-body text-text-secondary">
+          Haseela needs a connection to load your latest clients, subscriptions, and transactions.
+          Anything already open in this session stays available.
         </p>
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          if (typeof window !== 'undefined') window.location.reload();
-        }}
-        className="focus-ring rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-hover"
-      >
+      <Button icon="refreshCcw" onClick={() => typeof window !== 'undefined' && window.location.reload()}>
         Try again
-      </button>
+      </Button>
     </div>
   );
 }

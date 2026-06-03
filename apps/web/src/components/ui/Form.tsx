@@ -58,7 +58,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             onFocus={(e) => { setFocus(true); props.onFocus?.(e); }}
             onBlur={(e) => { setFocus(false); props.onBlur?.(e); }}
-            className="flex-1 min-w-0 border-none outline-none bg-transparent text-text h-full px-3 text-sm placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 min-w-0 border-none outline-none bg-transparent text-text h-full px-3 text-sm placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed focus:shadow-none focus-visible:shadow-none"
             {...props}
           />
           {suffix && <span className="t-body pr-3 text-text-muted whitespace-nowrap">{suffix}</span>}

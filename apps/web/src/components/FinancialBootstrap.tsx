@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { loadFinancialSnapshot } from '@/services/financialApi';
 import { useFinancialStore } from '@/store/financialStore';
+import { useNotificationStore } from '@/store/notificationStore';
 import { useAuth } from '@/components/AuthProvider';
 
 const getStorageKey = (userId: string) => `flowledger-financial-state:${userId}`;
@@ -17,6 +18,11 @@ export function FinancialBootstrap() {
     if (isInitialized || !user) return;
 
     setStorageUserId(user.id);
+
+    // Load notifications (and generate reminders) once per session.
+    if (!useNotificationStore.getState().isLoaded) {
+      useNotificationStore.getState().load();
+    }
 
     const loadCachedSnapshot = () => {
       const cached = window.localStorage.getItem(getStorageKey(user.id));

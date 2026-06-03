@@ -4,49 +4,77 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
+import { CommandPalette } from '@/components/CommandPalette';
+import { EntityModals } from '@/components/modals/EntityModals';
 import { FinancialBootstrap } from '@/components/FinancialBootstrap';
 import { AuthProvider, useAuth } from '@/components/AuthProvider';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { ToastProvider } from '@/components/ui/Toast';
 import { useFinancialStore } from '@/store/financialStore';
+import { useUiStore } from '@/store/uiStore';
 
-const authRoutes = new Set(['/login', '/register']);
+// Routes rendered without the app shell (full-bleed).
+const bareRoutes = new Set([
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/verify',
+  '/onboarding',
+  '/offline',
+]);
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const isFinancialInitialized = useFinancialStore((state) => state.isInitialized);
-  const isAuthRoute = authRoutes.has(pathname);
+  const { mobileNavOpen, setMobileNavOpen, togglePalette } = useUiStore();
+  const isBareRoute = bareRoutes.has(pathname);
 
   useEffect(() => {
     if (isLoading) return;
-
-    if (!user && !isAuthRoute) {
+    if (!user && !isBareRoute) {
       const current = `${pathname}${typeof window !== 'undefined' ? window.location.search : ''}`;
       router.replace(`/login?redirect=${encodeURIComponent(current)}`);
       return;
     }
-
-    if (user && isAuthRoute) {
+    if (user && (pathname === '/login' || pathname === '/register')) {
       router.replace('/');
     }
-  }, [isAuthRoute, isLoading, pathname, router, user]);
+  }, [isBareRoute, isLoading, pathname, router, user]);
+
+  // Global ⌘K / Ctrl+K to toggle the command palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        togglePalette();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [togglePalette]);
+
+  // Close the mobile nav whenever the route changes.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname, setMobileNavOpen]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
-        Loading Haseela...
+        Loading Haseela…
       </div>
     );
   }
 
-  if (isAuthRoute) {
-    return <>{children}</>;
-  }
+  if (isBareRoute) return <>{children}</>;
 
   if (!user) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
-        Redirecting to login...
+        Redirecting to login…
       </div>
     );
   }
@@ -54,29 +82,59 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       <FinancialBootstrap />
-      <Sidebar />
-      <main className="w-full md:ml-[var(--sidebar-w)] flex-1 flex flex-col min-h-screen">
-        {isFinancialInitialized ? (
-          <>
-            <Topbar />
-            <div className="px-4 py-5 pb-24 sm:px-5 md:p-8 flex-1 overflow-auto">
-              {children}
+      <div className="flex h-screen overflow-hidden bg-background text-foreground w-full">
+        {/* Desktop sidebar */}
+        <div className="hidden lg:flex">
+          <Sidebar />
+        </div>
+
+        {/* Mobile slide-over */}
+        {mobileNavOpen && (
+          <div
+            className="lg:hidden fixed inset-0 z-[160] bg-black/50 anim-fade"
+            onMouseDown={() => setMobileNavOpen(false)}
+          >
+            <div
+              className="h-full w-[260px]"
+              style={{ animation: 'fl-slide-right var(--dur-base) var(--ease-out)' }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <Sidebar mobile onClose={() => setMobileNavOpen(false)} />
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-[13px] text-text-muted">
-            Loading your financial workspace...
           </div>
         )}
-      </main>
+
+        {/* Main column */}
+        <div className="flex-1 flex flex-col min-w-0 h-full">
+          <Topbar />
+          <main className="flex-1 overflow-y-auto bg-background">
+            <div className="mx-auto w-full max-w-[var(--content-max)] px-4 py-5 sm:px-5 md:px-8 md:py-8 pb-24 md:pb-12">
+              {isFinancialInitialized ? (
+                children
+              ) : (
+                <div className="flex items-center justify-center py-24 text-[13px] text-text-muted">
+                  Loading your financial workspace…
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+
+      <CommandPalette />
+      <EntityModals />
     </>
   );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <AuthGate>{children}</AuthGate>
-    </AuthProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AuthGate>{children}</AuthGate>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

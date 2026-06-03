@@ -34,10 +34,15 @@ export default function LoginPage() {
   const [resendWaitSeconds, setResendWaitSeconds] = useState(0);
 
   useEffect(() => {
-    if (searchParams.get('confirmed') !== '1') return;
-
-    setNotice('Email confirmed. You can log in now.');
-    window.history.replaceState(null, '', '/login');
+    if (searchParams.get('confirmed') === '1') {
+      setNotice('Email confirmed. You can log in now.');
+      window.history.replaceState(null, '', '/login');
+      return;
+    }
+    if (searchParams.get('reset') === '1') {
+      setNotice('Password updated. Log in with your new password.');
+      window.history.replaceState(null, '', '/login');
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -151,7 +156,16 @@ export default function LoginPage() {
           <Input name="email" type="email" placeholder="you@email.com" required autoFocus />
         </Field>
 
-        <Field label="Password">
+        <Field
+          label={
+            <span className="flex items-center justify-between">
+              <span>Password</span>
+              <Link href="/forgot-password" className="t-small font-medium text-accent hover:underline">
+                Forgot password?
+              </Link>
+            </span>
+          }
+        >
           <PasswordInput name="password" required />
         </Field>
 

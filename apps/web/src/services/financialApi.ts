@@ -1,4 +1,4 @@
-import { Client, Subscription, Transaction } from '@/types/finance';
+import { Client, Subscription, Transaction, Invoice } from '@/types/finance';
 import { getDevAuthHeaders, isDevAuthEnabled } from '@/lib/devAuth';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 
@@ -231,4 +231,111 @@ export const deleteTransactionAPI = async (id: string) => {
   return apiRequest<{ success: boolean }>(`/api/transactions/delete/${id}`, {
     method: 'DELETE',
   }, 'delete transaction');
+};
+
+export type InvoiceInput = {
+  number?: string;
+  clientId?: string | null;
+  issueDate: string;
+  dueDate: string;
+  status?: string;
+  currency: string;
+  taxRate: number;
+  discount: number;
+  notes?: string;
+  terms?: string;
+  lineItems: { description: string; quantity: number; rate: number }[];
+};
+
+export const loadInvoicesAPI = async () => {
+  return apiRequest<{ invoices: Invoice[] }>('/api/invoices', {}, 'load invoices');
+};
+
+export type ReportColumn = { key: string; label: string; numeric?: boolean };
+export type ReportData = {
+  type: string;
+  title: string;
+  range: { from: string; to: string };
+  columns: ReportColumn[];
+  rows: (string | number)[][];
+  summary: { label: string; value: number; tone?: 'positive' | 'negative' | 'neutral' }[];
+};
+
+export const loadReportAPI = async (type: string, from: string, to: string) => {
+  const qs = new URLSearchParams({ type, from, to, format: 'json' }).toString();
+  return apiRequest<ReportData>(`/api/reports?${qs}`, {}, 'generate report');
+};
+
+export type UserPreferences = {
+  name: string;
+  email: string;
+  currency: string;
+  onboardedAt: string | null;
+  notifyBillingReminders: boolean;
+  notifyInvoiceDue: boolean;
+  notifyWeeklySummary: boolean;
+};
+
+export const loadPreferencesAPI = async () => {
+  return apiRequest<UserPreferences>('/api/user/preferences', {}, 'load preferences');
+};
+
+export const updatePreferencesAPI = async (updates: Partial<UserPreferences>) => {
+  return apiRequest<UserPreferences>('/api/user/preferences', {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }, 'update preferences');
+};
+
+export const deleteAccountAPI = async () => {
+  return apiRequest<{ ok: boolean }>('/api/user/delete', { method: 'DELETE' }, 'delete account');
+};
+
+export const downloadReportCsv = async (type: string, from: string, to: string) => {
+  const qs = new URLSearchParams({ type, from, to, format: 'csv' }).toString();
+  const url = `${apiBaseUrl()}/api/reports?${qs}`;
+  const response = await fetch(url, {
+    headers: { ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Failed to export report (${response.status})`);
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  return { blob, filename: match?.[1] || `${type}-report.csv` };
+};
+
+export const createInvoiceAPI = async (invoice: InvoiceInput) => {
+  return apiRequest<Invoice>('/api/invoices/create', {
+    method: 'POST',
+    body: JSON.stringify(invoice),
+  }, 'create invoice');
+};
+
+export const updateInvoiceAPI = async (id: string, invoice: InvoiceInput) => {
+  return apiRequest<Invoice>(`/api/invoices/update/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(invoice),
+  }, 'update invoice');
+};
+
+export const deleteInvoiceAPI = async (id: string) => {
+  return apiRequest<{ id: string }>(`/api/invoices/delete/${id}`, {
+    method: 'DELETE',
+  }, 'delete invoice');
+};
+
+export const markInvoicePaidAPI = async (id: string) => {
+  return apiRequest<{ invoice: Invoice; transaction: Transaction | null }>(`/api/invoices/${id}/mark-paid`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, 'mark invoice paid');
+};
+
+export const sendInvoiceAPI = async (id: string) => {
+  return apiRequest<Invoice>(`/api/invoices/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  }, 'send invoice');
 };

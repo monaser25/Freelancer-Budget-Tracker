@@ -10,10 +10,14 @@ const makeEmail = (userId: string) => {
 export const ensureUser = async (user: AuthenticatedUser) => {
   const userId = user.id;
   const email = user.email || makeEmail(userId);
+  const name = user.name?.trim() || email.split('@')[0] || 'Haseela User';
   const existing = await prisma.user.findUnique({ where: { id: userId } });
   if (existing) {
-    if (existing.email !== email) {
-      await prisma.user.update({ where: { id: userId }, data: { email } });
+    const data: { email?: string; name?: string } = {};
+    if (existing.email !== email) data.email = email;
+    if (user.name?.trim() && existing.name !== user.name.trim()) data.name = user.name.trim();
+    if (Object.keys(data).length > 0) {
+      await prisma.user.update({ where: { id: userId }, data });
     }
     return;
   }
@@ -22,7 +26,7 @@ export const ensureUser = async (user: AuthenticatedUser) => {
     await prisma.user.create({
       data: {
         id: userId,
-        name: email.split('@')[0] || 'FlowLedger User',
+        name,
         email,
         password: 'supabase-auth',
       },
