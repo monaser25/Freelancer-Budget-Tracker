@@ -33,8 +33,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-textMuted">
-        Loading FlowLedger...
+      <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
+        Loading Haseela...
       </div>
     );
   }
@@ -45,7 +45,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-textMuted">
+      <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
         Redirecting to login...
       </div>
     );
@@ -64,7 +64,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[13px] text-textMuted">
+          <div className="flex-1 flex items-center justify-center text-[13px] text-text-muted">
             Loading your financial workspace...
           </div>
         )}

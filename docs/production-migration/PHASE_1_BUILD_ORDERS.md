@@ -321,3 +321,99 @@ Tests run:
 Screenshots/visual notes:
 Remaining work:
 ```
+
+## Build Order 4: Dashboard And Analytics
+
+Status: Ready.
+
+Run only after `reports/lead-review-build-shell-ui.md` exists and is approved.
+
+Mode: Build Mode
+
+Agent name: `build-dashboard-analytics`
+
+Allowed scope:
+
+- `apps/web/src/app/page.tsx`
+- `apps/web/src/app/analytics/page.tsx`
+- `apps/web/src/components/charts/*`
+- `docs/production-migration/reports/build-dashboard-analytics.md`
+
+Do not edit:
+
+- `apps/web/src/components/AppShell.tsx`
+- `apps/web/src/components/Sidebar.tsx`
+- `apps/web/src/components/Topbar.tsx`
+- `apps/web/src/app/globals.css`
+- `apps/web/tailwind.config.js`
+- `apps/web/src/components/ui/*`
+- `apps/web/src/components/auth/*`
+- `apps/web/src/components/layout/*`
+- `apps/web/src/store/*`
+- `apps/web/src/server/*`
+- `apps/web/src/app/api/*`
+- `apps/web/prisma/*`
+- `package.json`
+- `package-lock.json`
+
+Prompt:
+
+```text
+You are build-dashboard-analytics working on the Haseela production web migration.
+
+Repository root:
+C:\Users\MoNaser\Desktop\Freelancer Budget Tracker 2\Freelancer Budget Tracker
+
+Read these files first:
+- docs/production-migration/HASEELA_WEB_MASTER_PLAN.md
+- docs/production-migration/AGENT_RULES.md
+- docs/production-migration/UI_MAPPING.md
+- docs/production-migration/QUALITY_GATES.md
+- docs/production-migration/DECISIONS.md
+- docs/production-migration/reports/agent-3-screen-mapping.md
+- docs/production-migration/reports/lead-review-build-shell-ui.md
+
+Mode: Build Mode
+
+Allowed scope:
+- apps/web/src/app/page.tsx
+- apps/web/src/app/analytics/page.tsx
+- apps/web/src/components/charts/*
+- docs/production-migration/reports/build-dashboard-analytics.md
+
+Task:
+Port the HASEELA premium visual direction to the existing Dashboard and Analytics pages while preserving current production data flows and backend-supported behavior.
+
+Requirements:
+- Use only real data from the existing store/hooks. Do not use HASEELA mock data.
+- Preserve existing dashboard transaction creation behavior for Add Revenue and Log Expense.
+- Preserve existing links/routes. Do not add invoices, reports, notifications, pricing, billing, profile, onboarding, or future-feature links.
+- Use existing UI primitives from `apps/web/src/components/ui` where practical.
+- Keep Recharts if it is already used. You may create lightweight chart wrapper components under `components/charts/*` only if useful.
+- Improve Dashboard stats, quick actions, revenue/expenses chart, recent transactions, clients overview, and subscriptions panel using Haseela tokens.
+- Improve Analytics visual hierarchy and chart styling using Haseela tokens.
+- Add or improve empty/error states where appropriate.
+- Keep financial calculations semantically equivalent to current behavior.
+- Do not edit store, API routes, Prisma, shell, auth, global CSS, Tailwind, package files, or env files.
+- Do not add dependencies.
+
+Validation:
+- Run npm run build -w apps/web if possible.
+- Run npm test -w apps/web if possible.
+- If a command fails, include exact output summary in the report and stop unless the fix is inside your scope.
+
+At the end, write:
+docs/production-migration/reports/build-dashboard-analytics.md
+
+Report format:
+# Agent Report
+
+Status:
+Scope:
+Files changed:
+Decisions made:
+Risks:
+Tests run:
+Screenshots/visual notes:
+Remaining work:
+```

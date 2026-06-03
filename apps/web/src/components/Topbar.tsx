@@ -1,23 +1,22 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useFinancialStore } from '@/store/useFinancialStore';
+import { useFinancialStore } from '@/store/financialStore';
 import { Transaction } from '@/types/finance';
+import { Button } from '@/components/ui/Button';
+import { Input, Select, Field } from '@/components/ui/Form';
 
 const pageCopy: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Overview', subtitle: 'Your financial snapshot at a glance' },
-  '/transactions': { title: 'Transactions', subtitle: 'All your income and expense entries' },
-  '/subscriptions': { title: 'Subscriptions', subtitle: 'Recurring tools and client retainers' },
-  '/clients': { title: 'Clients & Revenue', subtitle: 'Manage your clients and track income' },
-  '/analytics': { title: 'Analytics', subtitle: 'In-depth financial analysis' },
-  '/archive': { title: 'Archive', subtitle: 'Removed clients and subscriptions' },
-  '/settings': { title: 'Preferences', subtitle: 'Tune the workspace for your freelance finances' },
+  '/transactions': { title: 'Transactions', subtitle: 'Every dollar in and out' },
+  '/subscriptions': { title: 'Subscriptions', subtitle: 'Recurring tools and software' },
+  '/clients': { title: 'Clients & Revenue', subtitle: 'Who pays you, and how much' },
+  '/analytics': { title: 'Analytics', subtitle: 'Trends across periods' },
+  '/archive': { title: 'Archive', subtitle: 'Restore past clients and tools' },
+  '/settings': { title: 'Settings', subtitle: 'Account and workspace' },
 };
 
-const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
 const today = () => new Date().toISOString().slice(0, 10);
 
 const makeId = () => {
@@ -74,71 +73,67 @@ export function Topbar() {
 
   return (
     <>
-      <div className="min-h-[var(--header-h)] bg-sidebar border-b border-border flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 md:px-7 sticky top-0 z-50">
-        <div className="flex min-w-0 flex-col">
-          <h1 className="text-[17px] font-semibold tracking-tight text-textPrimary">{copy.title}</h1>
-          <p className="text-[12px] text-textMuted">{copy.subtitle}</p>
+      <header className="h-[var(--header-h)] shrink-0 border-b border-border bg-surface flex items-center gap-[14px] px-5 sticky top-0 z-40">
+        <div className="min-w-0">
+          <h1 className="t-h2 truncate">{copy.title}</h1>
+          <p className="hidden sm:block t-small text-text-muted truncate">{copy.subtitle}</p>
         </div>
-        <div className="flex w-full items-center gap-[10px] sm:w-auto">
-          <Link href="/transactions" className="inline-flex flex-1 sm:flex-none items-center justify-center gap-[6px] px-[14px] py-[8px] rounded-md text-[13px] font-medium cursor-pointer border border-border bg-transparent text-textSecondary hover:bg-slate-100 hover:text-textPrimary transition-all">
-            View Ledger
-          </Link>
-          <button type="button" onClick={openModal} className="inline-flex flex-1 sm:flex-none items-center justify-center gap-[6px] px-[14px] py-[8px] rounded-md text-[13px] font-medium cursor-pointer border-none bg-accent text-white hover:bg-accent-hover transition-all">
-            <Plus size={15} /> New Transaction
-          </button>
-        </div>
-      </div>
+        <div className="flex-1" />
+
+        <Button onClick={openModal} icon="plus" size="md">
+          New Transaction
+        </Button>
+      </header>
 
       {isOpen && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setIsOpen(false); }}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
-            <form onSubmit={(event) => { event.preventDefault(); saveTransaction(new FormData(event.currentTarget)); }} className="space-y-4">
+        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4 backdrop-blur-sm" onMouseDown={() => { if (!isSaving) setIsOpen(false); }}>
+          <div className="bg-surface-elevated rounded-[var(--r-xl)] border border-border shadow-lg w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6 anim-rise" onMouseDown={(event) => event.stopPropagation()}>
+            <form onSubmit={(event) => { event.preventDefault(); saveTransaction(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
               <div>
-                <h2 className="text-[16px] font-semibold text-textPrimary">New Transaction</h2>
-                <p className="text-[13px] text-textMuted mt-1">Create a manual revenue or expense entry.</p>
-                {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
+                <h2 className="text-[16px] font-semibold text-text">New Transaction</h2>
+                <p className="text-[13px] text-text-muted mt-1">Create a manual revenue or expense entry.</p>
+                {error && <p className="text-[13px] text-negative mt-2">{error}</p>}
               </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Type</span>
-                  <select name="type" className={inputClass} defaultValue="INCOME">
+                <Field label="Type">
+                  <Select name="type" defaultValue="INCOME">
                     <option value="INCOME">Revenue</option>
                     <option value="EXPENSE">Expense</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Amount</span>
-                  <input name="amount" type="number" min="0" step="0.01" className={inputClass} required />
-                </label>
+                  </Select>
+                </Field>
+                <Field label="Amount">
+                  <Input name="amount" type="number" min="0" step="0.01" required />
+                </Field>
               </div>
-              <label className="block">
-                <span className="block text-[12px] font-medium text-textSecondary mb-1">Transaction Name</span>
-                <input name="name" className={inputClass} required />
-              </label>
-              <label className="block">
-                <span className="block text-[12px] font-medium text-textSecondary mb-1">Notes</span>
-                <input name="notes" className={inputClass} placeholder="Optional" />
-              </label>
+              
+              <Field label="Transaction Name">
+                <Input name="name" required />
+              </Field>
+              
+              <Field label="Notes">
+                <Input name="notes" placeholder="Optional" />
+              </Field>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block">
-                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Date</span>
-                  <input name="date" type="date" defaultValue={today()} className={inputClass} required />
-                </label>
-                <label className="block">
-                  <span className="block text-[12px] font-medium text-textSecondary mb-1">Category</span>
-                  <select name="categoryId" className={inputClass} defaultValue="CLIENT">
+                <Field label="Date">
+                  <Input name="date" type="date" defaultValue={today()} required />
+                </Field>
+                <Field label="Category">
+                  <Select name="categoryId" defaultValue="CLIENT">
                     <option value="CLIENT">Client Payment</option>
                     <option value="PROJECT">Project Revenue</option>
                     <option value="TOOLS">Tools</option>
                     <option value="OPERATIONS">Operations</option>
                     <option value="TAXES">Taxes</option>
                     <option value="OTHER">Other</option>
-                  </select>
-                </label>
+                  </Select>
+                </Field>
               </div>
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-                <button type="button" disabled={isSaving} onClick={() => setIsOpen(false)} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
-                <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Transaction'}</button>
+              
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 mt-2 border-t border-border">
+                <Button type="button" variant="secondary" disabled={isSaving} onClick={() => setIsOpen(false)}>Cancel</Button>
+                <Button type="submit" loading={isSaving}>Save Transaction</Button>
               </div>
             </form>
           </div>
