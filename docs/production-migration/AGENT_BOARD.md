@@ -20,7 +20,8 @@ This file tracks agent assignments. Update statuses only when coordinating work.
 | Agent 2 | Plan | approved | App shell and auth UI | `reports/agent-2-shell-auth.md` |
 | Agent 3 | Plan | approved | MVP screens to HASEELA mapping | `reports/agent-3-screen-mapping.md` |
 | Build Design System | Build | approved | Tokens and first UI primitives | `reports/build-design-system.md` |
-| Build Auth UI | Build | ready-for-build | Login/register premium UI | `reports/build-auth-ui.md` |
+| Build Auth UI | Build | approved | Login/register premium UI | `reports/build-auth-ui.md` |
+| Build Shell UI | Build | ready-for-build | App shell visual polish | `reports/build-shell-ui.md` |
 | Agent 4 | Build later | not-started | Dashboard and analytics | `reports/agent-4-dashboard-analytics.md` |
 | Agent 5 | Build later | not-started | Transactions and forms | `reports/agent-5-transactions.md` |
 | Agent 6 | Build later | not-started | Clients, subscriptions, archive, settings | `reports/agent-6-money-sections.md` |
@@ -61,9 +62,9 @@ Agent QA reviews all changes and runs checks.
 
 ## Active Order
 
-Only run `Build Auth UI` now.
+Only run `Build Shell UI` now.
 
-Do not run shell or page build agents until `reports/build-auth-ui.md` is reviewed and approved.
+Do not run page build agents until `reports/build-shell-ui.md` is reviewed and approved.
 
 ## Lock Rules
 

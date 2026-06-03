@@ -13,8 +13,13 @@ import {
   isAuthEmailRateLimited,
   setAuthEmailCooldown,
 } from '@/lib/authEmailRateLimit';
+import { AuthLayout } from '@/components/layout/AuthLayout';
+import { AuthHeader } from '@/components/auth/AuthHeader';
+import { PasswordInput } from '@/components/auth/PasswordInput';
+import { Button } from '@/components/ui/Button';
+import { Field, Input } from '@/components/ui/Form';
+import { InlineAlert } from '@/components/ui/InlineAlert';
 
-const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
 const isEmailNotConfirmed = (message: string) => message.toLowerCase().includes('email not confirmed');
 
 export default function LoginPage() {
@@ -105,50 +110,59 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 sm:p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-[420px] bg-card border border-border rounded-[var(--radius-xl)] shadow-sm p-5 sm:p-7 space-y-5">
-        <div>
-          <div className="w-10 h-10 rounded-md bg-accent text-white flex items-center justify-center font-semibold mb-4">FL</div>
-          <h1 className="text-[20px] font-semibold text-textPrimary">Log in to FlowLedger</h1>
-          <p className="text-[13px] text-textMuted mt-1">Access your private freelance financial workspace.</p>
-        </div>
+    <AuthLayout>
+      <AuthHeader title="Welcome back" sub="Log in to your Haseela workspace." />
+      
+      {error && (
+        <InlineAlert 
+          tone={confirmationEmail && error.includes('confirm') ? "warning" : "negative"} 
+          title={confirmationEmail && error.includes('confirm') ? "Confirm your email first" : "Login error"} 
+          body={error}
+          className="mb-[18px]"
+        >
+          {confirmationEmail && (
+            <button
+              type="button"
+              onClick={onResendConfirmation}
+              disabled={isResending || resendWaitSeconds > 0}
+              className={`t-small font-semibold mt-2 ${resendWaitSeconds > 0 ? 'text-text-muted cursor-default' : 'text-accent hover:underline cursor-pointer'}`}
+            >
+              {isResending
+                ? 'Sending...'
+                : resendWaitSeconds > 0
+                  ? `Resend in ${formatAuthWaitTime(resendWaitSeconds)}`
+                  : 'Resend confirmation email'}
+            </button>
+          )}
+        </InlineAlert>
+      )}
+      
+      {notice && (
+        <InlineAlert 
+          tone="positive" 
+          title="Notice" 
+          body={notice}
+          className="mb-[18px]"
+        />
+      )}
 
-        {error && <div className="bg-red-50 border border-red-100 text-red-700 rounded-md px-3 py-2 text-[13px]">{error}</div>}
-        {notice && <div className="bg-green-50 border border-green-100 text-green-700 rounded-md px-3 py-2 text-[13px]">{notice}</div>}
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Field label="Email">
+          <Input name="email" type="email" placeholder="you@email.com" required autoFocus />
+        </Field>
 
-        <label className="block">
-          <span className="block text-[12px] font-medium text-textSecondary mb-1">Email</span>
-          <input name="email" type="email" className={inputClass} required />
-        </label>
+        <Field label="Password">
+          <PasswordInput name="password" required />
+        </Field>
 
-        <label className="block">
-          <span className="block text-[12px] font-medium text-textSecondary mb-1">Password</span>
-          <input name="password" type="password" className={inputClass} required />
-        </label>
-
-        <button disabled={isSubmitting} className="w-full px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">
-          {isSubmitting ? 'Logging in...' : 'Log In'}
-        </button>
-
-        {confirmationEmail && (
-          <button
-            type="button"
-            onClick={onResendConfirmation}
-            disabled={isResending || resendWaitSeconds > 0}
-            className="w-full px-4 py-2 rounded-md border border-border text-textSecondary text-[13px] font-medium hover:bg-slate-50 disabled:opacity-60"
-          >
-            {isResending
-              ? 'Sending confirmation...'
-              : resendWaitSeconds > 0
-                ? `Resend available in ${formatAuthWaitTime(resendWaitSeconds)}`
-                : 'Resend confirmation email'}
-          </button>
-        )}
-
-        <p className="text-center text-[13px] text-textMuted">
-          New to FlowLedger? <Link href="/register" className="text-accent font-medium hover:underline">Create an account</Link>
-        </p>
+        <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1">
+          {isSubmitting ? 'Logging in...' : 'Log in'}
+        </Button>
       </form>
-    </main>
+
+      <div className="t-body text-text-secondary text-center mt-6">
+        New to Haseela? <Link href="/register" className="text-accent font-semibold hover:underline">Create an account</Link>
+      </div>
+    </AuthLayout>
   );
 }

@@ -13,8 +13,14 @@ import {
   setAuthEmailCooldown,
 } from '@/lib/authEmailRateLimit';
 import { isDevAuthEnabled } from '@/lib/devAuth';
+import { AuthLayout } from '@/components/layout/AuthLayout';
+import { AuthHeader } from '@/components/auth/AuthHeader';
+import { PasswordInput } from '@/components/auth/PasswordInput';
+import { Button } from '@/components/ui/Button';
+import { Field, Input, StrengthMeter } from '@/components/ui/Form';
+import { InlineAlert } from '@/components/ui/InlineAlert';
+import { Icon } from '@/components/ui/Icon';
 
-const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
 const isEmailNotConfirmed = (message: string) => message.toLowerCase().includes('email not confirmed');
 
 export default function RegisterPage() {
@@ -25,6 +31,7 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendWaitSeconds, setResendWaitSeconds] = useState(0);
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (!confirmationEmail) {
@@ -45,7 +52,7 @@ export default function RegisterPage() {
     setConfirmationEmail(null);
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get('email') || '').trim();
-    const password = String(formData.get('password') || '');
+    const submittedPassword = String(formData.get('password') || password);
     const cooldownSeconds = getAuthEmailCooldownSeconds(email);
 
     if (!isDevAuthEnabled() && cooldownSeconds > 0) {
@@ -57,7 +64,7 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await signUp(email, password);
+      await signUp(email, submittedPassword);
       setAuthEmailCooldown(email);
       setConfirmationEmail(email);
       setNotice('Check your email to confirm your account before logging in.');
@@ -104,51 +111,88 @@ export default function RegisterPage() {
     }
   };
 
-  return (
-    <main className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 sm:p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-[420px] bg-card border border-border rounded-[var(--radius-xl)] shadow-sm p-5 sm:p-7 space-y-5">
-        <div>
-          <div className="w-10 h-10 rounded-md bg-accent text-white flex items-center justify-center font-semibold mb-4">FL</div>
-          <h1 className="text-[20px] font-semibold text-textPrimary">Create your FlowLedger account</h1>
-          <p className="text-[13px] text-textMuted mt-1">Start with a private workspace scoped to your login.</p>
+  if (notice && !error) {
+    return (
+      <AuthLayout>
+        <div className="w-[56px] h-[56px] rounded-full bg-positive-tint text-positive flex items-center justify-center mb-5">
+          <Icon name="mail" size={26} />
         </div>
+        <AuthHeader 
+          title="Check your email" 
+          sub="We sent a confirmation link to your email. Click it to activate your account." 
+        />
+        <Button 
+          variant="secondary" 
+          disabled={isResending || resendWaitSeconds > 0} 
+          onClick={onResendConfirmation} 
+          className="w-full mt-4" 
+          icon="refreshCcw"
+        >
+          {isResending
+            ? 'Sending...'
+            : resendWaitSeconds > 0
+              ? `Resend in ${formatAuthWaitTime(resendWaitSeconds)}`
+              : 'Resend confirmation email'}
+        </Button>
+        <div className="t-body text-text-secondary text-center mt-6">
+          <Link href="/login" className="text-accent font-semibold hover:underline">Return to log in</Link>
+        </div>
+      </AuthLayout>
+    );
+  }
 
-        {error && <div className="bg-red-50 border border-red-100 text-red-700 rounded-md px-3 py-2 text-[13px]">{error}</div>}
-        {notice && <div className="bg-green-50 border border-green-100 text-green-700 rounded-md px-3 py-2 text-[13px]">{notice}</div>}
+  return (
+    <AuthLayout>
+      <AuthHeader title="Create your account" sub="Start tracking your freelance finances in minutes." />
+      
+      {error && (
+        <InlineAlert 
+          tone={confirmationEmail && error.includes('confirm') ? "warning" : "negative"} 
+          title={confirmationEmail && error.includes('confirm') ? "Confirm your email first" : "Registration error"} 
+          body={error}
+          className="mb-[18px]"
+        >
+          {confirmationEmail && (
+            <button
+              type="button"
+              onClick={onResendConfirmation}
+              disabled={isResending || resendWaitSeconds > 0}
+              className={`t-small font-semibold mt-2 ${resendWaitSeconds > 0 ? 'text-text-muted cursor-default' : 'text-accent hover:underline cursor-pointer'}`}
+            >
+              {isResending
+                ? 'Sending...'
+                : resendWaitSeconds > 0
+                  ? `Resend in ${formatAuthWaitTime(resendWaitSeconds)}`
+                  : 'Resend confirmation email'}
+            </button>
+          )}
+        </InlineAlert>
+      )}
 
-        <label className="block">
-          <span className="block text-[12px] font-medium text-textSecondary mb-1">Email</span>
-          <input name="email" type="email" className={inputClass} required />
-        </label>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Field label="Email">
+          <Input name="email" type="email" placeholder="you@email.com" required autoFocus />
+        </Field>
 
-        <label className="block">
-          <span className="block text-[12px] font-medium text-textSecondary mb-1">Password</span>
-          <input name="password" type="password" minLength={8} className={inputClass} required />
-        </label>
+        <Field label="Password" hint="Minimum 8 characters">
+          <PasswordInput 
+            name="password" 
+            required 
+            minLength={8} 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {password && <div className="mt-2"><StrengthMeter value={password} /></div>}
+        </Field>
 
-        <button disabled={isSubmitting} className="w-full px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">
-          {isSubmitting ? 'Creating account...' : 'Create Account'}
-        </button>
-
-        {confirmationEmail && (
-          <button
-            type="button"
-            onClick={onResendConfirmation}
-            disabled={isResending || resendWaitSeconds > 0}
-            className="w-full px-4 py-2 rounded-md border border-border text-textSecondary text-[13px] font-medium hover:bg-slate-50 disabled:opacity-60"
-          >
-            {isResending
-              ? 'Sending confirmation...'
-              : resendWaitSeconds > 0
-                ? `Resend available in ${formatAuthWaitTime(resendWaitSeconds)}`
-                : 'Resend confirmation email'}
-          </button>
-        )}
-
-        <p className="text-center text-[13px] text-textMuted">
-          Already have an account? <Link href="/login" className="text-accent font-medium hover:underline">Log in</Link>
-        </p>
+        <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1">
+          {isSubmitting ? 'Creating account...' : 'Create account'}
+        </Button>
       </form>
-    </main>
+
+      <div className="t-body text-text-secondary text-center mt-6">
+        Already have an account? <Link href="/login" className="text-accent font-semibold hover:underline">Log in</Link>
+      </div>
+    </AuthLayout>
   );
 }

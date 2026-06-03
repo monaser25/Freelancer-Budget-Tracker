@@ -222,4 +222,102 @@ Remaining work:
 
 ## Build Order 3: Shell Visual Polish
 
-Do not run until Build Order 2 is reviewed and approved.
+Status: Ready.
+
+Run only after `reports/lead-review-build-auth-ui.md` exists and is approved.
+
+Mode: Build Mode
+
+Agent name: `build-shell-ui`
+
+Allowed scope:
+
+- `apps/web/src/components/AppShell.tsx`
+- `apps/web/src/components/Sidebar.tsx`
+- `apps/web/src/components/Topbar.tsx`
+- `apps/web/src/components/layout/*`
+- `docs/production-migration/reports/build-shell-ui.md`
+
+Do not edit:
+
+- `apps/web/src/app/**/page.tsx`
+- `apps/web/src/app/globals.css`
+- `apps/web/tailwind.config.js`
+- `apps/web/src/components/AuthProvider.tsx`
+- `apps/web/src/components/FinancialBootstrap.tsx`
+- `apps/web/src/components/auth/*`
+- `apps/web/src/store/*`
+- `apps/web/src/server/*`
+- `apps/web/src/app/api/*`
+- `apps/web/prisma/*`
+- `package.json`
+- `package-lock.json`
+
+Prompt:
+
+```text
+You are build-shell-ui working on the Haseela production web migration.
+
+Repository root:
+C:\Users\MoNaser\Desktop\Freelancer Budget Tracker 2\Freelancer Budget Tracker
+
+Read these files first:
+- docs/production-migration/HASEELA_WEB_MASTER_PLAN.md
+- docs/production-migration/AGENT_RULES.md
+- docs/production-migration/UI_MAPPING.md
+- docs/production-migration/QUALITY_GATES.md
+- docs/production-migration/DECISIONS.md
+- docs/production-migration/reports/agent-2-shell-auth.md
+- docs/production-migration/reports/lead-review-build-auth-ui.md
+
+Mode: Build Mode
+
+Allowed scope:
+- apps/web/src/components/AppShell.tsx
+- apps/web/src/components/Sidebar.tsx
+- apps/web/src/components/Topbar.tsx
+- apps/web/src/components/layout/*
+- docs/production-migration/reports/build-shell-ui.md
+
+Task:
+Port the HASEELA premium app shell visual direction to the current authenticated web shell while preserving existing routing, auth gate, data bootstrap, and transaction creation behavior.
+
+Requirements:
+- Rebrand visible shell copy from FlowLedger to Haseela.
+- Keep existing authenticated route structure and Next.js routes.
+- Keep `AuthProvider`, `AuthGate`, and `FinancialBootstrap` behavior intact.
+- Keep current mobile navigation behavior unless you can improve visuals without changing routes or data flow.
+- Use existing UI primitives from `apps/web/src/components/ui` where practical.
+- Improve Sidebar and Topbar visual quality using Haseela tokens.
+- Preserve the current New Transaction modal behavior in `Topbar`; visual polish is allowed, but do not remove or break create transaction logic.
+- Do not add future navigation links for invoices, reports, notifications, profile, billing, onboarding, or command palette.
+- Do not implement CommandPalette in this build order.
+- Do not add dependencies.
+
+Allowed feature-level polish:
+- Sidebar Haseela branding.
+- Better active states and hover states.
+- Dark/light-token-compatible colors.
+- Cleaner topbar spacing and button styles.
+- Optional sidebar collapse only if implemented without breaking layout and without affecting mobile navigation.
+
+Validation:
+- Run npm run build -w apps/web if possible.
+- Run npm test -w apps/web if possible.
+- If a command fails, include exact output summary in the report and stop unless the fix is inside your scope.
+
+At the end, write:
+docs/production-migration/reports/build-shell-ui.md
+
+Report format:
+# Agent Report
+
+Status:
+Scope:
+Files changed:
+Decisions made:
+Risks:
+Tests run:
+Screenshots/visual notes:
+Remaining work:
+```
