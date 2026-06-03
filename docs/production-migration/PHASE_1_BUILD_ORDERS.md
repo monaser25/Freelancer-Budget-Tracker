@@ -113,6 +113,103 @@ Screenshots/visual notes:
 Remaining work:
 ```
 
+## Build Order 6: Money Sections
+
+Status: Ready.
+
+Run only after `reports/lead-review-build-transactions.md` exists and is approved.
+
+Mode: Build Mode
+
+Agent name: `build-money-sections`
+
+Allowed scope:
+
+- `apps/web/src/app/clients/page.tsx`
+- `apps/web/src/app/subscriptions/page.tsx`
+- `apps/web/src/app/archive/page.tsx`
+- `apps/web/src/app/settings/page.tsx`
+- `docs/production-migration/reports/build-money-sections.md`
+
+Do not edit:
+
+- `apps/web/src/app/page.tsx`
+- `apps/web/src/app/analytics/page.tsx`
+- `apps/web/src/app/transactions/page.tsx`
+- `apps/web/src/components/AppShell.tsx`
+- `apps/web/src/components/Sidebar.tsx`
+- `apps/web/src/components/Topbar.tsx`
+- `apps/web/src/app/globals.css`
+- `apps/web/tailwind.config.js`
+- `apps/web/src/components/ui/*`
+- `apps/web/src/components/auth/*`
+- `apps/web/src/components/layout/*`
+- `apps/web/src/store/*`
+- `apps/web/src/server/*`
+- `apps/web/src/app/api/*`
+- `apps/web/prisma/*`
+- `package.json`
+- `package-lock.json`
+
+Prompt:
+
+```text
+You are build-money-sections working on the Haseela production web migration.
+
+Repository root:
+C:\Users\MoNaser\Desktop\Freelancer Budget Tracker 2\Freelancer Budget Tracker
+
+Read these files first:
+- docs/production-migration/HASEELA_WEB_MASTER_PLAN.md
+- docs/production-migration/AGENT_RULES.md
+- docs/production-migration/UI_MAPPING.md
+- docs/production-migration/QUALITY_GATES.md
+- docs/production-migration/DECISIONS.md
+- docs/production-migration/reports/agent-3-screen-mapping.md
+- docs/production-migration/reports/lead-review-build-transactions.md
+
+Mode: Build Mode
+
+Allowed scope:
+- apps/web/src/app/clients/page.tsx
+- apps/web/src/app/subscriptions/page.tsx
+- apps/web/src/app/archive/page.tsx
+- apps/web/src/app/settings/page.tsx
+- docs/production-migration/reports/build-money-sections.md
+
+Task:
+Port the HASEELA premium visual direction to the existing Clients, Subscriptions, Archive, and Settings pages while preserving current production data flows and backend-supported behavior.
+
+Requirements:
+- Use only real data from the existing store/hooks. Do not use HASEELA mock data.
+- Preserve existing client CRUD, subscription CRUD, archive/restore/delete behavior, settings currency behavior, and URL action handling.
+- Use existing UI primitives from `apps/web/src/components/ui` where practical.
+- Improve lists/cards, filters, empty states, local forms/modals, and responsive layouts using Haseela tokens.
+- Keep routes as existing production routes only. Do not add invoices, reports, notifications, pricing, billing, profile, onboarding, command palette, or future-feature links.
+- Do not edit store, API routes, Prisma, shell, auth, global CSS, Tailwind, package files, or env files.
+- Do not add dependencies.
+
+Validation:
+- Run npm run build -w apps/web if possible.
+- Run npm test -w apps/web if possible.
+- If a command fails, include exact output summary in the report and stop unless the fix is inside your scope.
+
+At the end, write:
+docs/production-migration/reports/build-money-sections.md
+
+Report format:
+# Agent Report
+
+Status:
+Scope:
+Files changed:
+Decisions made:
+Risks:
+Tests run:
+Screenshots/visual notes:
+Remaining work:
+```
+
 ## Build Order 2: Auth UI Polish
 
 Status: Ready.
