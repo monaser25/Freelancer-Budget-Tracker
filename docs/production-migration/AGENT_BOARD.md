@@ -24,11 +24,11 @@ This file tracks agent assignments. Update statuses only when coordinating work.
 | Build Shell UI | Build | approved | App shell visual polish | `reports/build-shell-ui.md` |
 | Build Dashboard Analytics | Build | approved | Dashboard and analytics pages | `reports/build-dashboard-analytics.md`, `reports/lead-review-build-dashboard-analytics.md` |
 | Build Transactions | Build | approved | Transactions ledger and forms | `reports/build-transactions.md`, `reports/lead-review-build-transactions.md` |
-| Build Money Sections | Build | ready-for-build | Clients, subscriptions, archive, settings | `reports/build-money-sections.md` |
+| Build Money Sections | Build | approved | Clients, subscriptions, archive, settings | `reports/build-money-sections.md`, `reports/lead-review-build-money-sections.md` |
 | Agent 4 | Build later | not-started | Dashboard and analytics | `reports/agent-4-dashboard-analytics.md` |
 | Agent 5 | Build later | not-started | Transactions and forms | `reports/agent-5-transactions.md` |
 | Agent 6 | Build later | not-started | Clients, subscriptions, archive, settings | `reports/agent-6-money-sections.md` |
-| Agent QA | Review | not-started | QA, tests, regression, production gaps | `reports/agent-qa.md` |
+| Agent QA | Review | ready-for-review | QA, tests, regression, production gaps | `reports/agent-qa.md` |
 
 ## Recommended Execution
 
@@ -65,9 +65,9 @@ Agent QA reviews all changes and runs checks.
 
 ## Active Order
 
-Only run `Build Money Sections` now.
+Only run `Agent QA` now.
 
-Do not run other page build agents until `reports/build-money-sections.md` is reviewed and approved.
+Do not run additional build agents until `reports/agent-qa.md` is reviewed and approved.
 
 ## Lock Rules
 

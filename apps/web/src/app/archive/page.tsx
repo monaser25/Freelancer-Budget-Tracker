@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
-import { Archive, RotateCcw, Users, CreditCard } from 'lucide-react';
+import { Avatar, Badge, Button, Card, EmptyState, Icon, InlineAlert, SectionHeader, StatCard } from '@/components/ui';
 
 export default function ArchivePage() {
   const { clients, subscriptions, transactions, currency, restoreClient, restoreSubscription } = useFinancialStore();
@@ -51,46 +51,52 @@ export default function ArchivePage() {
   };
 
   const isEmpty = archivedClients.length === 0 && archivedSubscriptions.length === 0;
+  const archivedTransactionCount = archivedClients.reduce((sum, client) => sum + clientTransactionCount(client.id), 0)
+    + archivedSubscriptions.reduce((sum, sub) => sum + subscriptionTransactionCount(sub.id), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-100 rounded-[var(--radius-lg)] p-4 text-[13px] text-blue-700">
-        Archived items do not generate future billing. Historical transactions remain in your ledger.
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
+      <div>
+        <h1 className="t-h1">Archive</h1>
+        <p className="t-body mt-1 text-text-muted">Paused clients and subscriptions with preserved historical records</p>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="Archived clients" value={archivedClients.length} icon="Users" />
+        <StatCard label="Archived tools" value={archivedSubscriptions.length} icon="CreditCard" />
+        <StatCard label="Historical records" value={archivedTransactionCount} icon="Archive" />
+      </div>
+
+      <InlineAlert tone="info">
+        Archived items do not generate future billing. Historical transactions remain in your ledger.
+      </InlineAlert>
+
       {error && (
-        <div className="bg-red-50 border border-red-100 rounded-[var(--radius-lg)] px-4 py-3 text-[13px] text-red-600">
-          {error}
-        </div>
+        <InlineAlert tone="negative">{error}</InlineAlert>
       )}
 
       {isEmpty ? (
-        <div className="bg-card border border-border rounded-[var(--radius-lg)] p-10 text-center">
-          <div className="flex justify-center mb-3 text-slate-300"><Archive size={34} /></div>
-          <p className="text-[13px] text-textMuted">No archived items. Clients and subscriptions you remove will appear here.</p>
-        </div>
+        <Card pad={0}>
+          <EmptyState icon="Archive" title="No archived items" body="Clients and subscriptions you remove will appear here, ready to restore later." />
+        </Card>
       ) : (
         <>
           {archivedClients.length > 0 && (
-            <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-border flex items-center gap-2">
-                <Users size={15} className="text-textSecondary" />
-                <h2 className="text-[14px] font-semibold text-textPrimary">Archived Clients</h2>
-                <span className="text-[12px] text-textMuted ml-1">({archivedClients.length})</span>
+            <Card pad={0} className="overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-border">
+                <SectionHeader title="Archived clients" sub={`${archivedClients.length} client${archivedClients.length === 1 ? '' : 's'}`} className="mb-0" />
               </div>
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-border">
                 {archivedClients.map((client) => (
-                  <div key={client.id} className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={client.id} className="p-4 flex flex-col gap-3 hover:bg-surface-hover transition-colors sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
-                        {client.name.slice(0, 2).toUpperCase()}
-                      </div>
+                      <Avatar name={client.name} size={40} color="--viz-6" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[13.5px] font-medium text-textPrimary">{client.name}</span>
-                          <Badge tone="slate">{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
+                          <span className="t-body-m text-text">{client.name}</span>
+                          <Badge>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
                         </div>
-                        <div className="text-[12px] text-textMuted mt-0.5">
+                        <div className="text-sm text-text-muted mt-0.5">
                           {money.format(client.revenue)}/mo
                           {' · '}
                           {clientTransactionCount(client.id)} historical transaction{clientTransactionCount(client.id) === 1 ? '' : 's'}
@@ -103,41 +109,41 @@ export default function ArchivePage() {
                         </div>
                       </div>
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
                       disabled={restoringId === client.id}
                       onClick={() => handleRestoreClient(client.id)}
-                      className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-border text-[13px] font-medium text-textSecondary hover:bg-slate-100 hover:text-textPrimary disabled:opacity-60 sm:w-auto"
+                      loading={restoringId === client.id}
+                      icon="RotateCcw"
+                      className="sm:w-auto"
                     >
-                      <RotateCcw size={14} />
                       {restoringId === client.id ? 'Restoring...' : 'Restore'}
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
 
           {archivedSubscriptions.length > 0 && (
-            <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-              <div className="p-4 sm:p-5 border-b border-border flex items-center gap-2">
-                <CreditCard size={15} className="text-textSecondary" />
-                <h2 className="text-[14px] font-semibold text-textPrimary">Archived Subscriptions</h2>
-                <span className="text-[12px] text-textMuted ml-1">({archivedSubscriptions.length})</span>
+            <Card pad={0} className="overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-border">
+                <SectionHeader title="Archived subscriptions" sub={`${archivedSubscriptions.length} subscription${archivedSubscriptions.length === 1 ? '' : 's'}`} className="mb-0" />
               </div>
-              <div className="divide-y divide-slate-50">
+              <div className="divide-y divide-border">
                 {archivedSubscriptions.map((sub) => (
-                  <div key={sub.id} className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div key={sub.id} className="p-4 flex flex-col gap-3 hover:bg-surface-hover transition-colors sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[13px] font-semibold shrink-0">
-                        <CreditCard size={16} />
+                      <div className="w-10 h-10 rounded-lg bg-surface-hover text-text-secondary flex items-center justify-center shrink-0">
+                        <Icon name="CreditCard" size={17} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[13.5px] font-medium text-textPrimary">{sub.name}</span>
-                          <Badge tone="slate">{(sub.billingCycle || sub.cycle).toLowerCase()}</Badge>
+                          <span className="t-body-m text-text">{sub.name}</span>
+                          <Badge>{(sub.billingCycle || sub.cycle).toLowerCase()}</Badge>
                         </div>
-                        <div className="text-[12px] text-textMuted mt-0.5">
+                        <div className="text-sm text-text-muted mt-0.5">
                           {money.format(sub.amount)}/{(sub.billingCycle || sub.cycle) === 'YEARLY' ? 'yr' : (sub.billingCycle || sub.cycle) === 'QUARTERLY' ? 'qtr' : 'mo'}
                           {' · '}
                           {subscriptionTransactionCount(sub.id)} historical transaction{subscriptionTransactionCount(sub.id) === 1 ? '' : 's'}
@@ -150,32 +156,24 @@ export default function ArchivePage() {
                         </div>
                       </div>
                     </div>
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
                       disabled={restoringId === sub.id}
                       onClick={() => handleRestoreSubscription(sub.id)}
-                      className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-border text-[13px] font-medium text-textSecondary hover:bg-slate-100 hover:text-textPrimary disabled:opacity-60 sm:w-auto"
+                      loading={restoringId === sub.id}
+                      icon="RotateCcw"
+                      className="sm:w-auto"
                     >
-                      <RotateCcw size={14} />
                       {restoringId === sub.id ? 'Restoring...' : 'Restore'}
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           )}
         </>
       )}
     </div>
   );
-}
-
-function Badge({ children, tone }: { children: React.ReactNode; tone: 'blue' | 'green' | 'amber' | 'slate' }) {
-  const classes = {
-    blue: 'bg-blue-50 text-accent',
-    green: 'bg-green-50 text-green-700',
-    amber: 'bg-amber-50 text-amber-600',
-    slate: 'bg-slate-100 text-textSecondary',
-  };
-  return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${classes[tone]}`}>{children}</span>;
 }
