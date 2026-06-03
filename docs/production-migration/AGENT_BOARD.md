@@ -28,7 +28,7 @@ This file tracks agent assignments. Update statuses only when coordinating work.
 | Agent 4 | Build later | not-started | Dashboard and analytics | `reports/agent-4-dashboard-analytics.md` |
 | Agent 5 | Build later | not-started | Transactions and forms | `reports/agent-5-transactions.md` |
 | Agent 6 | Build later | not-started | Clients, subscriptions, archive, settings | `reports/agent-6-money-sections.md` |
-| Agent QA | Review | ready-for-review | QA, tests, regression, production gaps | `reports/agent-qa.md` |
+| Agent QA | Review | approved | QA, tests, regression, production gaps | `reports/agent-qa.md`, `reports/lead-review-qa.md` |
 
 ## Recommended Execution
 
@@ -65,9 +65,9 @@ Agent QA reviews all changes and runs checks.
 
 ## Active Order
 
-Only run `Agent QA` now.
+Phase 1 web UI migration checkpoint is ready for final manual review.
 
-Do not run additional build agents until `reports/agent-qa.md` is reviewed and approved.
+Do not run additional build agents until final manual review is complete.
 
 ## Lock Rules
 

@@ -87,10 +87,10 @@ export function Topbar() {
 
       {isOpen && (
         <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4 backdrop-blur-sm" onMouseDown={() => { if (!isSaving) setIsOpen(false); }}>
-          <div className="bg-surface-elevated rounded-[var(--r-xl)] border border-border shadow-lg w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6 anim-rise" onMouseDown={(event) => event.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="topbar-new-transaction-title" className="bg-surface-elevated rounded-[var(--r-xl)] border border-border shadow-lg w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6 anim-rise" onMouseDown={(event) => event.stopPropagation()}>
             <form onSubmit={(event) => { event.preventDefault(); saveTransaction(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
               <div>
-                <h2 className="text-[16px] font-semibold text-text">New Transaction</h2>
+                <h2 id="topbar-new-transaction-title" className="text-[16px] font-semibold text-text">New Transaction</h2>
                 <p className="text-[13px] text-text-muted mt-1">Create a manual revenue or expense entry.</p>
                 {error && <p className="text-[13px] text-negative mt-2">{error}</p>}
               </div>

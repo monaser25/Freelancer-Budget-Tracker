@@ -13,7 +13,7 @@ export default function OfflinePage() {
       <div className="space-y-1">
         <h1 className="text-[16px] font-semibold text-textPrimary">You&rsquo;re offline</h1>
         <p className="max-w-md text-[13px] text-textMuted">
-          FlowLedger needs a connection to load the latest clients, subscriptions, and
+          Haseela needs a connection to load the latest clients, subscriptions, and
           transactions. Anything you already opened in this session stays available.
         </p>
       </div>
@@ -22,7 +22,7 @@ export default function OfflinePage() {
         onClick={() => {
           if (typeof window !== 'undefined') window.location.reload();
         }}
-        className="rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-hover"
+        className="focus-ring rounded-md bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent-hover"
       >
         Try again
       </button>

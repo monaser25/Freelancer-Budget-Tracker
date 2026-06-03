@@ -3,14 +3,14 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 
 export const metadata: Metadata = {
-  title: 'FlowLedger - Freelancer Budget Tracker',
+  title: 'Haseela - Freelancer Budget Tracker',
   description: 'A modern SaaS application for freelancers to track their budget, income, expenses, and clients.',
   manifest: '/manifest.json',
-  applicationName: 'FlowLedger',
+  applicationName: 'Haseela',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'FlowLedger',
+    title: 'Haseela',
   },
   icons: {
     icon: [

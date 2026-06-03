@@ -315,7 +315,15 @@ export default function DashboardPage() {
                   <tr 
                     key={tx.id} 
                     onClick={() => router.push('/transactions')} 
-                    className="border-b last:border-b-0 border-border hover:bg-surface-hover cursor-pointer transition-colors"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        router.push('/transactions');
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="border-b last:border-b-0 border-border hover:bg-surface-hover focus:bg-surface-hover focus:outline-none cursor-pointer transition-colors"
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
@@ -343,7 +351,7 @@ export default function DashboardPage() {
 
       {modal && (
         <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" onMouseDown={() => { if (!isSaving) setModal(null); }}>
-          <Card className="w-full max-w-md my-8 relative shadow-xl" pad={24} onMouseDown={(event) => event.stopPropagation()}>
+          <Card role="dialog" aria-modal="true" aria-labelledby="dashboard-transaction-title" className="w-full max-w-md my-8 relative shadow-xl" pad={24} onMouseDown={(event) => event.stopPropagation()}>
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -352,7 +360,7 @@ export default function DashboardPage() {
               className="flex flex-col gap-4"
             >
               <div>
-                <h2 className="t-h3">{modal === 'income' ? 'Add revenue' : 'Log expense'}</h2>
+                <h2 id="dashboard-transaction-title" className="t-h3">{modal === 'income' ? 'Add revenue' : 'Log expense'}</h2>
                 <p className="text-sm text-text-muted mt-1">Record a {modal === 'income' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
                 {modalError && <p className="text-sm text-negative mt-2">{modalError}</p>}
               </div>

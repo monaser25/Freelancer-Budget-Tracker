@@ -116,7 +116,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`min-w-[78px] flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-[11px] transition-colors ${
+                 className={`focus-ring min-w-[78px] flex flex-col items-center justify-center gap-1 rounded-md px-2 py-2 text-[11px] transition-colors ${
                   active ? 'bg-accent-tint text-accent font-semibold' : 'text-text-muted hover:bg-surface-hover hover:text-text-secondary font-medium'
                 }`}
               >
