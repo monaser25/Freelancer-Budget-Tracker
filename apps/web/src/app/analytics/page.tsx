@@ -12,12 +12,15 @@ import {
   YAxis,
 } from 'recharts';
 import { useFinancialStore } from '@/store/useFinancialStore';
-import { Transaction } from '@/types/finance';
+import { Subscription, Transaction } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
+import { Segmented } from '@/components/ui/Form';
+import { Avatar } from '@/components/ui/Avatar';
 
 type Period = 'week' | 'month' | 'year';
 
-const ACCENT = '#2563EB';
+const ACCENT = 'var(--accent)';
 
 // ─── period helpers ────────────────────────────────────────────────────────────
 
@@ -48,6 +51,13 @@ function getPeriodRange(period: Period): { start: Date; end: Date } {
 function inRange(tx: Transaction, start: Date, end: Date) {
   const d = new Date(tx.date);
   return d >= start && d <= end;
+}
+
+function getMonthlySubscriptionAmount(subscription: Subscription) {
+  const cycle = subscription.billingCycle || subscription.cycle;
+  if (cycle === 'YEARLY') return subscription.amount / 12;
+  if (cycle === 'QUARTERLY') return subscription.amount / 3;
+  return subscription.amount;
 }
 
 function getChartBuckets(period: Period, transactions: Transaction[]) {
@@ -102,10 +112,11 @@ export default function AnalyticsPage() {
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
 
   const { start, end } = useMemo(() => getPeriodRange(period), [period]);
+  const completedTransactions = useMemo(() => transactions.filter(tx => tx.status === 'COMPLETED'), [transactions]);
 
   const periodTxs = useMemo(
-    () => transactions.filter(tx => inRange(tx, start, end)),
-    [transactions, start, end],
+    () => completedTransactions.filter(tx => inRange(tx, start, end)),
+    [completedTransactions, start, end],
   );
 
   const periodRevenue = useMemo(() => periodTxs.filter(t => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0), [periodTxs]);
@@ -113,7 +124,7 @@ export default function AnalyticsPage() {
   const periodProfit = periodRevenue - periodExpenses;
   const periodMargin = periodRevenue > 0 ? Math.round((periodProfit / periodRevenue) * 100) : 0;
 
-  const chartBuckets = useMemo(() => getChartBuckets(period, transactions), [period, transactions]);
+  const chartBuckets = useMemo(() => getChartBuckets(period, completedTransactions), [period, completedTransactions]);
   const chartEmpty = chartBuckets.every(b => b.revenue === 0 && b.expenses === 0);
 
   const categoryRows = useMemo(() => {
@@ -132,6 +143,8 @@ export default function AnalyticsPage() {
       return { client, revenue: rev };
     }).sort((a, b) => b.revenue - a.revenue);
   }, [clients, periodTxs]);
+  
+  const totalClientRev = useMemo(() => clientRows.reduce((a, c) => a + c.revenue, 0), [clientRows]);
 
   const subCosts = useMemo(() => {
     return subscriptions.map(sub => {
@@ -141,255 +154,186 @@ export default function AnalyticsPage() {
       return { sub, cost };
     }).filter(s => s.cost > 0).sort((a, b) => b.cost - a.cost);
   }, [subscriptions, periodTxs]);
+  
+  const activeSubs = subscriptions.filter(s => s.status === 'ACTIVE' && !s.archivedAt);
+  const subscriptionPeriodTotal = subCosts.reduce((sum, row) => sum + row.cost, 0);
 
-  const recentPeriodTransactions = useMemo(
-    () => [...periodTxs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
-    [periodTxs],
-  );
-
-  const activeClients = clients.filter(c => c.status === 'ACTIVE').length;
-  const retainerClients = clients.filter(c => c.paymentType === 'retainer').length;
-  const activeSubscriptions = subscriptions.filter(s => s.status === 'ACTIVE').length;
+  const activeSubscriptions = activeSubs.length;
 
   const periodLabel = period === 'week' ? 'This week' : period === 'month' ? 'This month' : 'This year';
   const allTimeMargin = overview.totalRevenue > 0 ? Math.round((overview.netProfit / overview.totalRevenue) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
 
       {/* ── header + period tabs ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-[14px] font-semibold text-textPrimary">Analytics</h1>
-          <p className="text-[12px] text-textMuted mt-0.5">Detailed financial breakdown and trends</p>
+          <h1 className="t-h1">Analytics</h1>
+          <p className="t-body mt-1 text-text-muted">Detailed financial breakdown and trends</p>
         </div>
-        <div className="flex w-full bg-slate-100 rounded-lg p-1 gap-0.5 sm:w-auto">
-          {(['week', 'month', 'year'] as Period[]).map(p => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-                className={`flex-1 px-4 py-1.5 rounded-md text-[13px] font-medium transition-all sm:flex-none ${
-                period === p
-                  ? 'bg-white text-textPrimary shadow-sm'
-                  : 'text-textMuted hover:text-textSecondary'
-              }`}
-            >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
+        <div className="flex justify-end">
+          <Segmented 
+            options={[
+              { label: 'Week', value: 'week' },
+              { label: 'Month', value: 'month' },
+              { label: 'Year', value: 'year' },
+            ]}
+            value={period}
+            onChange={(v) => setPeriod(v as Period)}
+          />
         </div>
       </div>
 
       {/* ── period metrics ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-[14px]">
-        <MetricCard label="Revenue" sub={periodLabel} value={money.format(periodRevenue)} valueClass="text-green-600" />
-        <MetricCard label="Expenses" sub={periodLabel} value={money.format(periodExpenses)} valueClass="text-red-500" />
-        <MetricCard label="Net Profit" sub={periodLabel} value={money.format(periodProfit)} valueClass={periodProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
-        <MetricCard label="Profit Margin" sub={periodLabel} value={`${periodMargin}%`} valueClass={periodMargin >= 0 ? 'text-accent' : 'text-red-500'} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Revenue" value={money.format(periodRevenue)} tone="positive" sub={periodLabel} />
+        <StatCard label="Expenses" value={money.format(periodExpenses)} tone="negative" sub={periodLabel} />
+        <StatCard label="Net profit" value={money.format(periodProfit)} tone={periodProfit >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
+        <StatCard label="Profit margin" value={`${periodMargin}%`} tone={periodMargin >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
       </div>
 
       {/* ── revenue vs expenses chart ── */}
-      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5 overflow-hidden">
-        <h2 className="text-[14px] font-semibold text-textPrimary">Revenue vs Expenses</h2>
-        <p className="text-[12px] text-textMuted mt-0.5 mb-5">
-          {period === 'week' ? 'Daily breakdown this week' : period === 'month' ? 'Weekly breakdown this month' : 'Monthly breakdown this year'}
-        </p>
+      <Card pad={22}>
+        <SectionHeader title="Revenue vs Expenses" sub={period === 'week' ? 'Daily breakdown this week' : period === 'month' ? 'Weekly breakdown this month' : 'Monthly breakdown this year'} />
         {chartEmpty ? (
-          <div className="h-[220px] flex items-center justify-center text-[13px] text-textMuted">No transactions for this period</div>
+          <div className="h-[220px] flex items-center justify-center text-sm text-text-muted">No transactions for this period</div>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={chartBuckets} barGap={4} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-              <XAxis dataKey="label" fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-              <YAxis fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={v => money.format(Number(v))} width={55} />
-              <Tooltip
-                formatter={(value, name) => [money.format(Number(value)), name === 'revenue' ? 'Revenue' : 'Expenses']}
-                contentStyle={{ fontSize: 12, borderColor: '#E2E8F0', borderRadius: 8 }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={v => v === 'revenue' ? 'Revenue' : 'Expenses'} />
-              <Bar dataKey="revenue" fill="#16A34A" radius={[4, 4, 0, 0]} name="revenue" />
-              <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} name="expenses" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="h-[280px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartBuckets} barGap={4} barCategoryGap="30%" margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} dy={10} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={v => money.format(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [money.format(value), name === 'revenue' ? 'Revenue' : 'Expenses']}
+                  cursor={{ fill: 'var(--surface-hover)' }}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
+                />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={v => v === 'revenue' ? 'Revenue' : 'Expenses'} />
+                <Bar dataKey="revenue" fill="var(--positive)" radius={[4, 4, 0, 0]} name="revenue" />
+                <Bar dataKey="expenses" fill="var(--negative)" radius={[4, 4, 0, 0]} name="expenses" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
-      </div>
+      </Card>
 
       {/* ── clients + expenses row ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* clients */}
-        <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-          <div className="p-5 border-b border-border">
-            <h2 className="text-[14px] font-semibold text-textPrimary">Client Revenue</h2>
-            <p className="text-[12px] text-textMuted mt-0.5">{periodLabel} · income per client</p>
-          </div>
-
-          <div className="grid grid-cols-3 divide-x divide-border border-b border-border overflow-hidden">
-            <StatMini label="Total Clients" value={String(clients.length)} />
-            <StatMini label="Active" value={String(activeClients)} />
-            <StatMini label="Retainers" value={String(retainerClients)} />
-          </div>
+        <Card pad={22}>
+          <SectionHeader title="Revenue by client" sub={`${clients.length} clients · ${money.format(totalClientRev)} total`} />
 
           {clientRows.length === 0 ? (
-            <div className="py-10 text-center text-[13px] text-textMuted">No clients yet</div>
+            <div className="py-10 text-center text-sm text-text-muted">No clients yet</div>
           ) : clientRows.every(r => r.revenue === 0) ? (
-            <div className="py-10 text-center text-[13px] text-textMuted">No client income recorded {periodLabel.toLowerCase()}</div>
+            <div className="py-10 text-center text-sm text-text-muted">No client income recorded {periodLabel.toLowerCase()}</div>
           ) : (
-            <div className="divide-y divide-slate-50">
-              {clientRows.map(({ client, revenue }) => {
-                const pct = periodRevenue > 0 ? Math.round((revenue / periodRevenue) * 100) : 0;
+            <div className="flex flex-col gap-3 mt-4">
+              {clientRows.map(({ client, revenue }, i) => {
+                const pct = totalClientRev > 0 ? Math.round((revenue / totalClientRev) * 100) : 0;
                 return (
-                  <div key={client.id} className="px-5 py-3 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-accent text-white flex items-center justify-center text-[12px] font-bold shrink-0">
-                      {client.name.slice(0, 2).toUpperCase()}
-                    </div>
+                  <div key={client.id} className="flex items-center gap-3">
+                    <span className="t-body-m font-mono text-text-muted w-[18px]">{i + 1}</span>
+                    <Avatar name={client.name} size={30} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[13px] font-medium text-textPrimary truncate">{client.name}</span>
-                        <span className={`text-[13px] font-semibold shrink-0 ${revenue > 0 ? 'text-green-600' : 'text-textMuted'}`}>{money.format(revenue)}</span>
+                      <div className="flex justify-between mb-1.5">
+                        <span className="t-body-m truncate">{client.name}</span>
+                        <span className="t-body-m font-mono">{money.format(revenue)}</span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[11px] text-textMuted shrink-0 w-10 text-right">{pct}%</span>
-                        <span className="text-[11px] text-textMuted shrink-0">
-                          {client.paymentType === 'retainer' ? 'Retainer' : 'One-time'} · {client.status}
-                        </span>
+                      <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
+                        <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
+                    <span className="text-xs font-mono text-text-muted w-9 text-right">{pct}%</span>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* expenses by category */}
-        <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-          <div className="p-5 border-b border-border">
-            <h2 className="text-[14px] font-semibold text-textPrimary">Expenses by Category</h2>
-            <p className="text-[12px] text-textMuted mt-0.5">{periodLabel} · where costs concentrate</p>
-          </div>
+        <Card pad={22}>
+          <SectionHeader title="Expenses by category" sub={`${categoryRows.length} categories`} />
 
           {categoryRows.length === 0 ? (
-            <div className="py-10 text-center text-[13px] text-textMuted">No expenses recorded {periodLabel.toLowerCase()}</div>
+            <div className="py-10 text-center text-sm text-text-muted">No expenses recorded {periodLabel.toLowerCase()}</div>
           ) : (
-            <>
-              <div className="px-4 pt-5 pb-2 sm:px-5 overflow-x-auto">
-                <ResponsiveContainer width="100%" height={Math.max(120, categoryRows.length * 38)}>
-                  <BarChart data={categoryRows} layout="vertical" margin={{ left: 0, right: 24, top: 0, bottom: 0 }}>
-                    <CartesianGrid stroke="#F1F5F9" horizontal={false} />
-                    <XAxis type="number" tickFormatter={v => money.format(Number(v))} fontSize={11} tick={{ fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="category" width={86} fontSize={11} tick={{ fill: '#64748B' }} axisLine={false} tickLine={false} />
-                    <Tooltip formatter={v => money.format(Number(v))} contentStyle={{ fontSize: 12, borderColor: '#E2E8F0', borderRadius: 8 }} />
-                    <Bar dataKey="amount" fill={ACCENT} radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="divide-y divide-slate-50 border-t border-border">
-                {categoryRows.map(({ category, amount }) => {
-                  const pct = periodExpenses > 0 ? Math.round((amount / periodExpenses) * 100) : 0;
-                  return (
-                    <div key={category} className="px-4 py-2.5 flex flex-col gap-2 sm:px-5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-accent shrink-0" />
-                        <span className="text-[13px] text-textPrimary">{category}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-full min-w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden sm:w-20">
-                          <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[13px] font-medium text-textPrimary w-16 text-right tabular-nums">{money.format(amount)}</span>
-                        <span className="text-[11px] text-textMuted w-7 text-right">{pct}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
+            <div className="mt-4">
+              <ResponsiveContainer width="100%" height={Math.max(160, categoryRows.length * 40)}>
+                <BarChart data={categoryRows} layout="vertical" margin={{ left: 0, right: 24, top: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
+                  <XAxis type="number" tickFormatter={v => money.format(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="category" width={86} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    formatter={(v: number) => money.format(v)} 
+                    cursor={{ fill: 'var(--surface-hover)' }}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', fontSize: 12 }} 
+                  />
+                  <Bar dataKey="amount" fill={ACCENT} radius={[0, 4, 4, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* ── subscription costs ── */}
       {(subCosts.length > 0 || activeSubscriptions > 0) && (
-        <div className="bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
-          <div className="p-4 sm:p-5 border-b border-border flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-[14px] font-semibold text-textPrimary">Subscription Costs</h2>
-              <p className="text-[12px] text-textMuted mt-0.5">{activeSubscriptions} active subscription{activeSubscriptions !== 1 ? 's' : ''} · {periodLabel.toLowerCase()}</p>
-            </div>
-            <div className="text-left sm:text-right">
-              <div className="text-[14px] font-semibold text-red-500">{money.format(subCosts.reduce((s, r) => s + r.cost, 0))}</div>
-              <div className="text-[11px] text-textMuted">total this period</div>
-            </div>
-          </div>
-
+        <Card pad={22}>
+          <SectionHeader 
+            title="Subscription costs" 
+            sub={`${activeSubscriptions} active subscription${activeSubscriptions !== 1 ? 's' : ''} · ${periodLabel.toLowerCase()}`}
+            action={
+              <div className="text-right">
+                <div className="t-body-m font-mono text-negative">{money.format(subscriptionPeriodTotal)}</div>
+                <div className="text-xs text-text-muted">total this period</div>
+              </div>
+            }
+          />
           {subCosts.length === 0 ? (
-            <div className="py-8 text-center text-[13px] text-textMuted">No subscription charges recorded {periodLabel.toLowerCase()}</div>
+            <div className="py-8 text-center text-sm text-text-muted">No subscription charges recorded {periodLabel.toLowerCase()}</div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 mt-4">
               {subCosts.map(({ sub, cost }) => {
                 const pct = periodExpenses > 0 ? Math.round((cost / periodExpenses) * 100) : 0;
                 return (
-                  <div key={sub.id} className="px-5 py-3 flex items-center gap-3">
+                  <div key={sub.id} className="flex items-center gap-2.5 p-3 rounded-md border border-border">
+                    <Avatar name={sub.name} size={32} />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[13px] font-medium text-textPrimary">{sub.name}</span>
-                        <span className="text-[13px] font-semibold text-red-500 shrink-0">{money.format(cost)}</span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-red-400 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-[11px] text-textMuted shrink-0 w-10 text-right">{pct}% of expenses</span>
-                        <span className="text-[11px] text-textMuted shrink-0">{sub.cycle.toLowerCase()} · {money.format(sub.amount)} billed</span>
-                      </div>
+                      <div className="t-body-m truncate">{sub.name}</div>
+                      <div className="text-xs text-text-muted">{pct}% of expenses · {sub.cycle.toLowerCase()} billing</div>
                     </div>
+                    <span className="t-body-m font-mono text-negative">{money.format(cost)}</span>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+          {activeSubscriptions > 0 && (
+            <div className="mt-4 pt-4 border-t border-border text-sm text-text-muted">
+              Equivalent monthly tool cost: <span className="font-mono text-text">{money.format(activeSubs.reduce((sum, sub) => sum + getMonthlySubscriptionAmount(sub), 0))}/mo</span>
+            </div>
+          )}
+        </Card>
       )}
 
       {/* ── all-time summary ── */}
-      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
-        <h2 className="text-[14px] font-semibold text-textPrimary">Recent Transactions</h2>
-        <p className="text-[12px] text-textMuted mt-0.5 mb-3">{periodLabel} · named ledger entries</p>
-        {recentPeriodTransactions.length === 0 ? (
-          <div className="text-[13px] text-textMuted">No transactions recorded {periodLabel.toLowerCase()}</div>
-        ) : (
-          <div className="divide-y divide-slate-50">
-            {recentPeriodTransactions.map((tx) => (
-              <div key={tx.id} className="py-2 flex items-center justify-between gap-3 text-[13px]">
-                <span className="min-w-0 truncate text-textPrimary">{tx.name || tx.notes || tx.sourceType}</span>
-                <span className={tx.type === 'INCOME' ? 'shrink-0 font-medium text-green-600' : 'shrink-0 font-medium text-red-500'}>{money.format(tx.amount)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
-        <h2 className="text-[14px] font-semibold text-textPrimary mb-5">All-Time Summary</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-          <SummaryBox label="Total Revenue" value={money.format(overview.totalRevenue)} sub="all recorded income" valueClass="text-green-600" />
-          <SummaryBox label="Total Expenses" value={money.format(overview.totalExpenses)} sub="all recorded costs" valueClass="text-red-500" />
-          <SummaryBox label="Net Profit" value={money.format(overview.netProfit)} sub={`${allTimeMargin}% margin`} valueClass={overview.netProfit >= 0 ? 'text-green-600' : 'text-red-500'} />
-          <SummaryBox label="Monthly Tool Cost" value={`${money.format(overview.subscriptionBurden)}/mo`} sub={`${activeSubscriptions} active subscription${activeSubscriptions !== 1 ? 's' : ''}`} valueClass="text-textPrimary" />
+      <Card pad={22}>
+        <SectionHeader title="All-time summary" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-[1px] bg-border rounded-md overflow-hidden mt-4">
+          <SummaryBox label="Total revenue" value={money.format(overview.totalRevenue)} valueClass="text-positive" />
+          <SummaryBox label="Total expenses" value={money.format(overview.totalExpenses)} valueClass="text-negative" />
+          <SummaryBox label="Net profit" value={money.format(overview.netProfit)} valueClass={overview.netProfit >= 0 ? 'text-positive' : 'text-negative'} />
+          <SummaryBox label="Profit margin" value={`${allTimeMargin}%`} valueClass={allTimeMargin >= 0 ? 'text-positive' : 'text-negative'} />
+          <SummaryBox label="Active clients" value={overview.activeClients.toString()} />
+          <SummaryBox label="Avg / client" value={money.format(overview.totalClients > 0 ? overview.totalRevenue / overview.totalClients : 0)} />
+          <SummaryBox label="Active tools" value={activeSubscriptions.toString()} />
+          <SummaryBox label="Tools / mo" value={money.format(overview.subscriptionBurden)} valueClass="text-negative" />
         </div>
-
-        <div className="mt-5 pt-5 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-          <SummaryBox label="Total Clients" value={String(overview.totalClients)} sub="across all statuses" valueClass="text-textPrimary" />
-          <SummaryBox label="Active Clients" value={String(overview.activeClients)} sub={`${retainerClients} retainer${retainerClients !== 1 ? 's' : ''}`} valueClass="text-accent" />
-          <SummaryBox label="Avg Revenue / Client" value={overview.totalClients > 0 ? money.format(overview.totalRevenue / overview.totalClients) : money.format(0)} sub="total ÷ clients" valueClass="text-textPrimary" />
-          <SummaryBox label="Subscription Burden" value={`${money.format(overview.subscriptionBurden)}/mo`} sub="equivalent monthly cost" valueClass="text-textPrimary" />
-        </div>
-      </div>
+      </Card>
 
     </div>
   );
@@ -397,31 +341,11 @@ export default function AnalyticsPage() {
 
 // ─── sub-components ────────────────────────────────────────────────────────────
 
-function MetricCard({ label, sub, value, valueClass }: { label: string; sub: string; value: string; valueClass: string }) {
+function SummaryBox({ label, value, valueClass = "text-text" }: { label: string; value: string; valueClass?: string }) {
   return (
-    <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5">
-      <div className="text-[12px] text-textMuted">{label}</div>
-      <div className={`text-[22px] font-semibold tracking-tight mt-1 ${valueClass}`}>{value}</div>
-      <div className="text-[11px] text-textMuted mt-0.5">{sub}</div>
-    </div>
-  );
-}
-
-function StatMini({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="py-4 text-center">
-      <div className="text-[20px] font-semibold text-textPrimary">{value}</div>
-      <div className="text-[11px] text-textMuted mt-0.5">{label}</div>
-    </div>
-  );
-}
-
-function SummaryBox({ label, value, sub, valueClass }: { label: string; value: string; sub: string; valueClass: string }) {
-  return (
-    <div>
-      <div className="text-[12px] text-textMuted">{label}</div>
-      <div className={`text-[18px] font-semibold mt-1 ${valueClass}`}>{value}</div>
-      <div className="text-[11px] text-textMuted mt-0.5">{sub}</div>
+    <div className="bg-surface p-4 sm:p-[16px_18px]">
+      <div className="text-xs text-text-muted">{label}</div>
+      <div className={`t-h2 font-mono mt-1.5 ${valueClass}`}>{value}</div>
     </div>
   );
 }

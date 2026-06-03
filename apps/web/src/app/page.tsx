@@ -3,23 +3,16 @@
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  ArrowDownCircle,
-  CreditCard,
-  Inbox,
-  PlusCircle,
-  RefreshCw,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  Users,
-  UserPlus,
-} from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Button } from '@/components/ui/Button';
+import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
+import { Avatar } from '@/components/ui/Avatar';
+import { Badge } from '@/components/ui/Badge';
+import { Icon } from '@/components/ui/Icon';
+import { Field, Input, Select } from '@/components/ui/Form';
+import { InlineAlert } from '@/components/ui/InlineAlert';
 
 type ModalType = 'income' | 'expense' | null;
 type MonthlyChartRow = {
@@ -42,11 +35,23 @@ function toIsoDate(date: string) {
   return new Date(`${date}T12:00:00`).toISOString();
 }
 
+function getRelativeDate(isoDate: string) {
+  const txDate = new Date(isoDate);
+  const diff = new Date().getTime() - txDate.getTime();
+  if (diff < 0) return txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const {
     transactions,
     subscriptions,
+    clients,
     overview,
     currency,
     error,
@@ -55,7 +60,10 @@ export default function DashboardPage() {
   const [modal, setModal] = useState<ModalType>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  
+  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }), [currency]);
+  const currencyPrefix = useMemo(() => money2.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money2]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -97,10 +105,23 @@ export default function DashboardPage() {
     () => [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
     [transactions],
   );
+  
   const activeSubscriptions = useMemo(
-    () => subscriptions.filter((sub) => sub.status === 'ACTIVE' && !sub.archivedAt),
+    () => subscriptions.filter((sub) => sub.status === 'ACTIVE' && !sub.archivedAt)
+           .sort((a, b) => new Date(a.nextBillingDate).getTime() - new Date(b.nextBillingDate).getTime())
+           .slice(0, 4),
     [subscriptions],
   );
+
+  const topClient = useMemo(() => {
+    const clientRev = clients.map(client => {
+      const rev = transactions
+        .filter(t => t.type === 'INCOME' && (t.clientId === client.id || (t.sourceType === 'client' && t.sourceId === client.id)))
+        .reduce((s, t) => s + t.amount, 0);
+      return { ...client, value: rev };
+    }).sort((a, b) => b.value - a.value);
+    return clientRev.length > 0 && clientRev[0].value > 0 ? clientRev[0] : null;
+  }, [clients, transactions]);
 
   const saveTransaction = async (formData: FormData, type: 'INCOME' | 'EXPENSE') => {
     const amount = Number(formData.get('amount'));
@@ -135,258 +156,251 @@ export default function DashboardPage() {
     }
   };
 
+  const chartRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
+  const chartExpenses = chartData.reduce((sum, item) => sum + item.expenses, 0);
+  const chartMargin = chartRevenue > 0 ? Math.round(((chartRevenue - chartExpenses) / chartRevenue) * 100) : 0;
+  const chartMarginLabel = `${chartMargin > 0 ? '+' : ''}${chartMargin}% margin`;
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
       {error && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-md text-sm flex items-center gap-2">
-          <AlertTriangle size={16} />
+        <InlineAlert tone="warning" title="Sync Issue">
           {error}
-        </div>
+        </InlineAlert>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-[14px]">
-        <StatCard href="/clients" label="Total Clients" value={String(overview.activeClients || overview.totalClients)} icon={<Users size={14} />} detail={`${overview.totalClients} total records`} />
-        <StatCard href="/transactions?filter=revenue" label="Total Revenue" value={money.format(overview.totalRevenue)} icon={<TrendingUp size={14} />} detail={`This month: ${money.format(overview.monthlyRevenue)}`} tone="green" />
-        <StatCard href="/transactions?filter=expenses" label="Total Expenses" value={money.format(overview.totalExpenses)} icon={<TrendingDown size={14} />} detail="Global tracked" tone="red" />
-        <StatCard href="/analytics" label="Net Profit" value={money.format(overview.netProfit)} icon={<Target size={14} />} detail="Revenue - costs" />
-        <StatCard href="/subscriptions" label="Active Subscriptions" value={`${money.format(overview.subscriptionBurden)}/mo`} icon={<RefreshCw size={14} />} detail={`${overview.activeSubscriptionsCount} active`} />
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2.5">
+        <Button icon="TrendingUp" onClick={() => { setModalError(null); setModal('income'); }}>Add revenue</Button>
+        <Button variant="secondary" icon="Receipt" onClick={() => { setModalError(null); setModal('expense'); }}>Log expense</Button>
+        <Button variant="secondary" icon="RefreshCw" onClick={() => router.push('/subscriptions?action=tool')}>Add subscription</Button>
+        <Button variant="secondary" icon="Users" onClick={() => router.push('/clients?action=client')}>Add client</Button>
       </div>
 
-      <div>
-        <div className="text-[13px] font-semibold text-textSecondary mb-[10px]">Quick Actions</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-[10px]">
-          <ActionButton icon={<PlusCircle size={18} />} label="Add Revenue" onClick={() => { setModalError(null); setModal('income'); }} />
-          <ActionButton icon={<ArrowDownCircle size={18} />} label="Log Expense" onClick={() => { setModalError(null); setModal('expense'); }} />
-          <ActionButton icon={<CreditCard size={18} />} label="Add Subscription" href="/subscriptions?action=tool" />
-          <ActionButton icon={<UserPlus size={18} />} label="Add Client" href="/clients?action=client" />
-        </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatCard 
+          label="Total clients" 
+          value={overview.totalClients} 
+          icon="Users" 
+          onClick={() => router.push('/clients')} 
+        />
+        <StatCard 
+          label="Total revenue" 
+          value={money0.format(overview.totalRevenue)} 
+          tone="positive" 
+          icon="TrendingUp" 
+          onClick={() => router.push('/transactions?filter=revenue')} 
+        />
+        <StatCard 
+          label="Total expenses" 
+          value={money0.format(overview.totalExpenses)} 
+          tone="negative" 
+          icon="Receipt" 
+          onClick={() => router.push('/transactions?filter=expenses')} 
+        />
+        <StatCard 
+          label="Net profit" 
+          value={money0.format(overview.netProfit)} 
+          icon="Wallet" 
+          onClick={() => router.push('/analytics')} 
+        />
+        <StatCard 
+          label="Active subscriptions" 
+          value={overview.activeSubscriptionsCount} 
+          sub={`${money0.format(overview.subscriptionBurden)}/mo`} 
+          icon="RefreshCw" 
+          onClick={() => router.push('/subscriptions')} 
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[14px]">
-        <div className="lg:col-span-2 space-y-[14px]">
-          <div className="bg-card border border-border rounded-[var(--radius-lg)] p-4 sm:p-5 h-[330px] overflow-hidden">
-            <h3 className="text-[14px] font-semibold text-textPrimary">Revenue vs Expenses</h3>
-            <p className="text-[12px] text-textMuted mt-1 mb-4">Monthly breakdown</p>
-            <ResponsiveContainer width="100%" height="82%">
-              <BarChart data={chartData}>
-                <CartesianGrid stroke="#F1F5F9" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={(value) => money.format(Number(value))} />
-                <Tooltip formatter={(value) => money.format(Number(value))} cursor={{ fill: '#F8FAFC' }} />
-                <Bar dataKey="revenue" fill="#2563EB" radius={[5, 5, 0, 0]} />
-                <Bar dataKey="expenses" fill="#BFDBFE" radius={[5, 5, 0, 0]} />
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        <Card className="lg:col-span-2 h-full" pad={22}>
+          <SectionHeader 
+            title="Revenue vs Expenses" 
+            sub="Last 6 months" 
+            action={<Badge tone={chartMargin >= 0 ? 'positive' : 'negative'} icon={chartMargin >= 0 ? 'TrendingUp' : 'TrendingDown'}>{chartMarginLabel}</Badge>} 
+          />
+          <div className="h-[260px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} dy={10} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => money0.format(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
+                <Tooltip 
+                  formatter={(value: number) => money0.format(value)}
+                  cursor={{ fill: 'var(--surface-hover)' }}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
+                />
+                <Bar dataKey="revenue" fill="var(--positive)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expenses" fill="var(--negative)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </Card>
 
-          <div className="bg-card border border-border rounded-[var(--radius-lg)] p-0 overflow-hidden">
-            <div className="p-5 border-b border-border flex justify-between items-center">
-              <div>
-                <h3 className="text-[14px] font-semibold text-textPrimary">Recent Transactions</h3>
-                <p className="text-[12px] text-textMuted mt-1">Latest synchronized entries</p>
-              </div>
-            </div>
-            {recentTransactions.length === 0 ? (
-              <div className="text-center py-10 px-4 text-textMuted">
-                <div className="mb-3 text-slate-300 flex justify-center"><Inbox size={34} /></div>
-                <p className="text-[13px]">No transactions yet.</p>
-                <p className="text-[12px] text-textMuted mt-1">Record a client payment or manual expense to see your dashboard come to life.</p>
-                <button onClick={() => setModal('income')} className="mt-4 px-4 py-2 rounded-md bg-accent text-white text-[12px] font-medium hover:bg-accent-hover transition-colors">
-                  Add Revenue
+        <div className="flex flex-col gap-4">
+          <Card pad={20}>
+            <SectionHeader 
+              title="Active subscriptions" 
+              action={
+                <button onClick={() => router.push('/subscriptions')} className="text-sm font-medium text-accent hover:underline">
+                  View all
                 </button>
+              } 
+            />
+            {activeSubscriptions.length > 0 ? (
+              <div className="flex flex-col gap-1 mt-2">
+                {activeSubscriptions.map((s) => (
+                  <div key={s.id} className="flex items-center gap-3 py-2">
+                    <Avatar name={s.name} size={32} />
+                    <div className="flex-1 min-w-0">
+                      <div className="t-body-m truncate">{s.name}</div>
+                      <div className="text-xs text-text-muted">Renews {new Date(s.nextBillingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                    </div>
+                    <span className="t-body-m font-mono">{money0.format(s.amount)}<span className="text-text-muted font-sans text-xs">/{s.cycle === 'YEARLY' ? 'yr' : 'mo'}</span></span>
+                  </div>
+                ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[460px] text-left border-collapse">
-                  <thead className="bg-slate-50 border-b border-border">
-                    <tr>
-                      <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Source/Desc</th>
-                      <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider">Date</th>
-                      <th className="p-[10px_14px] text-[11px] font-semibold text-textMuted uppercase tracking-wider text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentTransactions.map((tx) => (
-                      <tr key={tx.id} onClick={() => router.push('/transactions')} className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer">
-                        <td className="p-[12px_14px] text-[13px] text-textPrimary">{tx.name || tx.notes || tx.sourceType}</td>
-                        <td className="p-[12px_14px] text-[13px] text-textSecondary">{new Date(tx.date).toLocaleDateString()}</td>
-                        <td className={`p-[12px_14px] text-[13px] font-mono font-medium text-right ${tx.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                          {tx.type === 'INCOME' ? '+' : '-'}{money.format(tx.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <div className="text-sm text-text-muted py-4 text-center">No active subscriptions</div>
             )}
-          </div>
-        </div>
+          </Card>
 
-        <div className="space-y-[14px]">
-          <div className="bg-card border border-border rounded-[var(--radius-lg)] p-5">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[14px] font-semibold text-textPrimary">Clients Overview</h3>
-              <span className="text-[11px] font-medium bg-blue-50 text-accent px-2 py-1 rounded-full">{overview.totalClients} Total</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Metric label="Active Clients" value={overview.activeClients.toString()} />
-              <Metric label="Average Revenue" value={money.format(overview.totalClients ? overview.totalRevenue / overview.totalClients : 0)} />
-            </div>
-          </div>
-
-          <Link href="/subscriptions" className="block bg-card border border-border rounded-[var(--radius-lg)] p-5 hover:shadow-[var(--shadow-md)] hover:border-blue-200 transition-all">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h3 className="text-[14px] font-semibold text-textPrimary">Active Subscriptions</h3>
-              <span className="text-[12px] text-accent">View all -&gt;</span>
-            </div>
-            <Metric label="Monthly Tools" value={money.format(overview.subscriptionBurden)} />
-            <div className="h-2 bg-slate-100 rounded-full mt-4 overflow-hidden">
-              <div
-                className="h-full bg-accent rounded-full"
-                style={{ width: `${Math.min(100, overview.totalRevenue ? (overview.subscriptionBurden / overview.totalRevenue) * 100 : 0)}%` }}
-              />
-            </div>
-            <div className="mt-4 divide-y divide-slate-50 border-t border-slate-50">
-              {activeSubscriptions.slice(0, 4).map((sub) => (
-                <div key={sub.id} className="py-2 flex items-center justify-between gap-3 text-[12px]">
-                  <span className="min-w-0 truncate text-textSecondary">{sub.name}</span>
-                  <span className="text-textMuted">{new Date(sub.nextBillingDate).toLocaleDateString()}</span>
+          {topClient && (
+            <Card pad={20}>
+              <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">Top client</div>
+              <div className="flex items-center gap-3">
+                <Avatar name={topClient.name} size={40} />
+                <div className="flex-1 min-w-0">
+                  <div className="t-h3 truncate">{topClient.name}</div>
+                  <div className="text-sm text-text-muted truncate">{topClient.email || topClient.company || 'Client'}</div>
                 </div>
-              ))}
-              {activeSubscriptions.length > 4 && <div className="pt-2 text-[12px] text-textMuted">... and {activeSubscriptions.length - 4} more</div>}
-            </div>
-          </Link>
+              </div>
+              <div className="mt-4 pt-3.5 border-t border-border flex justify-between items-baseline">
+                <span className="text-sm text-text-muted">Total paid</span>
+                <span className="t-h3 font-mono text-positive">{money0.format(topClient.value)}</span>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 
-      {modal && (
-        <div className="fixed inset-0 z-[200] bg-slate-900/40 flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={() => { if (!isSaving) setModal(null); }}>
-          <div className="bg-white rounded-[var(--radius-xl)] border border-border shadow-xl w-full max-w-[480px] max-h-[calc(100vh-2rem)] overflow-y-auto p-5 sm:p-6" onMouseDown={(event) => event.stopPropagation()}>
-            {(modal === 'income' || modal === 'expense') && (
-              <TransactionForm type={modal === 'income' ? 'INCOME' : 'EXPENSE'} error={modalError} isSaving={isSaving} onCancel={() => setModal(null)} onSave={saveTransaction} />
-            )}
+      {/* Recent Transactions */}
+      <Card pad={0}>
+        <div className="px-5 py-4 flex items-center justify-between border-b border-border">
+          <span className="t-h3">Recent transactions</span>
+          <button 
+            onClick={() => router.push('/transactions')} 
+            className="text-sm font-medium text-accent hover:underline inline-flex items-center gap-1"
+          >
+            View ledger <Icon name="ChevronRight" size={14} />
+          </button>
+        </div>
+        
+        {recentTransactions.length === 0 ? (
+          <div className="text-center py-10 px-4 text-text-muted">
+            <div className="mb-3 text-border-strong flex justify-center"><Icon name="Inbox" size={34} /></div>
+            <p className="text-sm">No transactions yet.</p>
+            <button onClick={() => setModal('income')} className="mt-4 text-sm font-medium text-accent hover:underline">
+              Add revenue to get started
+            </button>
           </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <tbody>
+                {recentTransactions.map((tx) => (
+                  <tr 
+                    key={tx.id} 
+                    onClick={() => router.push('/transactions')} 
+                    className="border-b last:border-b-0 border-border hover:bg-surface-hover cursor-pointer transition-colors"
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${tx.type === 'INCOME' ? 'bg-positive-tint text-positive' : 'bg-negative-tint text-negative'}`}>
+                          <Icon name={tx.type === 'INCOME' ? 'ArrowDown' : 'ArrowUp'} size={15} strokeWidth={2.2} />
+                        </div>
+                        <div>
+                          <div className="t-body-m">{tx.name || tx.notes || tx.sourceType}</div>
+                          <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date)}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <span className={`t-body-m font-mono ${tx.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
+                        {tx.type === 'INCOME' ? '+' : '−'}{money2.format(tx.amount)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {modal && (
+        <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 overflow-y-auto" onMouseDown={() => { if (!isSaving) setModal(null); }}>
+          <Card className="w-full max-w-md my-8 relative shadow-xl" pad={24} onMouseDown={(event) => event.stopPropagation()}>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                saveTransaction(new FormData(event.currentTarget), modal === 'income' ? 'INCOME' : 'EXPENSE');
+              }}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <h2 className="t-h3">{modal === 'income' ? 'Add revenue' : 'Log expense'}</h2>
+                <p className="text-sm text-text-muted mt-1">Record a {modal === 'income' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
+                {modalError && <p className="text-sm text-negative mt-2">{modalError}</p>}
+              </div>
+              
+              <Field label="Transaction Name">
+                <Input name="name" placeholder={modal === 'income' ? 'Website design project' : 'Adobe Creative Cloud'} required autoFocus />
+              </Field>
+              
+              <Field label="Notes">
+                <Input name="notes" placeholder="Optional details" />
+              </Field>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Amount">
+                  <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
+                </Field>
+                <Field label="Date">
+                  <Input name="date" type="date" defaultValue={today()} required />
+                </Field>
+              </div>
+              
+              <Field label="Category">
+                <Select name="categoryId">
+                  {modal === 'income' ? (
+                    <>
+                      <option value="CLIENT">Client Payment</option>
+                      <option value="PROJECT">Project Revenue</option>
+                      <option value="OTHER">Other Income</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="TOOLS">Tools</option>
+                      <option value="OPERATIONS">Operations</option>
+                      <option value="TAXES">Taxes</option>
+                      <option value="OTHER">Other Expense</option>
+                    </>
+                  )}
+                </Select>
+              </Field>
+              
+              <div className="flex justify-end gap-2 pt-2 mt-2">
+                <Button type="button" variant="ghost" disabled={isSaving} onClick={() => setModal(null)}>Cancel</Button>
+                <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save Entry'}</Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
     </div>
-  );
-}
-
-function StatCard({ label, value, detail, icon, href, tone = 'muted' }: { label: string; value: string; detail: string; icon: React.ReactNode; href: string; tone?: 'green' | 'red' | 'muted' }) {
-  const toneClass = tone === 'green' ? 'text-green-600' : tone === 'red' ? 'text-red-600' : 'text-textMuted';
-  return (
-    <Link href={href} className="block bg-card border border-border rounded-[var(--radius-lg)] p-[18px_20px] cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-blue-200 transition-all">
-      <div className="text-[12px] text-textMuted font-normal mb-[6px]">{label}</div>
-      <div className="break-words text-[22px] sm:text-[24px] font-semibold tracking-tight text-textPrimary">{value}</div>
-      <div className={`text-[12px] mt-[6px] flex items-center gap-1 ${toneClass}`}>
-        {icon} {detail}
-      </div>
-    </Link>
-  );
-}
-
-function ActionButton({ icon, label, onClick, href }: { icon: React.ReactNode; label: string; onClick?: () => void; href?: string }) {
-  const content = (
-    <>
-      <div className="w-[36px] h-[36px] rounded-md bg-slate-100 flex items-center justify-center text-textSecondary group-hover:bg-blue-100 group-hover:text-accent transition-all">
-        {icon}
-      </div>
-      <div className="text-center text-[12px] font-medium text-textSecondary">{label}</div>
-    </>
-  );
-
-  const className = "flex flex-col items-center gap-[8px] p-[16px_12px] bg-card border border-border rounded-[var(--radius-lg)] cursor-pointer hover:bg-accent-light hover:border-blue-200 transition-all group";
-
-  if (href) {
-    return <Link href={href} className={className}>{content}</Link>;
-  }
-
-  return (
-    <button type="button" onClick={onClick} className={className}>
-      {content}
-    </button>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between items-center text-[13px]">
-      <span className="text-textSecondary">{label}</span>
-      <span className="font-semibold text-textPrimary">{value}</span>
-    </div>
-  );
-}
-
-function EmptyState({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="text-center py-10 text-textMuted">
-      <div className="mb-3 text-slate-300 flex justify-center">{icon}</div>
-      <p className="text-[13px]">{text}</p>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="block text-[12px] font-medium text-textSecondary mb-1">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-const inputClass = 'w-full px-3 py-2 border border-border rounded-md text-[13px] outline-none focus:border-accent bg-background';
-
-function TransactionForm({ type, error, isSaving, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE'; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, type: 'INCOME' | 'EXPENSE') => void }) {
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave(new FormData(event.currentTarget), type);
-      }}
-      className="space-y-4"
-    >
-      <div>
-        <h2 className="text-[16px] font-semibold text-textPrimary">{type === 'INCOME' ? 'Add Revenue' : 'Log Expense'}</h2>
-        <p className="text-[13px] text-textMuted">Record a {type === 'INCOME' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
-        {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
-      </div>
-      <Field label="Transaction Name">
-        <input name="name" className={inputClass} placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required />
-      </Field>
-      <Field label="Notes">
-        <input name="notes" className={inputClass} placeholder="Optional" />
-      </Field>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Amount">
-          <input name="amount" type="number" min="0" step="0.01" className={inputClass} required />
-        </Field>
-        <Field label="Date">
-          <input name="date" type="date" defaultValue={today()} className={inputClass} required />
-        </Field>
-      </div>
-      <Field label="Category">
-        <select name="categoryId" className={inputClass}>
-          {type === 'INCOME' ? (
-            <>
-              <option value="CLIENT">Client Payment</option>
-              <option value="PROJECT">Project Revenue</option>
-              <option value="OTHER">Other Income</option>
-            </>
-          ) : (
-            <>
-              <option value="TOOLS">Tools</option>
-              <option value="OPERATIONS">Operations</option>
-              <option value="TAXES">Taxes</option>
-              <option value="OTHER">Other Expense</option>
-            </>
-          )}
-        </select>
-      </Field>
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-        <button type="button" disabled={isSaving} onClick={onCancel} className="px-4 py-2 rounded-md border border-border text-[13px] text-textSecondary hover:bg-slate-100 disabled:opacity-60">Cancel</button>
-        <button disabled={isSaving} className="px-4 py-2 rounded-md bg-accent text-white text-[13px] font-medium hover:bg-accent-hover disabled:opacity-60">{isSaving ? 'Saving...' : 'Save Entry'}</button>
-      </div>
-    </form>
   );
 }
