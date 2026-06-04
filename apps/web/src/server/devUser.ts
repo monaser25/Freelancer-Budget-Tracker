@@ -10,7 +10,7 @@ const makeEmail = (userId: string) => {
 export const ensureUser = async (user: AuthenticatedUser) => {
   const userId = user.id;
   const email = user.email || makeEmail(userId);
-  const name = user.name?.trim() || email.split('@')[0] || 'Haseela User';
+  const name = user.name?.trim() || email.split('@')[0] || 'Haseeela User';
   const existing = await prisma.user.findUnique({ where: { id: userId } });
   if (existing) {
     const data: { email?: string; name?: string } = {};

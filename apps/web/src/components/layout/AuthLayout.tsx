@@ -15,7 +15,7 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
           <div className="w-[34px] h-[34px] rounded-[10px] bg-[rgba(255,255,255,0.16)] flex items-center justify-center backdrop-blur-sm">
             <Icon name="wallet" size={20} className="text-white" />
           </div>
-          <span className="text-[18px] font-semibold text-white">Haseela</span>
+          <span className="text-[18px] font-semibold text-white">Haseeela</span>
         </div>
         
         {/* Decorative grid */}
@@ -52,7 +52,7 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
         </div>
         
         <div className="relative z-10 text-[13px] text-[rgba(255,255,255,0.6)]">
-          © 2026 Haseela · Built for freelancers
+          © 2026 Haseeela · Built for freelancers
         </div>
       </div>
       

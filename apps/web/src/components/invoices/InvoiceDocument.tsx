@@ -47,7 +47,7 @@ export function InvoiceDocument({ data }: { data: InvoiceDocData }) {
               <Icon name="wallet" size={20} className="text-white" />
             </div>
             <div>
-              <div className="t-h3 leading-tight">{data.fromName || 'Haseela'}</div>
+              <div className="t-h3 leading-tight">{data.fromName || 'Haseeela'}</div>
               {data.fromEmail && <div className="t-small text-text-muted">{data.fromEmail}</div>}
             </div>
           </div>

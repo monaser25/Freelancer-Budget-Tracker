@@ -133,7 +133,7 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthLayout>
-      <AuthHeader title="Set a new password" sub="Choose a strong password for your Haseela account." />
+      <AuthHeader title="Set a new password" sub="Choose a strong password for your Haseeela account." />
 
       {error && <InlineAlert tone="negative" title="Couldn't update password" body={error} className="mb-[18px]" />}
 

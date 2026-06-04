@@ -71,7 +71,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
-        Loading Haseela…
+        Loading Haseeela…
       </div>
     );
   }
@@ -103,7 +103,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           >
             <div
               className="h-full w-[260px]"
-              style={{ animation: 'fl-slide-right var(--dur-base) var(--ease-out)' }}
+              style={{ animation: 'fl-slide-left var(--dur-base) var(--ease-out)' }}
               onMouseDown={(e) => e.stopPropagation()}
             >
               <Sidebar mobile onClose={() => setMobileNavOpen(false)} />

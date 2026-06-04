@@ -93,7 +93,7 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
           <div className="w-[30px] h-[30px] rounded-[9px] bg-accent flex items-center justify-center shrink-0 shadow-[0_2px_8px_color-mix(in_srgb,var(--accent)_40%,transparent)]">
             <Icon name="wallet" size={18} className="text-white" />
           </div>
-          {!collapsed && <span className="text-[16px] font-semibold tracking-[-0.02em] text-text">Haseela</span>}
+          {!collapsed && <span className="text-[16px] font-semibold tracking-[-0.02em] text-text">Haseeela</span>}
         </Link>
       </div>
 
@@ -110,15 +110,15 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
       </nav>
 
       {/* User card */}
-      <div className={`border-t border-border ${collapsed ? 'p-2.5' : 'p-3'}`}>
+      <div className={`border-t border-border ${collapsed ? 'p-2.5 flex justify-center' : 'p-3'}`}>
         <Menu
           align="left"
           width={210}
           side="top"
           trigger={
             <button
-              className={`flex items-center gap-2.5 w-full rounded-md transition-colors hover:bg-surface-hover focus-ring ${
-                collapsed ? 'justify-center p-0 h-10' : 'p-2'
+              className={`flex items-center gap-2.5 rounded-md transition-colors hover:bg-surface-hover focus-ring ${
+                collapsed ? 'justify-center w-10 h-10 p-0' : 'w-full p-2'
               }`}
             >
               <Avatar name={displayName} size={32} />

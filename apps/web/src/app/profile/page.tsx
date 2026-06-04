@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { Card, SectionHeader } from '@/components/ui/Card';
 import { Field, Input, StrengthMeter, strength } from '@/components/ui/Form';
 import { PasswordInput } from '@/components/auth/PasswordInput';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Modal } from '@/components/ui/Modal';
+import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 
 export default function ProfilePage() {
@@ -23,11 +24,20 @@ export default function ProfilePage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [savingName, setSavingName] = useState(false);
+
+  // Email change requires the current password to confirm identity.
+  const [emailCurrentPw, setEmailCurrentPw] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+
+  // Password change requires the current password.
+  const [currentPw, setCurrentPw] = useState('');
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [savingPw, setSavingPw] = useState(false);
+
+  // Delete requires re-entering the password.
   const [confirmDel, setConfirmDel] = useState(false);
+  const [delPw, setDelPw] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -38,6 +48,16 @@ export default function ProfilePage() {
         setEmail(user?.email || '');
       });
   }, [user]);
+
+  // Re-authenticate the user by their current password (Supabase has no
+  // dedicated verify endpoint, so a sign-in serves as the check).
+  const verifyPassword = async (password: string) => {
+    const { error } = await getSupabaseBrowserClient().auth.signInWithPassword({
+      email: user?.email || '',
+      password,
+    });
+    if (error) throw new Error('Current password is incorrect.');
+  };
 
   const saveName = async () => {
     if (!name.trim()) return;
@@ -55,15 +75,15 @@ export default function ProfilePage() {
 
   const saveEmail = async () => {
     if (!email.trim() || email === user?.email) return;
+    if (dev) { toast('Email change is disabled in local dev mode', 'info'); return; }
+    if (!emailCurrentPw) { toast('Enter your current password to change email', 'error'); return; }
     setSavingEmail(true);
     try {
-      if (dev) {
-        toast('Email change is disabled in local dev mode', 'info');
-      } else {
-        const { error } = await getSupabaseBrowserClient().auth.updateUser({ email: email.trim() });
-        if (error) throw error;
-        toast('Check your new inbox to confirm the change', 'info');
-      }
+      await verifyPassword(emailCurrentPw);
+      const { error } = await getSupabaseBrowserClient().auth.updateUser({ email: email.trim() });
+      if (error) throw error;
+      setEmailCurrentPw('');
+      toast('Check your new inbox to confirm the change', 'info');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Failed to update email', 'error');
     } finally {
@@ -72,18 +92,17 @@ export default function ProfilePage() {
   };
 
   const savePassword = async () => {
-    if (pw.length < 8) { toast('Password must be at least 8 characters', 'error'); return; }
+    if (dev) { toast('Password change is disabled in local dev mode', 'info'); return; }
+    if (!currentPw) { toast('Enter your current password', 'error'); return; }
+    if (pw.length < 8) { toast('New password must be at least 8 characters', 'error'); return; }
     if (pw !== pw2) { toast('Passwords do not match', 'error'); return; }
     setSavingPw(true);
     try {
-      if (dev) {
-        toast('Password change is disabled in local dev mode', 'info');
-      } else {
-        const { error } = await getSupabaseBrowserClient().auth.updateUser({ password: pw });
-        if (error) throw error;
-        toast('Password updated');
-      }
-      setPw(''); setPw2('');
+      await verifyPassword(currentPw);
+      const { error } = await getSupabaseBrowserClient().auth.updateUser({ password: pw });
+      if (error) throw error;
+      setCurrentPw(''); setPw(''); setPw2('');
+      toast('Password updated');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Failed to update password', 'error');
     } finally {
@@ -92,8 +111,10 @@ export default function ProfilePage() {
   };
 
   const doDelete = async () => {
+    if (!dev && !delPw) { toast('Enter your password to confirm', 'error'); return; }
     setDeleting(true);
     try {
+      if (!dev) await verifyPassword(delPw);
       await deleteAccountAPI();
       await signOut().catch(() => undefined);
       router.replace('/login');
@@ -123,28 +144,36 @@ export default function ProfilePage() {
               <Button variant="secondary" loading={savingName} onClick={saveName}>Save</Button>
             </div>
           </Field>
-          <Field label="Email" hint={dev ? 'Disabled in local dev mode.' : 'Changing your email requires re-verification.'}>
-            <div className="flex gap-2">
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1" disabled={dev} />
-              <Button variant="secondary" loading={savingEmail} disabled={dev || email === user?.email} onClick={saveEmail}>Update</Button>
-            </div>
+          <Field label="Email" hint={dev ? 'Disabled in local dev mode.' : 'Changing your email requires your current password and re-verification.'}>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={dev} />
           </Field>
+          {!dev && email !== user?.email && email.trim() && (
+            <Field label="Current password">
+              <div className="flex gap-2">
+                <PasswordInput value={emailCurrentPw} onChange={(e) => setEmailCurrentPw(e.target.value)} className="flex-1" placeholder="Confirm it's you" />
+                <Button variant="secondary" loading={savingEmail} disabled={!emailCurrentPw} onClick={saveEmail}>Update email</Button>
+              </div>
+            </Field>
+          )}
         </div>
       </Card>
 
       {/* Password */}
       <Card pad={20}>
-        <SectionHeader title="Change password" sub={dev ? 'Disabled in local dev mode.' : 'Use a strong, unique password.'} />
+        <SectionHeader title="Change password" sub={dev ? 'Disabled in local dev mode.' : 'Verify your current password, then set a new one.'} />
         <div className="flex flex-col gap-4">
+          <Field label="Current password">
+            <PasswordInput value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} disabled={dev} autoComplete="current-password" />
+          </Field>
           <Field label="New password" hint="Minimum 8 characters">
-            <PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} minLength={8} disabled={dev} />
+            <PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} minLength={8} disabled={dev} autoComplete="new-password" />
             {pw && <div className="mt-2"><StrengthMeter value={pw} /></div>}
           </Field>
-          <Field label="Confirm password" error={pw2 && pw2 !== pw ? 'Passwords do not match' : undefined}>
-            <PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} disabled={dev} />
+          <Field label="Confirm new password" error={pw2 && pw2 !== pw ? 'Passwords do not match' : undefined}>
+            <PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} disabled={dev} autoComplete="new-password" />
           </Field>
           <div className="flex justify-end">
-            <Button loading={savingPw} disabled={dev || strength(pw) < 2 || pw !== pw2} onClick={savePassword}>Update password</Button>
+            <Button loading={savingPw} disabled={dev || !currentPw || strength(pw) < 2 || pw !== pw2} onClick={savePassword}>Update password</Button>
           </div>
         </div>
       </Card>
@@ -152,20 +181,36 @@ export default function ProfilePage() {
       {/* Danger zone */}
       <Card pad={20} className="border-negative/40">
         <SectionHeader title="Delete account" sub="Permanently remove your account and all data. This cannot be undone." />
-        <Button variant="destructive" icon="trash2" onClick={() => setConfirmDel(true)}>Delete my account</Button>
+        <Button variant="destructive" icon="trash2" onClick={() => { setDelPw(''); setConfirmDel(true); }}>Delete my account</Button>
       </Card>
 
-      <ConfirmDialog
+      <Modal
         open={confirmDel}
         onClose={() => !deleting && setConfirmDel(false)}
-        tone="danger"
-        title="Delete your account?"
-        description="This permanently deletes your account and every client, subscription, transaction, and invoice. This action cannot be undone."
-        impact="All of your data will be erased immediately."
-        confirmLabel="Delete everything"
-        loading={deleting}
-        onConfirm={doDelete}
-      />
+        dismissable={!deleting}
+        maxWidth={460}
+      >
+        <div className="flex flex-col items-center text-center gap-3 pt-1">
+          <div className="w-12 h-12 rounded-full bg-negative-tint text-negative flex items-center justify-center">
+            <Icon name="alertTriangle" size={24} />
+          </div>
+          <h2 className="t-h3">Delete your account?</h2>
+          <p className="t-body text-text-secondary max-w-[360px]">
+            This permanently deletes your account and every client, subscription, transaction, and invoice. This cannot be undone.
+          </p>
+        </div>
+        {!dev && (
+          <div className="mt-4">
+            <Field label="Enter your password to confirm">
+              <PasswordInput value={delPw} onChange={(e) => setDelPw(e.target.value)} placeholder="Your password" autoFocus />
+            </Field>
+          </div>
+        )}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-center gap-2 pt-5">
+          <Button variant="secondary" disabled={deleting} onClick={() => setConfirmDel(false)}>Cancel</Button>
+          <Button variant="destructive" loading={deleting} disabled={!dev && !delPw} onClick={doDelete}>Delete everything</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

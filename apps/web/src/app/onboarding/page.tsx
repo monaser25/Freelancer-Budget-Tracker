@@ -111,7 +111,7 @@ export default function OnboardingPage() {
           <div className="w-[30px] h-[30px] rounded-[9px] bg-accent flex items-center justify-center shadow-[0_2px_8px_color-mix(in_srgb,var(--accent)_40%,transparent)]">
             <Icon name="wallet" size={18} className="text-white" />
           </div>
-          <span className="text-[16px] font-semibold tracking-[-0.02em]">Haseela</span>
+          <span className="text-[16px] font-semibold tracking-[-0.02em]">Haseeela</span>
         </div>
         <ol className="flex flex-col gap-1">
           {STEPS.map((label, i) => {
@@ -144,7 +144,7 @@ export default function OnboardingPage() {
           )}
 
           {step === 1 && (
-            <Step title="Choose your currency" sub="This sets how amounts are displayed. It's formatting only — Haseela never converts your money.">
+            <Step title="Choose your currency" sub="This sets how amounts are displayed. It's formatting only — Haseeela never converts your money.">
               <div className="grid grid-cols-2 gap-2.5 mb-6">
                 {supportedCurrencies.map((c) => (
                   <button

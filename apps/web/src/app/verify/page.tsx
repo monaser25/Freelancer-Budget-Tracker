@@ -79,7 +79,7 @@ export default function VerifyEmailPage() {
         </div>
         <AuthHeader title="Email confirmed" sub="Your account is ready. Let's set up your workspace." />
         <Button onClick={() => router.replace('/onboarding')} size="lg" className="w-full">
-          Continue to Haseela
+          Continue to Haseeela
         </Button>
       </AuthLayout>
     );

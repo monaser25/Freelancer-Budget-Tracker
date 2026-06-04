@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
       {/* Appearance */}
       <Card pad={20}>
-        <SectionHeader title="Appearance" sub="Choose how Haseela looks." />
+        <SectionHeader title="Appearance" sub="Choose how Haseeela looks." />
         <Segmented
           value={theme}
           onChange={(v) => setTheme(v as ThemeMode)}
@@ -98,7 +98,7 @@ export default function SettingsPage() {
 
       {/* Notifications */}
       <Card pad={20}>
-        <SectionHeader title="Notifications" sub="Choose which reminders Haseela generates." />
+        <SectionHeader title="Notifications" sub="Choose which reminders Haseeela generates." />
         <div className="flex flex-col divide-y divide-border">
           <ToggleRow
             label="Billing reminders"

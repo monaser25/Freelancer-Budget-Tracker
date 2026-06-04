@@ -26,7 +26,7 @@ function copyFor(pathname: string) {
   if (PAGE_COPY[pathname]) return PAGE_COPY[pathname];
   // Match nested routes (e.g. /invoices/new) to their section.
   const section = `/${pathname.split('/')[1] || ''}`;
-  return PAGE_COPY[section] || { title: 'Haseela', subtitle: '' };
+  return PAGE_COPY[section] || { title: 'Haseeela', subtitle: '' };
 }
 
 export function Topbar() {
@@ -60,7 +60,6 @@ export function Topbar() {
       >
         <Icon name="search" size={16} />
         <span className="t-body flex-1 text-left">Search…</span>
-        <kbd className="text-[11px] px-1.5 py-0.5 rounded border border-border bg-surface">⌘K</kbd>
       </button>
       <IconButton icon="search" title="Search" className="sm:hidden" onClick={() => setPaletteOpen(true)} />
 

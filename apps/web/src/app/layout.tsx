@@ -4,14 +4,14 @@ import { AppShell } from '@/components/AppShell';
 import { themeNoFlashScript } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'Haseela - Freelancer Budget Tracker',
+  title: 'Haseeela - Freelancer Budget Tracker',
   description: 'A modern SaaS application for freelancers to track their budget, income, expenses, and clients.',
   manifest: '/manifest.json',
-  applicationName: 'Haseela',
+  applicationName: 'Haseeela',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Haseela',
+    title: 'Haseeela',
   },
   icons: {
     icon: [

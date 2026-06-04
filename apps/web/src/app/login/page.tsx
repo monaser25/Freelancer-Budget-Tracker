@@ -116,7 +116,7 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <AuthHeader title="Welcome back" sub="Log in to your Haseela workspace." />
+      <AuthHeader title="Welcome back" sub="Log in to your Haseeela workspace." />
       
       {error && (
         <InlineAlert 
@@ -175,7 +175,7 @@ export default function LoginPage() {
       </form>
 
       <div className="t-body text-text-secondary text-center mt-6">
-        New to Haseela? <Link href="/register" className="text-accent font-semibold hover:underline">Create an account</Link>
+        New to Haseeela? <Link href="/register" className="text-accent font-semibold hover:underline">Create an account</Link>
       </div>
     </AuthLayout>
   );

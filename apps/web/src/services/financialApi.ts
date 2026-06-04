@@ -71,7 +71,7 @@ const authHeaders = async () => {
 
 const logApiFailure = (method: string, url: string, err: unknown) => {
   if (err instanceof ApiRequestError) {
-    console.error('Haseela API request failed', {
+    console.error('Haseeela API request failed', {
       method,
       url,
       status: err.status,
@@ -80,7 +80,7 @@ const logApiFailure = (method: string, url: string, err: unknown) => {
     return;
   }
 
-  console.error('Haseela API request failed', {
+  console.error('Haseeela API request failed', {
     method,
     url,
     error: err instanceof Error ? err.message : String(err),

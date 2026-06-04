@@ -14,7 +14,7 @@ export default function OfflinePage() {
       <div className="space-y-1.5">
         <h1 className="t-h2">You&rsquo;re offline</h1>
         <p className="max-w-md t-body text-text-secondary">
-          Haseela needs a connection to load your latest clients, subscriptions, and transactions.
+          Haseeela needs a connection to load your latest clients, subscriptions, and transactions.
           Anything already open in this session stays available.
         </p>
       </div>
