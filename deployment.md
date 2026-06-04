@@ -2,9 +2,8 @@
 
 FlowLedger now deploys as one Vercel Hobby project:
 
-- **Web and API**: Vercel Next.js app in `apps/web`
+- **Web and API**: Vercel Next.js app in `apps/web` (all API routes live in `apps/web/src/app/api`)
 - **Auth and database**: Supabase Auth and Supabase Postgres
-- **Deprecated fallback only**: `apps/api` Express app remains in the repo but is not required for production deployment
 - **Not used**: Railway, Render, Stripe, billing, paid plans
 
 ## 1. Supabase Setup
@@ -51,9 +50,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbG..."
 NEXT_PUBLIC_API_URL=""
 ```
 
-`NEXT_PUBLIC_API_URL` should stay empty for Vercel-only deployment. Empty means the browser calls same-origin paths such as `/api/dashboard/overview`.
-
-Only set `NEXT_PUBLIC_API_URL` if you deliberately want to call an external API fallback.
+`NEXT_PUBLIC_API_URL` should stay empty. Empty means the browser calls same-origin paths such as `/api/dashboard/overview` against the Next.js Route Handlers.
 
 For Prisma on Vercel with the Supabase pooler, `DATABASE_URL` must include `sslmode=require`, `pgbouncer=true`, and `connection_limit=1`. Missing these pooler parameters can cause production 500s with `PostgresError code 42P05: prepared statement already exists`.
 
@@ -89,7 +86,7 @@ npx prisma migrate deploy
 
 ## 6. API Runtime
 
-The Express routes have been moved to Next.js Route Handlers under `apps/web/src/app/api`.
+All API routes live in Next.js Route Handlers under `apps/web/src/app/api`.
 
 All handlers that touch Prisma or auth use:
 
@@ -132,19 +129,13 @@ POST /api/transactions/create
 
 ## 8. Local Development
 
-Use the same web app for frontend and API handlers:
+Use the Next.js web app for frontend and API handlers:
 
 ```bash
 npm run dev -w apps/web
 ```
 
-The legacy Express API can still be started separately as a fallback:
-
-```bash
-npm run dev -w apps/api
-```
-
-If you use the fallback Express API locally, set `NEXT_PUBLIC_API_URL="http://localhost:4000"`. Otherwise leave it empty for same-origin Next routes.
+Same-origin Next.js routes serve `/api/*`; leave `NEXT_PUBLIC_API_URL` empty.
 
 ## 9. Security Checklist
 
