@@ -22,10 +22,18 @@ export const GET = async (request: Request) => withApiError(request, async () =>
   const defaultFrom = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
   const from = url.searchParams.get('from') || defaultFrom;
   const to = url.searchParams.get('to') || now.toISOString().slice(0, 10);
+  const fromDate = new Date(`${from}T00:00:00`);
+  const toDate = new Date(`${to}T23:59:59`);
+  const validRange = !Number.isNaN(fromDate.getTime()) && !Number.isNaN(toDate.getTime());
 
   const [transactions, clients] = await Promise.all([
     prisma.transaction.findMany({
-      where: { userId, deletedAt: null },
+      where: {
+        userId,
+        deletedAt: null,
+        status: 'COMPLETED',
+        ...(validRange ? { date: { gte: fromDate, lte: toDate } } : {}),
+      },
       select: { id: true, name: true, amount: true, type: true, status: true, date: true, categoryId: true, clientId: true, sourceType: true, sourceId: true },
     }),
     prisma.client.findMany({ where: { userId }, select: { id: true, name: true, company: true } }),

@@ -1,16 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription, Transaction } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
@@ -20,7 +11,15 @@ import { Avatar } from '@/components/ui/Avatar';
 
 type Period = 'week' | 'month' | 'year';
 
-const ACCENT = 'var(--accent)';
+const AnalyticsRevenueExpensesChart = dynamic(
+  () => import('@/components/charts/AnalyticsCharts').then((mod) => mod.AnalyticsRevenueExpensesChart),
+  { ssr: false, loading: () => <div className="h-[280px] w-full mt-4" /> },
+);
+
+const AnalyticsCategoryBarChart = dynamic(
+  () => import('@/components/charts/AnalyticsCharts').then((mod) => mod.AnalyticsCategoryBarChart),
+  { ssr: false, loading: () => <div className="mt-4 h-[160px]" /> },
+);
 
 const formatEnumLabel = (value: string) => value
   .toLowerCase()
@@ -207,23 +206,7 @@ export default function AnalyticsPage() {
         {chartEmpty ? (
           <div className="h-[220px] flex items-center justify-center text-sm text-text-muted">No transactions for this period</div>
         ) : (
-          <div className="h-[280px] w-full mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartBuckets} barGap={4} barCategoryGap="30%" margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} dy={10} />
-                <YAxis tickLine={false} axisLine={false} tickFormatter={v => money.format(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
-                <Tooltip
-                  formatter={(value: number, name: string) => [money.format(value), name === 'revenue' ? 'Revenue' : 'Expenses']}
-                  cursor={{ fill: 'var(--surface-hover)' }}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={v => v === 'revenue' ? 'Revenue' : 'Expenses'} />
-                <Bar dataKey="revenue" fill="var(--positive)" radius={[4, 4, 0, 0]} name="revenue" />
-                <Bar dataKey="expenses" fill="var(--negative)" radius={[4, 4, 0, 0]} name="expenses" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <AnalyticsRevenueExpensesChart data={chartBuckets} formatAmount={money.format} />
         )}
       </Card>
 
@@ -269,21 +252,7 @@ export default function AnalyticsPage() {
           {categoryRows.length === 0 ? (
             <div className="py-10 text-center text-sm text-text-muted">No expenses recorded {periodLabel.toLowerCase()}</div>
           ) : (
-            <div className="mt-4">
-              <ResponsiveContainer width="100%" height={Math.max(160, categoryRows.length * 40)}>
-                <BarChart data={categoryRows} layout="vertical" margin={{ left: 0, right: 24, top: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)" />
-                  <XAxis type="number" tickFormatter={v => money.format(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="category" width={86} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    formatter={(v: number) => money.format(v)} 
-                    cursor={{ fill: 'var(--surface-hover)' }}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)', fontSize: 12 }} 
-                  />
-                  <Bar dataKey="amount" fill={ACCENT} radius={[0, 4, 4, 0]} barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <AnalyticsCategoryBarChart data={categoryRows} formatAmount={money.format} />
           )}
         </Card>
       </div>

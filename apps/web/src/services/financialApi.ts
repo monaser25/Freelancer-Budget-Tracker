@@ -16,6 +16,10 @@ const apiBaseUrl = () => {
   // local environments may still point to the removed Express API on :4000.
   if (!value || /localhost:4000|127\.0\.0\.1:4000/.test(value)) return '';
 
+  // Local dev/prod checks should exercise the local Next route handlers even if
+  // an old env file still points at a deployed URL.
+  if (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) return '';
+
   return value;
 };
 

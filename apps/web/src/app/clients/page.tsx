@@ -1,7 +1,7 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
@@ -12,7 +12,10 @@ import { Avatar, Badge, Button, Card, EmptyState, Field, Icon, IconButton, Inlin
 type ModalState = { mode: 'add' } | { mode: 'edit'; client: Client } | null;
 type DeleteTarget = { client: Client; transactionCount: number; revenueTotal: number } | null;
 
-const colors = ['var(--viz-1)', 'var(--viz-2)', 'var(--viz-3)', 'var(--viz-4)', 'var(--viz-5)'];
+const ClientRevenuePieChart = dynamic(
+  () => import('@/components/charts/ClientRevenuePieChart').then((mod) => mod.ClientRevenuePieChart),
+  { ssr: false, loading: () => <div className="h-[210px]" /> },
+);
 
 const makeId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
@@ -275,14 +278,7 @@ export default function ClientsPage() {
             {chartData.length === 0 ? (
               <div className="h-[210px] flex items-center justify-center text-sm text-text-muted">No recorded client revenue yet</div>
             ) : (
-              <ResponsiveContainer width="100%" height="86%">
-                <PieChart>
-                  <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={54} outerRadius={88}>
-                    {chartData.map((entry, index) => <Cell key={entry.name} fill={colors[index % colors.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(value) => money.format(Number(value))} />
-                </PieChart>
-              </ResponsiveContainer>
+              <ClientRevenuePieChart data={chartData} formatAmount={money.format} />
             )}
           </Card>
           <Card pad={20}>

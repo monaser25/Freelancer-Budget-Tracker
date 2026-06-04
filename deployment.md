@@ -31,10 +31,11 @@ Create one Vercel project for `apps/web`.
 
 - **Framework Preset**: Next.js
 - **Root Directory**: `apps/web`
-- **Install Command**: `npm install`
-- **Build Command**: `npm run build`
+- **Install Command**: `cd ../.. && npm ci`
+- **Build Command**: `cd ../.. && npm run build -w apps/web`
 
 The web build runs `prisma generate --schema=prisma/schema.prisma` before `next build`.
+Using `npm ci` from the repo root keeps Vercel aligned with the committed root `package-lock.json`.
 
 ## 4. Vercel Environment Variables
 
@@ -48,9 +49,12 @@ SUPABASE_SERVICE_ROLE_KEY="eyJhbG..."
 NEXT_PUBLIC_SUPABASE_URL="https://[YOUR_REF].supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbG..."
 NEXT_PUBLIC_API_URL=""
+CRON_SECRET="a-long-random-value"
 ```
 
 `NEXT_PUBLIC_API_URL` should stay empty. Empty means the browser calls same-origin paths such as `/api/dashboard/overview` against the Next.js Route Handlers.
+
+`CRON_SECRET` is optional for Vercel's scheduled cron request, but recommended so manual invocations of `/api/cron` can be protected with `Authorization: Bearer <CRON_SECRET>`.
 
 For Prisma on Vercel with the Supabase pooler, `DATABASE_URL` must include `sslmode=require`, `pgbouncer=true`, and `connection_limit=1`. Missing these pooler parameters can cause production 500s with `PostgresError code 42P05: prepared statement already exists`.
 
@@ -136,6 +140,17 @@ npm run dev -w apps/web
 ```
 
 Same-origin Next.js routes serve `/api/*`; leave `NEXT_PUBLIC_API_URL` empty.
+
+If you want local development without Supabase email auth, set both of these in `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_AUTH_MODE="dev"
+ENABLE_DEV_AUTH="true"
+```
+
+Dev auth only works in `next dev`; it is intentionally disabled in `next start` production mode. For local production-mode checks, use real Supabase auth variables and keep `NEXT_PUBLIC_AUTH_MODE="supabase"`.
+
+If Vercel CLI created `.env.production.local` with blank values, either fill the required variables there or remove the blank entries before running `next build` / `next start` locally. Blank production env values override working development env values and can cause local 500s.
 
 ## 9. Security Checklist
 

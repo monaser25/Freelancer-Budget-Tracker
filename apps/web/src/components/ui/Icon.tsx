@@ -1,24 +1,128 @@
-import * as LucideIcons from 'lucide-react';
-import { LucideProps } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Archive,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  BarChart3,
+  Bell,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  CreditCard,
+  DollarSign,
+  Download,
+  Eye,
+  EyeOff,
+  FileBarChart,
+  FileText,
+  HelpCircle,
+  Inbox,
+  Info,
+  LayoutDashboard,
+  LogOut,
+  Mail,
+  MailCheck,
+  Menu,
+  Minus,
+  Moon,
+  MoreHorizontal,
+  PanelLeft,
+  Pencil,
+  Plus,
+  Printer,
+  Receipt,
+  RefreshCcw,
+  RefreshCw,
+  Repeat,
+  RotateCcw,
+  Search,
+  Send,
+  Settings,
+  Sun,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  User,
+  Users,
+  Wallet,
+  WalletCards,
+  WifiOff,
+  X,
+  type LucideProps,
+} from 'lucide-react';
 import type { ComponentType } from 'react';
 
-export type IconName = keyof typeof LucideIcons;
+const iconMap = {
+  alertCircle: AlertCircle,
+  alertTriangle: AlertTriangle,
+  archive: Archive,
+  arrowDown: ArrowDown,
+  arrowLeft: ArrowLeft,
+  arrowRight: ArrowRight,
+  arrowUp: ArrowUp,
+  barChart3: BarChart3,
+  bell: Bell,
+  check: Check,
+  checkCircle: CheckCircle,
+  chevronDown: ChevronDown,
+  chevronRight: ChevronRight,
+  clock: Clock,
+  creditCard: CreditCard,
+  dollarSign: DollarSign,
+  download: Download,
+  eye: Eye,
+  eyeOff: EyeOff,
+  fileBarChart: FileBarChart,
+  fileText: FileText,
+  helpCircle: HelpCircle,
+  inbox: Inbox,
+  info: Info,
+  layoutDashboard: LayoutDashboard,
+  logOut: LogOut,
+  mail: Mail,
+  mailCheck: MailCheck,
+  menu: Menu,
+  minus: Minus,
+  moon: Moon,
+  moreHorizontal: MoreHorizontal,
+  panelLeft: PanelLeft,
+  pencil: Pencil,
+  plus: Plus,
+  printer: Printer,
+  receipt: Receipt,
+  refreshCcw: RefreshCcw,
+  refreshCw: RefreshCw,
+  repeat: Repeat,
+  rotateCcw: RotateCcw,
+  search: Search,
+  send: Send,
+  settings: Settings,
+  sun: Sun,
+  trash2: Trash2,
+  trendingDown: TrendingDown,
+  trendingUp: TrendingUp,
+  user: User,
+  users: Users,
+  wallet: Wallet,
+  walletCards: WalletCards,
+  wifiOff: WifiOff,
+  x: X,
+} satisfies Record<string, ComponentType<LucideProps>>;
+
+export type IconName = keyof typeof iconMap;
 
 export interface IconProps extends LucideProps {
   name: string;
 }
 
 export function Icon({ name, ...props }: IconProps) {
-  // Convert standard names to lucide names if necessary
-  const normalizedName = name.charAt(0).toUpperCase() + name.slice(1);
-  const icons = LucideIcons as unknown as Record<string, ComponentType<LucideProps>>;
-  
-  // Try to find exact match
-  const LucideIcon = icons[normalizedName] || icons[name] || LucideIcons.HelpCircle;
-
-  if (!LucideIcon) {
-    return <LucideIcons.HelpCircle {...props} />;
-  }
+  const normalizedName = `${name.charAt(0).toLowerCase()}${name.slice(1)}` as IconName;
+  const LucideIcon = iconMap[normalizedName] || HelpCircle;
 
   return <LucideIcon {...props} />;
 }

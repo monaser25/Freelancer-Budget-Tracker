@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { execFileSync } from 'node:child_process';
 
 const WEB_URL = process.env.WEB_URL || 'http://localhost:3000';
-const API_URL = process.env.API_URL || 'http://localhost:4000';
+const API_URL = process.env.API_URL || WEB_URL;
 
 const today = () => new Date().toISOString().slice(0, 10);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

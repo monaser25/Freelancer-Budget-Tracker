@@ -1,12 +1,12 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/Button';
 import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -22,6 +22,11 @@ type MonthlyChartRow = {
   revenue: number;
   expenses: number;
 };
+
+const DashboardMonthlyChart = dynamic(
+  () => import('@/components/charts/DashboardMonthlyChart').then((mod) => mod.DashboardMonthlyChart),
+  { ssr: false, loading: () => <div className="h-[260px] w-full mt-4" /> },
+);
 
 const makeId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -299,22 +304,7 @@ export default function DashboardPage() {
             sub="Last 6 months" 
             action={<Badge tone={chartMargin >= 0 ? 'positive' : 'negative'} icon={chartMargin >= 0 ? 'TrendingUp' : 'TrendingDown'}>{chartMarginLabel}</Badge>} 
           />
-          <div className="h-[260px] w-full mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} dy={10} />
-                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => money0.format(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
-                <Tooltip 
-                  formatter={(value: number) => money0.format(value)}
-                  cursor={{ fill: 'var(--surface-hover)' }}
-                  contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
-                />
-                <Bar dataKey="revenue" fill="var(--positive)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expenses" fill="var(--negative)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <DashboardMonthlyChart data={chartData} formatAmount={money0.format} />
         </Card>
 
         <div className="flex flex-col gap-4">

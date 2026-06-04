@@ -1,16 +1,14 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
-import { CommandPalette } from '@/components/CommandPalette';
-import { EntityModals } from '@/components/modals/EntityModals';
 import { FinancialBootstrap } from '@/components/FinancialBootstrap';
 import { AuthProvider, useAuth } from '@/components/AuthProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ToastProvider } from '@/components/ui/Toast';
-import { useFinancialStore } from '@/store/financialStore';
 import { useUiStore } from '@/store/uiStore';
 
 // Routes rendered without the app shell (full-bleed).
@@ -24,12 +22,21 @@ const bareRoutes = new Set([
   '/offline',
 ]);
 
+const CommandPalette = dynamic(
+  () => import('@/components/CommandPalette').then((mod) => mod.CommandPalette),
+  { ssr: false },
+);
+
+const EntityModals = dynamic(
+  () => import('@/components/modals/EntityModals').then((mod) => mod.EntityModals),
+  { ssr: false },
+);
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useAuth();
-  const isFinancialInitialized = useFinancialStore((state) => state.isInitialized);
-  const { mobileNavOpen, setMobileNavOpen, togglePalette } = useUiStore();
+  const { mobileNavOpen, setMobileNavOpen, togglePalette, paletteOpen, newModal } = useUiStore();
   const isBareRoute = bareRoutes.has(pathname);
 
   useEffect(() => {
@@ -109,20 +116,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           <Topbar />
           <main className="flex-1 overflow-y-auto bg-background">
             <div className="mx-auto w-full max-w-[var(--content-max)] px-4 py-5 sm:px-5 md:px-8 md:py-8 pb-24 md:pb-12">
-              {isFinancialInitialized ? (
-                children
-              ) : (
-                <div className="flex items-center justify-center py-24 text-[13px] text-text-muted">
-                  Loading your financial workspace…
-                </div>
-              )}
+              {children}
             </div>
           </main>
         </div>
       </div>
 
-      <CommandPalette />
-      <EntityModals />
+      {paletteOpen && <CommandPalette />}
+      {newModal && <EntityModals />}
     </>
   );
 }

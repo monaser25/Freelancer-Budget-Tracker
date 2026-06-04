@@ -5,6 +5,8 @@ import { Session, User } from '@supabase/supabase-js';
 import { clearDevAuthUser, getDevAuthUser, isDevAuthEnabled, setDevAuthUser } from '@/lib/devAuth';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { useFinancialStore } from '@/store/financialStore';
+import { useInvoiceStore } from '@/store/invoiceStore';
+import { useNotificationStore } from '@/store/notificationStore';
 
 type AuthContextValue = {
   session: Session | null;
@@ -19,6 +21,19 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+const resetWorkspaceStores = () => {
+  useFinancialStore.getState().resetStore();
+  useInvoiceStore.getState().reset();
+  useNotificationStore.getState().reset();
+};
+
+const resetWorkspaceStoresForUserChange = (nextUserId?: string) => {
+  const currentStorageUserId = useFinancialStore.getState().storageUserId;
+  if (currentStorageUserId && nextUserId && currentStorageUserId !== nextUserId) {
+    resetWorkspaceStores();
+  }
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -43,15 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      const currentStorageUserId = useFinancialStore.getState().storageUserId;
       const nextUserId = nextSession?.user.id;
 
-      if (currentStorageUserId && nextUserId && currentStorageUserId !== nextUserId) {
-        useFinancialStore.getState().resetStore();
-      }
+      resetWorkspaceStoresForUserChange(nextUserId);
 
       if (event === 'SIGNED_OUT') {
-        useFinancialStore.getState().resetStore();
+        resetWorkspaceStores();
       }
 
       setSession(nextSession);
@@ -68,10 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         signIn: async (email) => {
           const user = setDevAuthUser(email);
+          resetWorkspaceStoresForUserChange(user.id);
           setSession({ user } as Session);
         },
         signUp: async (email) => {
           const user = setDevAuthUser(email);
+          resetWorkspaceStoresForUserChange(user.id);
           setSession({ user } as Session);
           return { requiresEmailConfirmation: false };
         },
@@ -81,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut: async () => {
           clearDevAuthUser();
           setSession(null);
-          useFinancialStore.getState().resetStore();
+          resetWorkspaceStores();
         },
       };
     }
@@ -137,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut: async () => {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
-        useFinancialStore.getState().resetStore();
+        resetWorkspaceStores();
       },
     };
   }, [isLoading, session]);

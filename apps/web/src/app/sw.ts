@@ -3,7 +3,7 @@
 
 import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { CacheFirst, NetworkFirst, NetworkOnly, Serwist, StaleWhileRevalidate } from 'serwist';
+import { CacheFirst, NetworkOnly, Serwist, StaleWhileRevalidate } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -34,27 +34,12 @@ const serwist = new Serwist({
       matcher: ({ url }) => url.pathname.startsWith('/login') || url.pathname.startsWith('/register'),
       handler: new NetworkOnly(),
     },
-    // Mutations under /api must never be served from cache.
+    // API routes are same-origin Next handlers with user-scoped data. Keep them
+    // network-only so deployments never serve stale authenticated responses.
     {
-      matcher: ({ request, url }) =>
-        url.pathname.startsWith('/api/') && request.method !== 'GET',
+      matcher: ({ url }) =>
+        url.pathname.startsWith('/api/'),
       handler: new NetworkOnly(),
-    },
-    // Read-only API calls: prefer network, fall back to cached snapshot if
-    // the user is briefly offline. Short TTL so a stale list never lingers.
-    {
-      matcher: ({ request, url }) =>
-        url.pathname.startsWith('/api/') && request.method === 'GET',
-      handler: new NetworkFirst({
-        cacheName: 'api-get',
-        networkTimeoutSeconds: 6,
-        plugins: [
-          {
-            cacheWillUpdate: async ({ response }) =>
-              response && response.status === 200 ? response : null,
-          },
-        ],
-      }),
     },
     // Hashed Next.js build assets are immutable — safe to serve cache-first.
     {

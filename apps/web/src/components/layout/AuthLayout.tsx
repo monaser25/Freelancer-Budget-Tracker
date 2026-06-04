@@ -33,7 +33,7 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
             See your money clearly.
           </div>
           <p className="text-[16px] leading-[26px] text-[rgba(255,255,255,0.78)] max-w-[360px] mt-4">
-            Track who pays you, what you spend, and whether you're profitable — all in one calm, precise ledger.
+            Track who pays you, what you spend, and whether you&apos;re profitable — all in one calm, precise ledger.
           </p>
           <div className="flex gap-6 mt-9">
             <div>

@@ -45,12 +45,27 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint --if-present
+        run: npm run lint -w apps/web --if-present
 
       - name: Generate Prisma Client
-        run: cd apps/web && npx prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/flowledger_test
+          DIRECT_URL: postgresql://postgres:password@localhost:5432/flowledger_test
+        run: npx prisma generate --schema=apps/web/prisma/schema.prisma
 
       - name: Run Tests
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/flowledger_test
-        run: npm test
+          DIRECT_URL: postgresql://postgres:password@localhost:5432/flowledger_test
+        run: npm test -w apps/web
+
+      - name: Production Build
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/flowledger_test
+          DIRECT_URL: postgresql://postgres:password@localhost:5432/flowledger_test
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-placeholder
+          NEXT_PUBLIC_API_URL: ""
+        run: npm run build -w apps/web

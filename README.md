@@ -25,18 +25,29 @@ This project is structured as a monorepo using npm workspaces:
    ```
 
 2. Setup environment variables:
-   ```bash
-   cp .env.example .env
+    ```bash
+    cp .env.example .env
+    ```
+
+   The web app and API route handlers are both served by Next.js. Keep `NEXT_PUBLIC_API_URL` empty for local and Vercel runs so the browser calls same-origin `/api/*` routes.
+
+3. Run PostgreSQL via Docker Compose if you want a local database:
+    ```bash
+    docker-compose up db -d
+    ```
+
+   For local Postgres, set both database URLs to the local database before running migrations:
+
+   ```env
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/flowledger"
+   DIRECT_URL="postgresql://postgres:password@localhost:5432/flowledger"
    ```
 
-3. Run PostgreSQL via Docker Compose:
-   ```bash
-   docker-compose up db -d
-   ```
+   If you prefer using the live Supabase database locally, keep the Supabase pooler/direct URLs from `.env.example` instead.
 
 4. Run Prisma Migrations:
-   ```bash
-   cd apps/web && npx prisma migrate dev
+    ```bash
+    cd apps/web && npx prisma migrate dev
    ```
 
 5. Start the development server:
@@ -63,6 +74,21 @@ Registration flow:
 - After confirmation, the user logs in normally from the app.
 
 For local development, Supabase auth is used by default. The local dev auth bypass is disabled unless `NEXT_PUBLIC_AUTH_MODE=dev` is set for the web app and `ENABLE_DEV_AUTH=true` is set on the server.
+
+Dev auth only works in `next dev`. Local production mode (`next build` then `next start`) uses `NODE_ENV=production`, so use real Supabase auth variables there.
+
+## Production-Mode Local Check
+
+After setting production-ready env vars, run:
+
+```bash
+npm run build -w apps/web
+npm run start -w apps/web -- -p 3100
+```
+
+Then verify direct visits and refreshes for `/`, `/login`, `/clients`, `/transactions`, `/analytics`, `/reports`, `/invoices`, and `/settings`.
+
+If Vercel CLI created `.env.production.local` with blank required variables, fill them or remove the blank entries before the production-mode check. Blank values can override working `.env.local` values.
 
 ## Recurring Transactions
 

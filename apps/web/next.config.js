@@ -4,8 +4,8 @@ const withSerwistInit = require('@serwist/next').default;
 const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.ts',
   swDest: 'public/sw.js',
-  cacheOnNavigation: true,
-  reloadOnOnline: true,
+  cacheOnNavigation: false,
+  reloadOnOnline: false,
   // Disable the service worker in development so HMR + Next.js error overlay
   // keep working. The production build still emits and registers it.
   disable: process.env.NODE_ENV === 'development',

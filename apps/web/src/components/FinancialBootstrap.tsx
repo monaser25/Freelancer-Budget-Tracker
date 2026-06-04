@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import { loadFinancialSnapshot } from '@/services/financialApi';
 import { useFinancialStore } from '@/store/financialStore';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -10,22 +9,30 @@ import { useAuth } from '@/components/AuthProvider';
 const getStorageKey = (userId: string) => `flowledger-financial-state:${userId}`;
 
 export function FinancialBootstrap() {
-  const pathname = usePathname();
   const { user } = useAuth();
-  const { isInitialized, setInitialData, setError, setStorageUserId, processPendingBillings } = useFinancialStore();
+  const userId = user?.id;
+  const { setInitialData, setError, setStorageUserId } = useFinancialStore();
 
   useEffect(() => {
-    if (isInitialized || !user) return;
+    if (!userId) return;
 
-    setStorageUserId(user.id);
+    const state = useFinancialStore.getState();
+    if (state.isInitialized && state.storageUserId === userId) return;
 
-    // Load notifications (and generate reminders) once per session.
-    if (!useNotificationStore.getState().isLoaded) {
-      useNotificationStore.getState().load();
-    }
+    let cancelled = false;
+
+    setStorageUserId(userId);
+
+    // Load notifications after the first paint so page transitions are not held
+    // behind reminder generation.
+    const notificationTimer = window.setTimeout(() => {
+      if (!useNotificationStore.getState().isLoaded) {
+        void useNotificationStore.getState().load();
+      }
+    }, 250);
 
     const loadCachedSnapshot = () => {
-      const cached = window.localStorage.getItem(getStorageKey(user.id));
+      const cached = window.localStorage.getItem(getStorageKey(userId));
       if (!cached) return false;
 
       try {
@@ -42,8 +49,11 @@ export function FinancialBootstrap() {
       }
     };
 
+    const hasCachedSnapshot = loadCachedSnapshot();
+
     loadFinancialSnapshot()
       .then((data) => {
+        if (cancelled) return;
         setError(null);
         setInitialData({
           clients: data.clients || [],
@@ -52,8 +62,9 @@ export function FinancialBootstrap() {
         });
       })
       .catch((err) => {
+        if (cancelled) return;
         console.warn('Backend unavailable.', err);
-        if (loadCachedSnapshot()) {
+        if (hasCachedSnapshot) {
           setError('Using locally cached data. API sync will resume when the backend is available.');
           return;
         }
@@ -65,12 +76,12 @@ export function FinancialBootstrap() {
           transactions: [],
         });
       });
-  }, [isInitialized, setError, setInitialData, setStorageUserId, user]);
 
-  useEffect(() => {
-    if (!isInitialized) return;
-    processPendingBillings();
-  }, [isInitialized, pathname, processPendingBillings]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(notificationTimer);
+    };
+  }, [setError, setInitialData, setStorageUserId, userId]);
 
   return null;
 }

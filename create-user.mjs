@@ -1,33 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
-import { execFileSync } from 'node:child_process';
-import dotenv from 'dotenv';
-import path from 'path';
-dotenv.config({ path: path.resolve('apps/api/.env') });
 
-const SUPABASE_PROJECT_REF = 'tpzydgcvlbndedsejqxb';
-const SUPABASE_URL = process.env.SUPABASE_URL || `https://${SUPABASE_PROJECT_REF}.supabase.co`;
-
-const serviceRoleKey = () => {
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) return process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const output = execFileSync('supabase', ['projects', 'api-keys', '--project-ref', SUPABASE_PROJECT_REF, '--output', 'json'], {
-    encoding: 'utf8',
-  });
-  const keys = JSON.parse(output);
-  const serviceRole = keys.find((key) => key.id === 'service_role' || key.name === 'service_role');
-  if (!serviceRole?.api_key || serviceRole.api_key.includes('··')) {
-    throw new Error('Could not load Supabase service role key');
-  }
-  return serviceRole.api_key;
+const required = (name) => {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is required`);
+  return value;
 };
 
-const admin = createClient(SUPABASE_URL, serviceRoleKey(), {
+const SUPABASE_URL = required('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = required('SUPABASE_SERVICE_ROLE_KEY');
+const email = required('QA_USER_EMAIL');
+const password = required('QA_USER_PASSWORD');
+
+const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
 async function main() {
-  const email = 'mohamednaser2537@gmail.com';
-  const password = 'mamlok123';
-
   console.log(`Creating/updating user ${email}...`);
   const { data, error } = await admin.auth.admin.createUser({
     email,

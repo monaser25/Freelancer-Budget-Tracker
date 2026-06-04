@@ -1,20 +1,31 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy root config and package files
 COPY package*.json ./
 COPY apps/web/package.json ./apps/web/
-COPY packages/ ./packages/
 
-# Install dependencies
-RUN npm ci --workspaces
+RUN npm ci
 
-# Copy web source
 COPY apps/web/ ./apps/web/
 
-# Build Web
-RUN cd apps/web && npm run build
+ARG DATABASE_URL="postgresql://postgres:password@localhost:5432/flowledger"
+ARG DIRECT_URL="postgresql://postgres:password@localhost:5432/flowledger"
+ARG SUPABASE_URL=""
+ARG SUPABASE_SERVICE_ROLE_KEY=""
+ARG NEXT_PUBLIC_SUPABASE_URL=""
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=""
+ARG NEXT_PUBLIC_API_URL=""
+
+ENV DATABASE_URL=$DATABASE_URL \
+    DIRECT_URL=$DIRECT_URL \
+    SUPABASE_URL=$SUPABASE_URL \
+    SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY \
+    NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+RUN npm run build -w apps/web
 
 EXPOSE 3000
 
