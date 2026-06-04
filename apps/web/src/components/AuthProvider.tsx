@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { clearDevAuthUser, getDevAuthUser, isDevAuthEnabled, setDevAuthUser } from '@/lib/devAuth';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { logAuth, logAuthStateChange, describeSession } from '@/lib/authDebug';
 import { useFinancialStore } from '@/store/financialStore';
 import { useInvoiceStore } from '@/store/invoiceStore';
 import { useNotificationStore } from '@/store/notificationStore';
@@ -52,18 +53,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) throw error;
+        logAuth('provider:initial-session', { session: describeSession(data.session) });
         setSession(data.session);
       })
       .catch(() => setSession(null))
       .finally(() => setIsLoading(false));
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      logAuthStateChange(event, nextSession);
       const nextUserId = nextSession?.user.id;
 
       resetWorkspaceStoresForUserChange(nextUserId);
 
       if (event === 'SIGNED_OUT') {
         resetWorkspaceStores();
+      }
+
+      // A PASSWORD_RECOVERY event means a recovery token was detected on the
+      // shared client. The reset flow uses an isolated client, so this should
+      // not normally fire — but if it ever does, refuse to treat it as a login.
+      if (event === 'PASSWORD_RECOVERY') {
+        logAuth('provider:password-recovery-ignored');
+        return;
       }
 
       setSession(nextSession);

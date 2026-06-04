@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { useEffect, useRef, useState } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createIsolatedSupabaseClient, getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { logAuth, describeUser } from '@/lib/authDebug';
 import { getAuthErrorMessage } from '@/lib/authEmailRateLimit';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AuthHeader } from '@/components/auth/AuthHeader';
@@ -19,50 +21,106 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const [status, setStatus] = useState<Status>('verifying');
   const [error, setError] = useState<string | null>(null);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Establish the recovery session from the URL. The shared client has
-  // detectSessionInUrl disabled, so we exchange the token manually here.
+  // The recovery session is held ONLY inside this isolated, non-persistent
+  // client. It is never written to the shared app session, so the user is never
+  // treated as "logged in" until they submit a new password and sign in fresh.
+  const recoveryClient = useRef<SupabaseClient | null>(null);
+  // Guard against React StrictMode double-invoking the effect, which would
+  // otherwise consume the single-use recovery token twice and fail.
+  const hasRun = useRef(false);
+
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const run = async () => {
+      logAuth('reset:start', { href: window.location.href.split('#')[0] });
+
+      // 1. Clear ANY existing app session before handling the reset. A stale
+      //    session from a previously logged-in account must never be mistaken
+      //    for the recovery session. `scope: 'local'` clears storage without a
+      //    network round-trip (and without failing on an already-invalid token).
+      try {
+        await getSupabaseBrowserClient().auth.signOut({ scope: 'local' });
+        logAuth('reset:cleared-existing-session');
+      } catch {
+        // Best-effort: even if there was nothing to clear, continue.
+      }
+
+      const isolated = createIsolatedSupabaseClient();
+      recoveryClient.current = isolated;
+
       try {
         const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
         const hashParams = new URLSearchParams(hash);
         const search = new URLSearchParams(window.location.search);
 
         if (search.get('error_description') || hashParams.get('error_description')) {
+          logAuth('reset:invalid', { reason: 'error_description in url' });
+          setStatus('invalid');
+          return;
+        }
+
+        // The token type must be a recovery token. If a signup/magiclink token
+        // somehow lands here, refuse it rather than resetting the wrong flow.
+        const type = hashParams.get('type') || search.get('type');
+        if (type && type !== 'recovery') {
+          logAuth('reset:invalid', { reason: 'wrong token type', type });
           setStatus('invalid');
           return;
         }
 
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
+        const tokenHash = search.get('token_hash') || hashParams.get('token_hash');
         const code = search.get('code');
 
-        if (accessToken && refreshToken) {
-          const { error: e } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (tokenHash) {
+          // Modern, email-bound token-hash format. verifyOtp binds the session
+          // to the exact account the recovery email was issued for.
+          const { error: e } = await isolated.auth.verifyOtp({ type: 'recovery', token_hash: tokenHash });
+          if (e) throw e;
+        } else if (accessToken && refreshToken) {
+          // Legacy implicit format: tokens delivered in the URL hash.
+          const { error: e } = await isolated.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
           if (e) throw e;
         } else if (code) {
-          const { error: e } = await supabase.auth.exchangeCodeForSession(code);
+          // PKCE format.
+          const { error: e } = await isolated.auth.exchangeCodeForSession(code);
           if (e) throw e;
         } else {
-          // Maybe a session already exists (e.g. PASSWORD_RECOVERY event handled).
-          const { data } = await supabase.auth.getSession();
-          if (!data.session) {
-            setStatus('invalid');
-            return;
-          }
+          // CRITICAL: never fall back to an existing/persisted session here.
+          // No recovery token in the URL means this is not a valid reset.
+          logAuth('reset:invalid', { reason: 'no recovery token in url' });
+          setStatus('invalid');
+          return;
         }
-        // Clean the token out of the URL.
+
+        // Confirm we have a recovery session bound to a real account, and show
+        // the user exactly which account they are resetting.
+        const { data: userData, error: userError } = await isolated.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error('No recovery user.');
+
+        logAuth('reset:recovery-session-established', { user: describeUser(userData.user) });
+        setAccountEmail(userData.user.email ?? null);
+
+        // Strip the token out of the URL so it can't be re-read or shared.
         window.history.replaceState(null, '', '/reset-password');
         setStatus('ready');
-      } catch {
+      } catch (err) {
+        logAuth('reset:invalid', { reason: 'token exchange failed', message: err instanceof Error ? err.message : String(err) });
         setStatus('invalid');
       }
     };
+
     run();
   }, []);
 
@@ -77,15 +135,30 @@ export default function ResetPasswordPage() {
       setError('Passwords do not match.');
       return;
     }
+
+    const isolated = recoveryClient.current;
+    if (!isolated) {
+      setStatus('invalid');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const supabase = getSupabaseBrowserClient();
-      const { error: e } = await supabase.auth.updateUser({ password });
+      // updateUser({ password }) runs ONLY here, after the user submits, and
+      // ONLY against the isolated recovery client.
+      logAuth('reset:update-password:start', { email: accountEmail });
+      const { error: e } = await isolated.auth.updateUser({ password });
       if (e) throw e;
-      await supabase.auth.signOut();
+
+      // Tear down the recovery session entirely. The user must now log in
+      // fresh with their new password — they are never auto-logged-in here.
+      await isolated.auth.signOut({ scope: 'local' });
+      logAuth('reset:update-password:success', { email: accountEmail });
+
       setStatus('done');
       setTimeout(() => router.replace('/login?reset=1'), 1500);
     } catch (err) {
+      logAuth('reset:update-password:error', { message: err instanceof Error ? err.message : String(err) });
       setError(getAuthErrorMessage(err instanceof Error ? err.message : 'Failed to update password.'));
     } finally {
       setIsSubmitting(false);
@@ -133,7 +206,12 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthLayout>
-      <AuthHeader title="Set a new password" sub="Choose a strong password for your Haseeela account." />
+      <AuthHeader
+        title="Set a new password"
+        sub={accountEmail
+          ? `Choose a strong password for ${accountEmail}.`
+          : 'Choose a strong password for your Haseeela account.'}
+      />
 
       {error && <InlineAlert tone="negative" title="Couldn't update password" body={error} className="mb-[18px]" />}
 

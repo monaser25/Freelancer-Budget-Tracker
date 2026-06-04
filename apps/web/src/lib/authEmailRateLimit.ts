@@ -7,7 +7,13 @@ const getStorageKey = (email: string) => `${STORAGE_PREFIX}:${email.toLowerCase(
 
 export const isAuthEmailRateLimited = (message: string) => {
   const normalized = message.toLowerCase();
-  return normalized.includes('email rate limit') || normalized.includes('rate limit exceeded');
+  return (
+    normalized.includes('email rate limit') ||
+    normalized.includes('rate limit exceeded') ||
+    // Supabase GoTrue error code for the project-wide hourly email cap.
+    normalized.includes('over_email_send_rate_limit') ||
+    normalized.includes('for security purposes')
+  );
 };
 
 export const setAuthEmailCooldown = (email: string, durationMs = AUTH_EMAIL_RESEND_COOLDOWN_MS) => {
