@@ -25,9 +25,11 @@ export interface MenuProps {
   width?: number;
   /** Where the panel opens relative to the trigger. */
   side?: 'bottom' | 'top';
+  /** Extra classes for the wrapper (e.g. `w-full` so the trigger can fill its container). */
+  className?: string;
 }
 
-export function Menu({ trigger, items, align = 'right', width = 200, side = 'bottom' }: MenuProps) {
+export function Menu({ trigger, items, align = 'right', width = 200, side = 'bottom', className }: MenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -48,7 +50,7 @@ export function Menu({ trigger, items, align = 'right', width = 200, side = 'bot
   }, [open]);
 
   return (
-    <div ref={ref} className="relative inline-flex">
+    <div ref={ref} className={cn('relative inline-flex', className)}>
       <span onClick={() => setOpen((o) => !o)} className="contents">
         {trigger}
       </span>
