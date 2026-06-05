@@ -5,19 +5,21 @@ import { prisma } from '@/server/prisma';
 import { isSmtpConfigured, sendMail, SmtpError, isValidEmail } from '@/server/email';
 import { renderBrandedEmail } from '@/server/emailTemplate';
 import { buildInvoicePdf } from '@/server/invoicePdf';
+import { formatCurrency, formatDate } from '@/lib/format';
+import { DEFAULT_LOCALE } from '@/lib/locales';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const money = (n: number, currency: string) => {
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD', minimumFractionDigits: 2 }).format(n);
+    return formatCurrency(n, currency || 'USD', DEFAULT_LOCALE, { minimumFractionDigits: 2 });
   } catch {
     return n.toFixed(2);
   }
 };
 const fmtDate = (v: Date | string | null) =>
-  v ? new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  v ? formatDate(v, DEFAULT_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
 
 // Send an invoice by email via SMTP. The invoice is marked SENT *only* after a
 // successful send. If SMTP isn't configured, returns a 503 with a machine code

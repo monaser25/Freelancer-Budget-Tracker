@@ -13,6 +13,7 @@ import { Card, SectionHeader } from '@/components/ui/Card';
 import { Field, Select, Switch, Segmented } from '@/components/ui/Form';
 import { Badge } from '@/components/ui/Badge';
 import { Icon } from '@/components/ui/Icon';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useToast } from '@/components/ui/Toast';
 
 export default function SettingsPage() {
@@ -73,10 +74,13 @@ export default function SettingsPage() {
       <Card pad={20}>
         <SectionHeader title="Workspace" sub="Display preferences for your whole workspace." />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Currency" hint={`Formats amounts as ${getCurrencyLabel(currency)}. Formatting only — no conversion.`}>
+          <Field label="Currency" hint={`Formats amounts as ${getCurrencyLabel(currency)}. Formatting only - no conversion.`}>
             <Select value={currency} onChange={(e) => onCurrency(e.target.value as CurrencyCode)}>
               {supportedCurrencies.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
             </Select>
+          </Field>
+          <Field label="Language" hint="Change your interface language.">
+            <LanguageToggle variant="segmented" />
           </Field>
           <Field label="Accounting mode" hint="Standard for freelancers.">
             <Select value="cash" disabled>

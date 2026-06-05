@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useInvoiceStore } from '@/store/invoiceStore';
 import { downloadInvoicePdf, InvoiceSendError } from '@/services/financialApi';
+import { formatCurrency } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import type { Invoice } from '@/types/finance';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -21,9 +24,9 @@ type SendableInvoice = {
   client?: { name?: string | null; email?: string | null } | null;
 };
 
-const money = (n: number, currency: string) => {
+const money = (n: number, currency: string, locale: Locale) => {
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD', minimumFractionDigits: 2 }).format(n);
+    return formatCurrency(n, currency || 'USD', locale, { minimumFractionDigits: 2 });
   } catch {
     return String(n);
   }
@@ -41,6 +44,7 @@ export function SendInvoiceModal({
   onSent?: (updated: Invoice) => void;
 }) {
   const { send } = useInvoiceStore();
+  const { locale } = useLocale();
   const [to, setTo] = useState('');
   const [message, setMessage] = useState('');
   const [view, setView] = useState<'form' | 'success' | 'fallback'>('form');
@@ -90,7 +94,7 @@ export function SendInvoiceModal({
     const subject = `Invoice ${invoice.number} from Haseeela`;
     const body =
       (message.trim() ? `${message.trim()}\n\n` : '') +
-      `Invoice ${invoice.number}\nAmount due: ${money(invoice.total, invoice.currency)}\nDue: ${invoice.dueDate}`;
+      `Invoice ${invoice.number}\nAmount due: ${money(invoice.total, invoice.currency, locale)}\nDue: ${invoice.dueDate}`;
     return `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
@@ -166,7 +170,7 @@ export function SendInvoiceModal({
       open={open}
       onClose={() => !sending && onClose()}
       title={`Send invoice ${invoice.number}`}
-      description={`${money(invoice.total, invoice.currency)} · due ${invoice.dueDate}`}
+      description={`${money(invoice.total, invoice.currency, locale)} · due ${invoice.dueDate}`}
       dismissable={!sending}
       maxWidth={480}
       footer={

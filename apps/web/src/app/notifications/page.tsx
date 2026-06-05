@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNotificationStore, type AppNotification } from '@/store/notificationStore';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -17,7 +20,7 @@ const typeConfig: Record<string, { icon: string; cls: string }> = {
   INFO: { icon: 'info', cls: 'bg-accent-tint text-accent' },
 };
 
-const relTime = (iso: string) => {
+const relTime = (iso: string, locale: Locale) => {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
@@ -26,11 +29,12 @@ const relTime = (iso: string) => {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatDate(iso, locale, { month: 'short', day: 'numeric' });
 };
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { locale } = useLocale();
   const { notifications, unread, isLoaded, load, markRead, markAllRead } = useNotificationStore();
   const [tab, setTab] = useState<'all' | 'unread'>('all');
 
@@ -91,7 +95,7 @@ export default function NotificationsPage() {
                       {!n.read && <span className="w-2 h-2 rounded-full bg-accent shrink-0" />}
                     </div>
                     {n.body && <div className="t-small text-text-secondary mt-0.5">{n.body}</div>}
-                    <div className="t-micro text-text-muted mt-1">{relTime(n.createdAt)}</div>
+                    <div className="t-micro text-text-muted mt-1">{relTime(n.createdAt, locale)}</div>
                   </div>
                   {n.link && <Icon name="chevronRight" size={16} className="text-text-muted shrink-0 mt-2" />}
                 </button>

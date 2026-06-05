@@ -52,7 +52,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     if (prefix || suffix) {
       return (
         <div className={cn("flex items-center overflow-hidden", baseClass, borderClass, className)}>
-          {prefix && <span className="t-body pl-3 text-text-muted whitespace-nowrap">{prefix}</span>}
+          {prefix && <span className="t-body ps-3 text-text-muted whitespace-nowrap">{prefix}</span>}
           <input
             ref={ref}
             type={type}
@@ -61,7 +61,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className="flex-1 min-w-0 border-none outline-none bg-transparent text-text h-full px-3 text-sm placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed focus:shadow-none focus-visible:shadow-none"
             {...props}
           />
-          {suffix && <span className="t-body pr-3 text-text-muted whitespace-nowrap">{suffix}</span>}
+          {suffix && <span className="t-body pe-3 text-text-muted whitespace-nowrap">{suffix}</span>}
         </div>
       );
     }
@@ -88,7 +88,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, error, children, ...props }, ref) => {
     const [focus, setFocus] = useState(false);
     
-    const baseClass = "h-[38px] w-full rounded-sm text-sm outline-none bg-surface text-text transition-all duration-fast appearance-none cursor-pointer pr-9 pl-3 disabled:opacity-50 disabled:cursor-not-allowed";
+    const baseClass = "h-[38px] w-full rounded-sm text-sm outline-none bg-surface text-text transition-all duration-fast appearance-none cursor-pointer pe-9 ps-3 disabled:opacity-50 disabled:cursor-not-allowed";
     
     const borderClass = error 
       ? "border border-negative" 
@@ -110,7 +110,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <Icon 
           name="chevronDown" 
           size={16} 
-          className="absolute right-3 top-[11px] text-text-muted pointer-events-none" 
+          className="absolute end-3 top-[11px] text-text-muted pointer-events-none" 
         />
       </div>
     );
@@ -173,7 +173,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         <span 
           className={cn(
             "block w-[18px] h-[18px] rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.3)] transition-transform duration-base ease-out",
-            checked ? "translate-x-4" : "translate-x-0"
+            checked ? "ltr:translate-x-4 rtl:-translate-x-4" : "translate-x-0"
           )} 
         />
       </button>

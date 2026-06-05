@@ -7,6 +7,8 @@ import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
 import { Client } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
 import { Avatar, Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; client: Client } | null;
@@ -26,6 +28,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export default function ClientsPage() {
   const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient, deleteClientPermanently, recordClientPayment } = useFinancialStore();
+  const { locale } = useLocale();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -36,8 +39,8 @@ export default function ClientsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
-  const moneyWithCents = useMemo(() => makeCurrencyFormatter(currency), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const moneyWithCents = useMemo(() => makeCurrencyFormatter(currency, undefined, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => moneyWithCents.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, moneyWithCents]);
 
   const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
@@ -227,8 +230,8 @@ export default function ClientsPage() {
                       </div>
                       <div className="text-sm text-text-muted mt-1">
                         {client.paymentType === 'retainer'
-                          ? `${money.format(client.revenue)}/mo - next ${client.nextBillingDate ? new Date(client.nextBillingDate).toLocaleDateString() : 'not scheduled'}`
-                          : `${money.format(client.revenue)} - payment ${client.paymentDate ? new Date(client.paymentDate).toLocaleDateString() : 'not scheduled'}`}
+                          ? `${money.format(client.revenue)}/mo - next ${client.nextBillingDate ? formatDate(client.nextBillingDate, locale) : 'not scheduled'}`
+                          : `${money.format(client.revenue)} - payment ${client.paymentDate ? formatDate(client.paymentDate, locale) : 'not scheduled'}`}
                       </div>
                     </div>
                   </div>
@@ -251,7 +254,7 @@ export default function ClientsPage() {
                   <div className="rounded-md bg-surface-hover border border-border p-3">
                     <div className="flex flex-col gap-1 text-xs text-text-secondary sm:flex-row sm:items-center sm:justify-between">
                       <span>Payment history</span>
-                      {client.paymentType === 'retainer' && <span>Next billing: {client.nextBillingDate ? new Date(client.nextBillingDate).toLocaleDateString() : 'not scheduled'}</span>}
+                      {client.paymentType === 'retainer' && <span>Next billing: {client.nextBillingDate ? formatDate(client.nextBillingDate, locale) : 'not scheduled'}</span>}
                     </div>
                     {clientTransactions.length === 0 ? (
                       <div className="text-xs text-text-muted mt-2">No payments recorded yet.</div>
@@ -260,7 +263,7 @@ export default function ClientsPage() {
                         {clientTransactions.slice(0, 3).map((tx) => (
                           <div key={tx.id} className="flex items-center justify-between gap-3 text-xs">
                             <span className="truncate text-text">{tx.name || tx.notes || 'Payment'}</span>
-                            <span className="shrink-0 text-text-muted">{new Date(tx.date).toLocaleDateString()} - {money.format(tx.amount)}</span>
+                            <span className="shrink-0 text-text-muted">{formatDate(tx.date, locale)} - {money.format(tx.amount)}</span>
                           </div>
                         ))}
                       </div>

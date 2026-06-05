@@ -90,7 +90,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       >
         <Icon name={icon} size={18} />
         {badge && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-negative shadow-[0_0_0_2px_var(--surface)]" />
+          <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-negative shadow-[0_0_0_2px_var(--surface)]" />
         )}
       </button>
     );

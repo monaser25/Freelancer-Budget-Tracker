@@ -1,4 +1,6 @@
 import ExcelJS from 'exceljs';
+import { formatDate } from '@/lib/format';
+import { DEFAULT_LOCALE } from '@/lib/locales';
 import type { ReportResult } from './reports';
 
 // Brand palette (ARGB).
@@ -46,7 +48,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
 
   ws.mergeCells(`A2:${lastCol}2`);
   ws.getCell('A2').value =
-    `${report.title}   ·   ${report.range.from} → ${report.range.to}   ·   Generated ${new Date().toLocaleDateString()}`;
+    `${report.title}   ·   ${report.range.from} → ${report.range.to}   ·   Generated ${formatDate(new Date(), DEFAULT_LOCALE)}`;
   ws.getCell('A2').font = { name: 'Calibri', size: 10, color: { argb: MUTED } };
 
   let r = 4;

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/financialStore';
 import { loadReportAPI, downloadReportCsv, downloadReportXlsx, type ReportData } from '@/services/financialApi';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -27,6 +29,7 @@ const todayStr = () => iso(new Date());
 
 export default function ReportsPage() {
   const { currency, transactions } = useFinancialStore();
+  const { locale } = useLocale();
   const { toast } = useToast();
 
   // "All time" should start at the first recorded transaction, not an arbitrary
@@ -46,8 +49,8 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
-  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -162,7 +165,7 @@ export default function ReportsPage() {
           <div className="text-right">
             <div className="text-[14px] font-semibold">{report?.title || 'Report'}</div>
             <div className="text-[11px] text-text-muted tnum">{from} → {to}</div>
-            <div className="text-[11px] text-text-muted">Generated {new Date().toLocaleDateString()}</div>
+            <div className="text-[11px] text-text-muted">Generated {formatDate(new Date(), locale)}</div>
           </div>
         </div>
 

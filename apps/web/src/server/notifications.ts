@@ -1,7 +1,9 @@
+import { formatDate } from '@/lib/format';
+import { DEFAULT_LOCALE } from '@/lib/locales';
 import { prisma } from '@/server/prisma';
 
 const DAY = 24 * 60 * 60 * 1000;
-const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const fmtDate = (d: Date) => formatDate(d, DEFAULT_LOCALE, { month: 'short', day: 'numeric' });
 
 /**
  * Compute reminder notifications from the user's current data and insert any

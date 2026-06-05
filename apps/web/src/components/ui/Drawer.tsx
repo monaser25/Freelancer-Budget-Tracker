@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { Icon } from './Icon';
+import { useLocale } from '@/lib/i18n';
 
 export interface DrawerProps {
   open: boolean;
@@ -14,6 +15,8 @@ export interface DrawerProps {
 }
 
 export function Drawer({ open, onClose, title, description, children, footer, width = 440 }: DrawerProps) {
+  const { dir } = useLocale();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -40,8 +43,8 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
         role="dialog"
         aria-modal="true"
         onMouseDown={(e) => e.stopPropagation()}
-        style={{ width, maxWidth: '100%', animation: 'fl-slide-right var(--dur-base) var(--ease-out)' }}
-        className="h-full bg-surface border-l border-border shadow-lg flex flex-col"
+        style={{ width, maxWidth: '100%', animation: `fl-slide-${dir === 'rtl' ? 'left' : 'right'} var(--dur-base) var(--ease-out)` }}
+        className="h-full bg-surface border-s border-border shadow-lg flex flex-col"
       >
         {(title || description) && (
           <div className="flex items-start gap-4 px-5 py-4 border-b border-border shrink-0">
@@ -52,7 +55,7 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
             <button
               onClick={onClose}
               aria-label="Close"
-              className="text-text-muted hover:text-text p-1 -mr-1 rounded-sm focus-ring transition-colors"
+              className="text-text-muted hover:text-text p-1 -me-1 rounded-sm focus-ring transition-colors"
             >
               <Icon name="x" size={18} />
             </button>

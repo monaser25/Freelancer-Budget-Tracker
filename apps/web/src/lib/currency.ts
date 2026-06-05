@@ -1,4 +1,6 @@
 import { CurrencyCode } from '@/types/finance';
+import { createCurrencyFormatter, type NumberFormatOptions } from './format';
+import { DEFAULT_LOCALE, type Locale } from './locales';
 
 export const supportedCurrencies: { code: CurrencyCode; label: string }[] = [
   { code: 'USD', label: 'USD ($)' },
@@ -17,10 +19,6 @@ export const getCurrencyLabel = (currency: CurrencyCode) => (
   supportedCurrencies.find((item) => item.code === currency)?.label || currency
 );
 
-export const makeCurrencyFormatter = (currency: CurrencyCode, options?: Intl.NumberFormatOptions) => (
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    ...options,
-  })
+export const makeCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => (
+  createCurrencyFormatter(currency, locale, options)
 );

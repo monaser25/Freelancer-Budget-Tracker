@@ -5,6 +5,8 @@ import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
 import { Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; subscription: Subscription } | null;
@@ -26,6 +28,7 @@ const monthlyEquivalent = (subscription: Subscription) => {
 
 export default function SubscriptionsPage() {
   const { subscriptions, transactions, currency, isInitialized, addSubscription, updateSubscription, deleteSubscription, recordSubscriptionPayment } = useFinancialStore();
+  const { locale } = useLocale();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export default function SubscriptionsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, undefined, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   useEffect(() => {
@@ -180,7 +183,7 @@ export default function SubscriptionsPage() {
                         {sub.archivedAt && <Badge>Archived</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
-                        next {new Date(sub.nextBillingDate).toLocaleDateString()}
+                        next {formatDate(sub.nextBillingDate, locale)}
                         {sub.notes ? ` - ${sub.notes}` : ''}
                       </div>
                     </div>

@@ -9,6 +9,7 @@ import { FinancialBootstrap } from '@/components/FinancialBootstrap';
 import { AuthProvider, useAuth } from '@/components/AuthProvider';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { ToastProvider } from '@/components/ui/Toast';
+import { LocaleProvider, useLocale } from '@/lib/i18n';
 import { useUiStore } from '@/store/uiStore';
 
 // Routes rendered without the app shell (full-bleed).
@@ -38,6 +39,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const { mobileNavOpen, setMobileNavOpen, togglePalette, paletteOpen, newModal } = useUiStore();
   const isBareRoute = bareRoutes.has(pathname);
+  const { dir } = useLocale();
 
   useEffect(() => {
     if (isLoading) return;
@@ -103,7 +105,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           >
             <div
               className="h-full w-[260px]"
-              style={{ animation: 'fl-slide-left var(--dur-base) var(--ease-out)' }}
+              style={{ animation: `fl-slide-${dir === 'rtl' ? 'right' : 'left'} var(--dur-base) var(--ease-out)` }}
               onMouseDown={(e) => e.stopPropagation()}
             >
               <Sidebar mobile onClose={() => setMobileNavOpen(false)} />
@@ -130,12 +132,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <AuthGate>{children}</AuthGate>
-        </AuthProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <LocaleProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AuthGate>{children}</AuthGate>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </LocaleProvider>
   );
 }

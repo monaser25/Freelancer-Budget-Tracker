@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
 import { Avatar, Badge, Button, Card, EmptyState, Icon, InlineAlert, SectionHeader, StatCard } from '@/components/ui';
 
 // Restore + permanent-delete actions for an archived row. The delete is a
@@ -59,8 +61,9 @@ export default function ArchivePage() {
     restoreClient, restoreSubscription,
     deleteClientPermanently, deleteSubscriptionPermanently,
   } = useFinancialStore();
+  const { locale } = useLocale();
   const [error, setError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
 
   const archivedClients = useMemo(
     () => clients.filter((c) => c.archivedAt),
@@ -140,7 +143,7 @@ export default function ArchivePage() {
                           {client.archivedAt && (
                             <>
                               {' · '}
-                              Archived {new Date(client.archivedAt).toLocaleDateString()}
+                              Archived {formatDate(client.archivedAt, locale)}
                             </>
                           )}
                         </div>
@@ -181,7 +184,7 @@ export default function ArchivePage() {
                           {sub.archivedAt && (
                             <>
                               {' · '}
-                              Archived {new Date(sub.archivedAt).toLocaleDateString()}
+                              Archived {formatDate(sub.archivedAt, locale)}
                             </>
                           )}
                         </div>

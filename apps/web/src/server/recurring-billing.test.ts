@@ -1,13 +1,16 @@
 import { recordClientPayment, recordSubscriptionPayment, runDueRecurringPaymentsInTransaction } from './recurring-billing';
 
-const makeTx = () => {
-  const clients: any[] = [];
-  const subscriptions: any[] = [];
-  const transactions: any[] = [];
+type MockRow = Record<string, any>;
+type MockWhere = Record<string, any>;
 
-  const matchesWhere = (item: any, where: any) => Object.entries(where).every(([key, value]) => {
-    if (key === 'OR') return (value as any[]).some((clause) => matchesWhere(item, clause));
-    if (value && typeof value === 'object' && 'lte' in value) return item[key] <= value.lte;
+const makeTx = () => {
+  const clients: MockRow[] = [];
+  const subscriptions: MockRow[] = [];
+  const transactions: MockRow[] = [];
+
+  const matchesWhere = (item: MockRow, where: MockWhere): boolean => Object.entries(where).every(([key, value]) => {
+    if (key === 'OR') return (value as MockWhere[]).some((clause) => matchesWhere(item, clause));
+    if (value && typeof value === 'object' && 'lte' in value) return item[key] <= (value as { lte: any }).lte;
     return item[key] === value;
   });
 
@@ -21,8 +24,8 @@ const makeTx = () => {
         findMany: jest.fn(({ where }) => Promise.resolve(clients.filter((item) => matchesWhere(item, where)))),
         update: jest.fn(({ where, data }) => {
           const item = clients.find((client) => client.id === where.id);
-          Object.assign(item, data);
-          return Promise.resolve(item);
+          Object.assign(item!, data);
+          return Promise.resolve(item!);
         }),
       },
       subscription: {
@@ -30,8 +33,8 @@ const makeTx = () => {
         findMany: jest.fn(({ where }) => Promise.resolve(subscriptions.filter((item) => matchesWhere(item, where)))),
         update: jest.fn(({ where, data }) => {
           const item = subscriptions.find((subscription) => subscription.id === where.id);
-          Object.assign(item, data);
-          return Promise.resolve(item);
+          Object.assign(item!, data);
+          return Promise.resolve(item!);
         }),
       },
       transaction: {
@@ -65,8 +68,8 @@ describe('recurring billing', () => {
       sourceId: 'client-1',
       clientId: 'client-1',
     }));
-    expect(result.transaction.sourceBillingDate.toISOString().slice(0, 10)).toBe('2026-05-01');
-    expect(result.client.nextBillingDate.toISOString().slice(0, 10)).toBe('2026-06-01');
+    expect(result.transaction.sourceBillingDate!.toISOString().slice(0, 10)).toBe('2026-05-01');
+    expect(result.client.nextBillingDate!.toISOString().slice(0, 10)).toBe('2026-06-01');
   });
 
   it('records a subscription payment and advances by billing cycle', async () => {

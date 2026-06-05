@@ -5,6 +5,9 @@ import { useFinancialStore } from '@/store/useFinancialStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/Button';
@@ -41,19 +44,20 @@ function toIsoDate(date: string) {
   return new Date(`${date}T12:00:00`).toISOString();
 }
 
-function getRelativeDate(isoDate: string) {
+function getRelativeDate(isoDate: string, locale: Locale) {
   const txDate = new Date(isoDate);
   const diff = new Date().getTime() - txDate.getTime();
-  if (diff < 0) return txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (diff < 0) return formatDate(txDate, locale, { month: 'short', day: 'numeric' });
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   if (days === 0) return 'Today';
   if (days === 1) return 'Yesterday';
   if (days < 7) return `${days} days ago`;
-  return txDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatDate(txDate, locale, { month: 'short', day: 'numeric' });
 }
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { locale } = useLocale();
   const {
     transactions,
     subscriptions,
@@ -69,8 +73,8 @@ export default function DashboardPage() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
-  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }), [currency]);
+  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money2.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money2]);
 
   useEffect(() => {
@@ -91,7 +95,7 @@ export default function DashboardPage() {
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       labels.push({
         key,
-        month: date.toLocaleString('en-US', { month: 'short' }),
+        month: formatDate(date, locale, { month: 'short' }),
         revenue: 0,
         expenses: 0,
       });
@@ -107,7 +111,7 @@ export default function DashboardPage() {
     });
 
     return labels;
-  }, [transactions]);
+  }, [transactions, locale]);
 
   const recentTransactions = useMemo(
     () => [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
@@ -324,7 +328,7 @@ export default function DashboardPage() {
                     <Avatar name={s.name} size={32} />
                     <div className="flex-1 min-w-0">
                       <div className="t-body-m truncate">{s.name}</div>
-                      <div className="text-xs text-text-muted">Renews {new Date(s.nextBillingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      <div className="text-xs text-text-muted">Renews {formatDate(s.nextBillingDate, locale, { month: 'short', day: 'numeric' })}</div>
                     </div>
                     <span className="t-body-m font-mono">{money0.format(s.amount)}<span className="text-text-muted font-sans text-xs">/{s.cycle === 'YEARLY' ? 'yr' : 'mo'}</span></span>
                   </div>
@@ -399,7 +403,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <div className="t-body-m">{tx.name || tx.notes || tx.sourceType}</div>
-                          <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date)}</div>
+                          <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date, locale)}</div>
                         </div>
                       </div>
                     </td>
