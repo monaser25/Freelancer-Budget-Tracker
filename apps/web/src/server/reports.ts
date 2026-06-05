@@ -1,3 +1,6 @@
+import { formatDate } from '@/lib/format';
+import { DEFAULT_LOCALE } from '@/lib/locales';
+
 type Tx = {
   id: string;
   name: string;
@@ -48,9 +51,9 @@ const iso = (d: Date | string) => (typeof d === 'string' ? d : d.toISOString());
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const monthLabel = (key: string) => {
   const [y, m] = key.split('-').map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  return formatDate(new Date(y, m - 1, 1), DEFAULT_LOCALE, { month: 'short', year: 'numeric' });
 };
-const dateLabel = (d: Date | string) => new Date(iso(d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const dateLabel = (d: Date | string) => formatDate(new Date(iso(d)), DEFAULT_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' });
 
 const inRange = (d: Date | string, from: Date, to: Date) => {
   const t = new Date(iso(d)).getTime();

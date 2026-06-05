@@ -2,6 +2,9 @@
 
 import { useMemo } from 'react';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import { CurrencyCode } from '@/types/finance';
 import { Icon } from '@/components/ui/Icon';
 
@@ -23,13 +26,14 @@ export interface InvoiceDocData {
   terms?: string | null;
 }
 
-const fmtDate = (v: string) => {
+const fmtDate = (v: string, locale: Locale) => {
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return Number.isNaN(d.getTime()) ? '—' : formatDate(d, locale, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 export function InvoiceDocument({ data }: { data: InvoiceDocData }) {
-  const money = useMemo(() => makeCurrencyFormatter(data.currency, { minimumFractionDigits: 2 }), [data.currency]);
+  const { locale } = useLocale();
+  const money = useMemo(() => makeCurrencyFormatter(data.currency, { minimumFractionDigits: 2 }, locale), [data.currency, locale]);
 
   const items = data.lineItems.map((li) => ({ ...li, amount: (Number(li.quantity) || 0) * (Number(li.rate) || 0) }));
   const subtotal = items.reduce((s, li) => s + li.amount, 0);
@@ -67,11 +71,11 @@ export function InvoiceDocument({ data }: { data: InvoiceDocData }) {
           </div>
           <div>
             <div className="t-caption text-text-muted mb-1">Issued</div>
-            <div className="t-body-m tnum">{fmtDate(data.issueDate)}</div>
+            <div className="t-body-m tnum">{fmtDate(data.issueDate, locale)}</div>
           </div>
           <div>
             <div className="t-caption text-text-muted mb-1">Due</div>
-            <div className="t-body-m tnum">{fmtDate(data.dueDate)}</div>
+            <div className="t-body-m tnum">{fmtDate(data.dueDate, locale)}</div>
           </div>
         </div>
 

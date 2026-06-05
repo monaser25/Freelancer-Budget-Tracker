@@ -1,5 +1,6 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 export function AuthLayout({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
@@ -33,7 +34,7 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
             See your money clearly.
           </div>
           <p className="text-[16px] leading-[26px] text-[rgba(255,255,255,0.78)] max-w-[360px] mt-4">
-            Track who pays you, what you spend, and whether you&apos;re profitable — all in one calm, precise ledger.
+            Track who pays you, what you spend, and whether you&apos;re profitable - all in one calm, precise ledger.
           </p>
           <div className="flex gap-6 mt-9">
             <div>
@@ -51,13 +52,16 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
           </div>
         </div>
         
-        <div className="relative z-10 text-[13px] text-[rgba(255,255,255,0.6)]">
-          © 2026 Haseeela · Built for freelancers
+        <div className="relative z-10 text-[13px] text-[rgba(255,255,255,0.6)] flex items-center justify-between">
+          <span>c 2026 Haseeela  Built for freelancers</span>
         </div>
       </div>
       
       {/* Form side */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-10">
+      <div className="flex-1 flex flex-col relative items-center justify-center p-6 md:p-10">
+        <div className="absolute top-6 right-6 md:top-10 md:right-10">
+          <LanguageToggle variant="ghost" />
+        </div>
         <div className="w-full" style={{ maxWidth: wide ? 560 : 400 }}>
           {children}
         </div>

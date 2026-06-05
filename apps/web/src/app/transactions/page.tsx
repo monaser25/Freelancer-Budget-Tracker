@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate as formatLocaleDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Badge, FilterChip } from '@/components/ui/Badge';
 import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
@@ -13,6 +16,7 @@ import { Icon } from '@/components/ui/Icon';
 import { InlineAlert } from '@/components/ui/InlineAlert';
 
 type Filter = 'all' | 'revenue' | 'expenses' | 'subscriptions' | 'client' | 'tools' | 'operations';
+type CurrencyFormatter = ReturnType<typeof makeCurrencyFormatter>;
 
 const filters: { id: Filter; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -61,12 +65,13 @@ function sourceLabel(tx: Transaction) {
   return 'Manual entry';
 }
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatTransactionDate(value: string, locale: Locale) {
+  return formatLocaleDate(value, locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function TransactionsPage() {
   const { transactions, currency, addTransaction, updateTransaction, deleteTransaction } = useFinancialStore();
+  const { locale } = useLocale();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -76,8 +81,8 @@ export default function TransactionsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }), [currency]);
-  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   useEffect(() => {
@@ -283,6 +288,7 @@ export default function TransactionsPage() {
                         key={tx.id}
                         transaction={tx}
                         money={money}
+                        locale={locale}
                         onEdit={openEditModal}
                         onDelete={requestDelete}
                       />
@@ -297,6 +303,7 @@ export default function TransactionsPage() {
                     key={tx.id}
                     transaction={tx}
                     money={money}
+                    locale={locale}
                     onEdit={openEditModal}
                     onDelete={requestDelete}
                   />
@@ -348,7 +355,7 @@ export default function TransactionsPage() {
             </div>
             <div className="rounded-md bg-surface-hover border border-border p-3 text-sm">
               <div className="font-medium text-text">{transactionTitle(deleting)}</div>
-              <div className="mt-1 text-text-muted">{formatDate(deleting.date)} - {deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</div>
+              <div className="mt-1 text-text-muted">{formatTransactionDate(deleting.date, locale)} - {deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</div>
             </div>
             {deleteError && <InlineAlert tone="negative">{deleteError}</InlineAlert>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
@@ -383,7 +390,7 @@ function TableHead({ children, align = 'left' }: { children: React.ReactNode; al
   );
 }
 
-function TransactionRow({ transaction, money, onEdit, onDelete }: { transaction: Transaction; money: Intl.NumberFormat; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
+function TransactionRow({ transaction, money, locale, onEdit, onDelete }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
   return (
     <tr className="border-b border-border last:border-b-0 hover:bg-surface-hover transition-colors">
       <td className="px-4 py-3">
@@ -397,7 +404,7 @@ function TransactionRow({ transaction, money, onEdit, onDelete }: { transaction:
         </div>
       </td>
       <td className="px-4 py-3"><Badge>{titleCase(transaction.categoryId)}</Badge></td>
-      <td className="px-4 py-3 text-sm text-text-secondary font-mono">{formatDate(transaction.date)}</td>
+      <td className="px-4 py-3 text-sm text-text-secondary font-mono">{formatTransactionDate(transaction.date, locale)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? 'Revenue' : 'Expense'}</Badge>
@@ -418,7 +425,7 @@ function TransactionRow({ transaction, money, onEdit, onDelete }: { transaction:
   );
 }
 
-function TransactionCard({ transaction, money, onEdit, onDelete }: { transaction: Transaction; money: Intl.NumberFormat; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
+function TransactionCard({ transaction, money, locale, onEdit, onDelete }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
   return (
     <div className="p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
@@ -426,7 +433,7 @@ function TransactionCard({ transaction, money, onEdit, onDelete }: { transaction
           <TransactionIcon type={transaction.type} />
           <div className="min-w-0">
             <div className="t-body-m truncate">{transactionTitle(transaction)}</div>
-            <div className="text-xs text-text-muted mt-0.5">{formatDate(transaction.date)} - {sourceLabel(transaction)}</div>
+            <div className="text-xs text-text-muted mt-0.5">{formatTransactionDate(transaction.date, locale)} - {sourceLabel(transaction)}</div>
           </div>
         </div>
         <div className={`font-mono text-sm font-medium shrink-0 ${transaction.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>

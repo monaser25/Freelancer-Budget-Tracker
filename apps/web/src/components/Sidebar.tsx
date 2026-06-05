@@ -8,6 +8,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Icon } from '@/components/ui/Icon';
 import { Avatar } from '@/components/ui/Avatar';
 import { Menu } from '@/components/ui/Menu';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Overview', icon: 'layoutDashboard' },
@@ -167,23 +168,32 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
         />
       </div>
 
-      {/* Collapse toggle (desktop only) */}
-      {!mobile && (
-        <button
-          onClick={toggleSidebar}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="h-10 border-t border-border text-text-muted hover:text-text hover:bg-surface-hover flex items-center w-full px-3.5 focus-ring transition-colors duration-base ease-out"
-        >
-          <span className={SLOT}>
-            <Icon
-              name="panelLeft"
-              size={17}
-              className={`transition-transform duration-slow ease-out ${collapsed ? 'rotate-180' : ''}`}
-            />
-          </span>
-          <span className={label(collapsed, 't-small text-left')}>Collapse</span>
-        </button>
+      {/* Bottom Actions */}
+      {!mobile ? (
+        <div className="flex items-center border-t border-border h-10 w-full overflow-hidden">
+          <button
+            onClick={toggleSidebar}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="flex-1 h-full text-text-muted hover:text-text hover:bg-surface-hover flex items-center px-3.5 focus-ring transition-colors duration-base ease-out min-w-0"
+          >
+            <span className={SLOT}>
+              <Icon
+                name="panelLeft"
+                size={17}
+                className={`transition-transform duration-slow ease-out ${collapsed ? 'rotate-180' : ''}`}
+              />
+            </span>
+            <span className={label(collapsed, 't-small text-left')}>Collapse</span>
+          </button>
+          <div className="shrink-0 border-l border-border h-full flex items-center justify-center min-w-[var(--sidebar-rail)]">
+            <LanguageToggle minimal className="w-full h-full rounded-none hover:bg-surface-hover text-text-muted hover:text-text" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center border-t border-border h-12 w-full p-2">
+          <LanguageToggle className="w-full" />
+        </div>
       )}
     </aside>
   );

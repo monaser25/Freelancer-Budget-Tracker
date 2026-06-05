@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription, Transaction } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { useLocale } from '@/lib/i18n';
 import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
 import { Segmented } from '@/components/ui/Form';
 import { Avatar } from '@/components/ui/Avatar';
@@ -114,8 +115,9 @@ function getChartBuckets(period: Period, transactions: Transaction[]) {
 
 export default function AnalyticsPage() {
   const { transactions, clients, subscriptions, overview, currency } = useFinancialStore();
+  const { locale } = useLocale();
   const [period, setPeriod] = useState<Period>('month');
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
 
   const { start, end } = useMemo(() => getPeriodRange(period), [period]);
   const completedTransactions = useMemo(() => transactions.filter(tx => tx.status === 'COMPLETED'), [transactions]);

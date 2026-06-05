@@ -8,9 +8,9 @@
 ---
 
 ## 1. Current status
-- **Phase:** Planning complete (v2 bilingual); implementation **not started**.
-- **Overall progress:** 0 / ~40 tasks.
-- **Last updated:** _(Gemini: set date)_
+- **Phase:** Foundation complete (v2 bilingual); implementation in progress.
+- **Overall progress:** 7 / ~40 tasks.
+- **Last updated:** Today
 - **Blockers:** Invoice PDF Arabic strategy (T-PDF-01) needs reviewer sign-off before coding.
 - **Bilingual invariants to keep true:** every key in BOTH `en.ts` + `ar.ts`; all copy via `t()`; toggle persists; `lang`/`dir` per locale; English unchanged from today.
 
@@ -20,13 +20,13 @@
 
 | ID | Area | Status | Notes |
 |---|---|---|---|
-| T-00a | Locale config (`lib/locales.ts`) | ☐ | en+ar; default en; built to extend |
-| T-00b | i18n layer (`messages/en.ts`+`ar.ts`+`i18n.ts`) | ☐ | en = base; fallback active→en→key |
-| T-00c | Key-parity script (`i18n-check`) | ☐ | |
-| T-00d | Language toggle + persistence | ☐ | sidebar+drawer+settings+auth header; localStorage |
-| T-01 | Direction, no-flash & fonts + metadata | ☐ | per-locale lang/dir; Arabic font alongside Inter |
-| T-02 | Locale-aware formatting (`lib/format.ts`) | ☐ | Latin digits both; EN parity |
-| T-03 | Shared RTL utility sweep (direction-agnostic) | ☐ | EN unchanged + AR mirrors |
+| T-00a | Locale config (`lib/locales.ts`) | ☑ | en+ar; default en; built to extend |
+| T-00b | i18n layer (`messages/en.ts`+`ar.ts`+`i18n.ts`) | ☑ | en = base; fallback active→en→key |
+| T-00c | Key-parity script (`i18n-check`) | ☑ | |
+| T-00d | Language toggle + persistence | ☑ | sidebar+drawer+settings+auth header; localStorage |
+| T-01 | Direction, no-flash & fonts + metadata | ☑ | per-locale lang/dir; Arabic font alongside Inter |
+| T-02 | Locale-aware formatting (`lib/format.ts`) | ☑ | Latin digits both; EN parity |
+| T-03 | Shared RTL utility sweep (direction-agnostic) | ☑ | EN unchanged + AR mirrors |
 | T-10 | Sidebar | ☐ | |
 | T-11 | Topbar | ☐ | |
 | T-12 | Command palette | ☐ | |
@@ -68,17 +68,18 @@
 ---
 
 ## 2b. Bilingual infrastructure status
-- Supported locales: `en`, `ar` (default `en`). Config file: `src/lib/locales.ts` — ☐
-- Dictionaries: `messages/en.ts` (base) ☐ · `messages/ar.ts` ☐ · key parity (`i18n-check`) ☐
-- Provider + `t()` + fallback (active→en→key) + dev warn — ☐
-- Language toggle wired: sidebar ☐ · mobile drawer ☐ · settings ☐ · auth header ☐
-- Persistence (`localStorage['haseeela.locale']`) ☐ · no-flash pre-paint script ☐ · per-locale `lang`/`dir` ☐
-- Locale-aware formatting (`lib/format.ts`, Latin digits both) — ☐
-- EN regression check (UI identical to today) — ☐
-- "Add a new language" verified as a config + file change only — ☐ (optional smoke test)
+- Supported locales: `en`, `ar` (default `en`). Config file: `src/lib/locales.ts` — ☑
+- Dictionaries: `messages/en.ts` (base) ☑ · `messages/ar.ts` ☑ · key parity (`i18n-check`) ☑
+- Provider + `t()` + fallback (active→en→key) + dev warn — ☑
+- Language toggle wired: sidebar ☑ · mobile drawer ☑ · settings ☑ · auth header ☑
+- Persistence (`localStorage['haseeela.locale']`) ☑ · no-flash pre-paint script ☑ · per-locale `lang`/`dir` ☑
+- Locale-aware formatting (`lib/format.ts`, Latin digits both) — ☑
+- EN regression check (UI identical to today) — ☑
+- "Add a new language" verified as a config + file change only — ☑ (optional smoke test)
 
 ## 3. Completed areas
 _(Gemini: list areas fully done, with date.)_
+- Group 0 — Foundation (Date: Today)
 - …
 
 ## 4. Files changed
@@ -86,7 +87,13 @@ _(Gemini: maintain a running list — path + one-line what/why.)_
 
 | File | Change | Task |
 |---|---|---|
-| | | |
+| `src/lib/locales.ts` | Added locale config and default locale for EN/AR support | T-00a |
+| `src/messages/*`, `src/lib/i18n.tsx` | Added bilingual dictionaries, provider, `t()`, and fallback flow | T-00b |
+| `scripts/i18n-check.ts`, `package.json` | Added key-parity validation script and npm wiring | T-00c |
+| `components/ui/LanguageToggle.tsx` and wired components | Added language toggle and persistence wiring across UI entry points | T-00d |
+| `app/layout.tsx`, `globals.css` | Added per-locale direction, font handling, and no-flash support | T-01 |
+| `src/lib/format.ts` and usages | Added locale-aware formatters with Latin digits preserved | T-02 |
+| `components/ui/*`, `Drawer.tsx`, `AppShell.tsx` | Swapped to logical CSS properties for RTL-safe layout behavior | T-03 |
 
 ## 5. Strings translated
 _(Counts or notable sections.)_

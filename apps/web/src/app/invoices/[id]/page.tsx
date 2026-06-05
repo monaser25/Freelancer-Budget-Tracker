@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useInvoiceStore } from '@/store/invoiceStore';
 import { InvoiceStatus } from '@/types/finance';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -14,11 +17,12 @@ import { SendInvoiceModal } from '@/components/invoices/SendInvoiceModal';
 
 const statusTone = (s: InvoiceStatus) =>
   s === 'PAID' ? 'positive' : s === 'OVERDUE' ? 'negative' : s === 'SENT' ? 'info' : 'neutral';
-const fmtDate = (v?: string | null) => (v ? new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
+const fmtDate = (v: string | null | undefined, locale: Locale) => (v ? formatDate(v, locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '—');
 
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { locale } = useLocale();
   const id = String(params.id);
   const { isLoaded, loadInvoices, getInvoice, markPaid, deleteInvoice } = useInvoiceStore();
   const { toast } = useToast();
@@ -95,9 +99,9 @@ export default function InvoiceDetailPage() {
           <Card pad={18} className="flex flex-col gap-3">
             <div className="t-caption text-text-muted">Status</div>
             <Badge tone={statusTone(invoice.status)} className="self-start">{invoice.status[0] + invoice.status.slice(1).toLowerCase()}</Badge>
-            <div className="flex justify-between t-small"><span className="text-text-muted">Issued</span><span className="tnum">{fmtDate(invoice.issueDate)}</span></div>
-            <div className="flex justify-between t-small"><span className="text-text-muted">Due</span><span className="tnum">{fmtDate(invoice.dueDate)}</span></div>
-            {invoice.paidAt && <div className="flex justify-between t-small"><span className="text-text-muted">Paid</span><span className="tnum text-positive">{fmtDate(invoice.paidAt)}</span></div>}
+            <div className="flex justify-between t-small"><span className="text-text-muted">Issued</span><span className="tnum">{fmtDate(invoice.issueDate, locale)}</span></div>
+            <div className="flex justify-between t-small"><span className="text-text-muted">Due</span><span className="tnum">{fmtDate(invoice.dueDate, locale)}</span></div>
+            {invoice.paidAt && <div className="flex justify-between t-small"><span className="text-text-muted">Paid</span><span className="tnum text-positive">{fmtDate(invoice.paidAt, locale)}</span></div>}
             {invoice.client && <div className="flex justify-between t-small"><span className="text-text-muted">Client</span><span>{invoice.client.name}</span></div>}
           </Card>
 
@@ -129,7 +133,7 @@ export default function InvoiceDetailPage() {
           number: invoice.number,
           currency: invoice.currency,
           total: invoice.total,
-          dueDate: fmtDate(invoice.dueDate),
+          dueDate: fmtDate(invoice.dueDate, locale),
           client: invoice.client,
         }}
       />

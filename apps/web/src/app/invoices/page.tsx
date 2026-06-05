@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useInvoiceStore } from '@/store/invoiceStore';
 import { Invoice, InvoiceStatus } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
+import { formatDate } from '@/lib/format';
+import { useLocale } from '@/lib/i18n';
+import type { Locale } from '@/lib/locales';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Card, StatCard } from '@/components/ui/Card';
 import { Badge, FilterChip } from '@/components/ui/Badge';
@@ -27,10 +30,11 @@ const STATUS_FILTERS: { id: 'all' | InvoiceStatus; label: string }[] = [
 const statusTone = (s: InvoiceStatus) =>
   s === 'PAID' ? 'positive' : s === 'OVERDUE' ? 'negative' : s === 'SENT' ? 'info' : 'neutral';
 
-const fmtDate = (v: string) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const fmtDate = (v: string, locale: Locale) => formatDate(v, locale, { month: 'short', day: 'numeric', year: 'numeric' });
 
 export default function InvoicesPage() {
   const router = useRouter();
+  const { locale } = useLocale();
   const { invoices, isLoaded, isLoading, error, loadInvoices, deleteInvoice, markPaid } = useInvoiceStore();
   const { toast } = useToast();
   const [filter, setFilter] = useState<'all' | InvoiceStatus>('all');
@@ -60,7 +64,7 @@ export default function InvoicesPage() {
 
   // Summary cards format in the most common currency among invoices (fallback USD).
   const baseCurrency = invoices[0]?.currency || 'USD';
-  const money0 = useMemo(() => makeCurrencyFormatter(baseCurrency, { maximumFractionDigits: 0 }), [baseCurrency]);
+  const money0 = useMemo(() => makeCurrencyFormatter(baseCurrency, { maximumFractionDigits: 0 }, locale), [baseCurrency, locale]);
 
   const filterCounts = useMemo(() => {
     const counts: Record<string, number> = { all: invoices.length };
@@ -152,7 +156,7 @@ export default function InvoicesPage() {
               </thead>
               <tbody>
                 {filtered.map((inv) => {
-                  const money = makeCurrencyFormatter(inv.currency, { minimumFractionDigits: 2 });
+                  const money = makeCurrencyFormatter(inv.currency, { minimumFractionDigits: 2 }, locale);
                   return (
                     <tr
                       key={inv.id}
@@ -161,8 +165,8 @@ export default function InvoicesPage() {
                     >
                       <td className="px-4 py-3 t-body-m">{inv.number}</td>
                       <td className="px-4 py-3 text-text-secondary">{inv.client?.name || '—'}</td>
-                      <td className="px-4 py-3 text-text-secondary tnum">{fmtDate(inv.issueDate)}</td>
-                      <td className={`px-4 py-3 tnum ${inv.status === 'OVERDUE' ? 'text-negative' : 'text-text-secondary'}`}>{fmtDate(inv.dueDate)}</td>
+                      <td className="px-4 py-3 text-text-secondary tnum">{fmtDate(inv.issueDate, locale)}</td>
+                      <td className={`px-4 py-3 tnum ${inv.status === 'OVERDUE' ? 'text-negative' : 'text-text-secondary'}`}>{fmtDate(inv.dueDate, locale)}</td>
                       <td className="px-4 py-3"><Badge tone={statusTone(inv.status)}>{inv.status[0] + inv.status.slice(1).toLowerCase()}</Badge></td>
                       <td className="px-4 py-3 text-right t-body-m tnum">{money.format(inv.total)}</td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -210,7 +214,7 @@ export default function InvoicesPage() {
             number: sendTarget.number,
             currency: sendTarget.currency,
             total: sendTarget.total,
-            dueDate: fmtDate(sendTarget.dueDate),
+            dueDate: fmtDate(sendTarget.dueDate, locale),
             client: sendTarget.client,
           }}
         />

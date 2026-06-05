@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useFinancialStore, computeNextBillingDate } from '@/store/financialStore';
 import { supportedCurrencies, makeCurrencyFormatter } from '@/lib/currency';
+import { useLocale } from '@/lib/i18n';
 import { CurrencyCode, Client, Subscription } from '@/types/finance';
 import { markOnboarded } from '@/lib/onboarding';
 import { Button } from '@/components/ui/Button';
@@ -20,6 +21,7 @@ const makeId = () =>
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { locale } = useLocale();
   const { user, isLoading } = useAuth();
   const { currency, setCurrency, setStorageUserId, addClient, addSubscription } = useFinancialStore();
 
@@ -39,7 +41,7 @@ export default function OnboardingPage() {
     setStorageUserId(user.id);
   }, [isLoading, user, router, setStorageUserId]);
 
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
+  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const prefix = useMemo(() => money.formatToParts(0).find((p) => p.type === 'currency')?.value || currency, [currency, money]);
 
   const finish = () => {

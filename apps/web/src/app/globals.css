@@ -52,7 +52,7 @@
     /* ---- Layout ---- */
     --sidebar-w:260px; --sidebar-rail:72px; --header-h:60px; --content-max:1280px;
 
-    --font: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --font: var(--font-inter), 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
     color-scheme: light;
 
     /* ---- Backward Compatibility Aliases ---- */
@@ -66,6 +66,10 @@
     --radius-md: var(--r-md);
     --radius-lg: var(--r-lg);
     --radius-xl: var(--r-xl);
+  }
+
+  html[lang="ar"], html[dir="rtl"] {
+    --font: var(--font-cairo), 'Cairo', -apple-system, 'Segoe UI', system-ui, sans-serif;
   }
 
   .dark {

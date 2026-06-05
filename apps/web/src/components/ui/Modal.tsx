@@ -71,7 +71,7 @@ export function Modal({
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="text-text-muted hover:text-text p-1 -mr-1 rounded-sm focus-ring transition-colors"
+                className="text-text-muted hover:text-text p-1 -me-1 rounded-sm focus-ring transition-colors"
               >
                 <Icon name="x" size={18} />
               </button>

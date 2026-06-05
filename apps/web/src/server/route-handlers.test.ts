@@ -1,6 +1,6 @@
-const mockPrisma = {
+const mockPrisma: any = {
   $queryRaw: jest.fn(),
-  $transaction: jest.fn((callback: any) => callback(mockPrisma)),
+  $transaction: jest.fn((callback: any): unknown => callback(mockPrisma)),
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
