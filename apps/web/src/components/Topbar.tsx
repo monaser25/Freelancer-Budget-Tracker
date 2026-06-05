@@ -7,6 +7,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Icon } from '@/components/ui/Icon';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Menu } from '@/components/ui/Menu';
+import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 const PAGE_COPY: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Overview', subtitle: 'Your money at a glance' },
@@ -63,6 +64,7 @@ export function Topbar() {
       </button>
       <IconButton icon="search" title="Search" className="sm:hidden" onClick={() => setPaletteOpen(true)} />
 
+      <LanguageToggle minimal />
       <IconButton icon={resolvedTheme === 'dark' ? 'sun' : 'moon'} title="Toggle theme" onClick={toggleTheme} />
       <IconButton
         icon="bell"
