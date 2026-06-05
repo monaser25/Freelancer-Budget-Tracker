@@ -27,14 +27,14 @@
 | T-01 | Direction, no-flash & fonts + metadata | ☑ | per-locale lang/dir; Arabic font alongside Inter |
 | T-02 | Locale-aware formatting (`lib/format.ts`) | ☑ | Latin digits both; EN parity |
 | T-03 | Shared RTL utility sweep (direction-agnostic) | ☑ | EN unchanged + AR mirrors |
-| T-10 | Sidebar | ☐ | |
-| T-11 | Topbar | ☐ | |
-| T-12 | Command palette | ☐ | |
-| T-20 | Login | ☐ | |
-| T-21 | Register | ☐ | |
-| T-22 | Forgot password | ☐ | |
-| T-23 | Reset password | ☐ | |
-| T-24 | Verify email (+ email-changed) | ☐ | Do NOT change token/refresh logic |
+| T-10 | Sidebar | ☑ | |
+| T-11 | Topbar | ☑ | |
+| T-12 | Command palette | ☑ | |
+| T-20 | Login | ☑ | |
+| T-21 | Register | ☑ | |
+| T-22 | Forgot password | ☑ | |
+| T-23 | Reset password | ☑ | |
+| T-24 | Verify email (+ email-changed) | ☑ | Do NOT change token/refresh logic |
 | T-25 | Onboarding | ☐ | |
 | T-30 | Dashboard / Overview | ☐ | |
 | T-31 | Transactions + entity modals | ☐ | |
