@@ -242,6 +242,12 @@ export const restoreSubscriptionAPI = async (id: string) => {
   }, 'restore subscription');
 };
 
+export const deleteSubscriptionPermanentAPI = async (id: string) => {
+  return apiRequest<{ id: string }>(`/api/subscriptions/delete-permanent/${id}`, {
+    method: 'DELETE',
+  }, 'permanently delete subscription');
+};
+
 export const recordSubscriptionPaymentAPI = async (id: string) => {
   return apiRequest<{ subscription: Subscription; transaction: Transaction }>(`/api/subscriptions/${id}/record-payment`, {
     method: 'POST',

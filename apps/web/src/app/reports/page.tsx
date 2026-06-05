@@ -26,8 +26,18 @@ const startOfYear = () => iso(new Date(new Date().getFullYear(), 0, 1));
 const todayStr = () => iso(new Date());
 
 export default function ReportsPage() {
-  const { currency } = useFinancialStore();
+  const { currency, transactions } = useFinancialStore();
   const { toast } = useToast();
+
+  // "All time" should start at the first recorded transaction, not an arbitrary
+  // year 2000 — keeps the range meaningful and the printed header tidy.
+  const earliestTxDate = useMemo(() => {
+    const dates = transactions
+      .map((t) => t.date)
+      .filter(Boolean)
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    return dates.length > 0 ? iso(new Date(dates[0])) : startOfYear();
+  }, [transactions]);
   const [type, setType] = useState('pl');
   const [from, setFrom] = useState(startOfYear());
   const [to, setTo] = useState(todayStr());
@@ -54,7 +64,7 @@ export default function ReportsPage() {
     if (preset === 'month') setFrom(startOfMonth());
     else if (preset === 'quarter') setFrom(startOfQuarter());
     else if (preset === 'year') setFrom(startOfYear());
-    else if (preset === 'all') setFrom('2000-01-01');
+    else if (preset === 'all') setFrom(earliestTxDate);
     setTo(todayStr());
   };
 

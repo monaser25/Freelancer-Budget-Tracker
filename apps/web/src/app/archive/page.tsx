@@ -5,9 +5,60 @@ import { useFinancialStore } from '@/store/useFinancialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
 import { Avatar, Badge, Button, Card, EmptyState, Icon, InlineAlert, SectionHeader, StatCard } from '@/components/ui';
 
+// Restore + permanent-delete actions for an archived row. The delete is a
+// two-step inline confirm (no modal) so it can't be triggered by accident.
+function RowActions({ count, onRestore, onDelete }: {
+  count: number;
+  onRestore: () => Promise<void>;
+  onDelete: () => Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState<null | 'restore' | 'delete'>(null);
+
+  const run = async (kind: 'restore' | 'delete', fn: () => Promise<void>) => {
+    setBusy(kind);
+    try {
+      await fn();
+    } finally {
+      setBusy(null);
+      setConfirming(false);
+    }
+  };
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-2 sm:justify-end shrink-0">
+        <span className="t-small text-text-muted hidden md:block">
+          Delete permanently{count > 0 ? ` + ${count} transaction${count === 1 ? '' : 's'}` : ''}?
+        </span>
+        <Button type="button" variant="ghost" onClick={() => setConfirming(false)} disabled={busy !== null}>
+          Cancel
+        </Button>
+        <Button type="button" variant="destructive" icon="Trash2" loading={busy === 'delete'} onClick={() => run('delete', onDelete)}>
+          Delete
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 sm:justify-end shrink-0">
+      <Button type="button" variant="secondary" icon="RotateCcw" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore', onRestore)}>
+        Restore
+      </Button>
+      <Button type="button" variant="ghost" icon="Trash2" disabled={busy !== null} onClick={() => setConfirming(true)} className="text-negative hover:text-negative">
+        Delete
+      </Button>
+    </div>
+  );
+}
+
 export default function ArchivePage() {
-  const { clients, subscriptions, transactions, currency, restoreClient, restoreSubscription } = useFinancialStore();
-  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const {
+    clients, subscriptions, transactions, currency,
+    restoreClient, restoreSubscription,
+    deleteClientPermanently, deleteSubscriptionPermanently,
+  } = useFinancialStore();
   const [error, setError] = useState<string | null>(null);
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }), [currency]);
 
@@ -26,27 +77,13 @@ export default function ArchivePage() {
   const subscriptionTransactionCount = (subscriptionId: string) =>
     transactions.filter((tx) => tx.subscriptionId === subscriptionId || (tx.sourceType === 'subscription' && tx.sourceId === subscriptionId)).length;
 
-  const handleRestoreClient = async (id: string) => {
-    setRestoringId(id);
+  const guard = async (fn: () => Promise<void>, failMessage: string) => {
     setError(null);
     try {
-      await restoreClient(id);
+      await fn();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to restore client');
-    } finally {
-      setRestoringId(null);
-    }
-  };
-
-  const handleRestoreSubscription = async (id: string) => {
-    setRestoringId(id);
-    setError(null);
-    try {
-      await restoreSubscription(id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to restore subscription');
-    } finally {
-      setRestoringId(null);
+      setError(err instanceof Error ? err.message : failMessage);
+      throw err;
     }
   };
 
@@ -109,17 +146,11 @@ export default function ArchivePage() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={restoringId === client.id}
-                      onClick={() => handleRestoreClient(client.id)}
-                      loading={restoringId === client.id}
-                      icon="RotateCcw"
-                      className="sm:w-auto"
-                    >
-                      {restoringId === client.id ? 'Restoring...' : 'Restore'}
-                    </Button>
+                    <RowActions
+                      count={clientTransactionCount(client.id)}
+                      onRestore={() => guard(() => restoreClient(client.id), 'Failed to restore client')}
+                      onDelete={() => guard(() => deleteClientPermanently(client.id), 'Failed to delete client')}
+                    />
                   </div>
                 ))}
               </div>
@@ -156,17 +187,11 @@ export default function ArchivePage() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={restoringId === sub.id}
-                      onClick={() => handleRestoreSubscription(sub.id)}
-                      loading={restoringId === sub.id}
-                      icon="RotateCcw"
-                      className="sm:w-auto"
-                    >
-                      {restoringId === sub.id ? 'Restoring...' : 'Restore'}
-                    </Button>
+                    <RowActions
+                      count={subscriptionTransactionCount(sub.id)}
+                      onRestore={() => guard(() => restoreSubscription(sub.id), 'Failed to restore subscription')}
+                      onDelete={() => guard(() => deleteSubscriptionPermanently(sub.id), 'Failed to delete subscription')}
+                    />
                   </div>
                 ))}
               </div>

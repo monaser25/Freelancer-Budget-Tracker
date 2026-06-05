@@ -11,6 +11,7 @@ import {
   createSubscriptionAPI,
   updateSubscriptionAPI,
   deleteSubscriptionAPI,
+  deleteSubscriptionPermanentAPI,
   restoreSubscriptionAPI,
   recordSubscriptionPaymentAPI,
   createTransactionAPI,
@@ -66,6 +67,7 @@ interface FinancialStore {
   addSubscription: (subscription: Subscription) => Promise<void>;
   updateSubscription: (id: string, updates: Partial<Subscription>) => Promise<void>;
   deleteSubscription: (id: string) => Promise<void>;
+  deleteSubscriptionPermanently: (id: string) => Promise<void>;
   restoreSubscription: (id: string) => Promise<void>;
   recordSubscriptionPayment: (id: string) => Promise<void>;
 
@@ -326,6 +328,26 @@ export const useFinancialStore = create<FinancialStore>((set) => ({
       await refreshAfterLocalMutation();
     } catch (e: any) {
       set({ error: e?.message || 'Failed to delete subscription' });
+      throw e;
+    }
+  },
+  deleteSubscriptionPermanently: async (id) => {
+    try {
+      await deleteSubscriptionPermanentAPI(id);
+      set((state) => ({
+        ...reconcileFinancialSnapshot({
+          clients: state.clients,
+          subscriptions: state.subscriptions.filter((sub) => sub.id !== id),
+          transactions: state.transactions.filter(
+            (tx) => !(tx.subscriptionId === id || (tx.sourceType === 'subscription' && tx.sourceId === id)),
+          ),
+        }),
+        error: null,
+      }));
+      persistLocalSnapshot();
+      await refreshAfterLocalMutation();
+    } catch (e: any) {
+      set({ error: e?.message || 'Failed to permanently delete subscription' });
       throw e;
     }
   },
