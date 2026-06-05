@@ -48,6 +48,8 @@ Project ref: `tpzydgcvlbndedsejqxb` · Production URL:
 
 ## 2. Email Templates (recovery must point at the reset page)
 
+> 📩 **Full branded HTML for every auth email** (confirm signup, invite, magic link/OTP, change email, reset password, reauthentication) lives in **`docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md`** — paste those for the production look. The note below only covers the routing requirement.
+
 **Dashboard → Authentication → Email Templates → "Reset Password"**
 
 Confirm the template uses the standard confirmation URL and does **not**
