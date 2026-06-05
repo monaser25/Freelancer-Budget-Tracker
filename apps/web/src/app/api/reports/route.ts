@@ -3,6 +3,7 @@ import { authenticateRequest, getUserId } from '@/server/auth';
 import { prisma } from '@/server/prisma';
 import { withApiError } from '@/server/errors';
 import { buildReport, reportToCsv, REPORT_TITLES, type ReportType } from '@/server/reports';
+import { reportToXlsx } from '@/server/reportXlsx';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,13 +42,26 @@ export const GET = async (request: Request) => withApiError(request, async () =>
 
   const report = buildReport(type, { transactions, clients }, from, to);
 
+  const baseFilename = `${REPORT_TITLES[type].replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`;
+
   if (format === 'csv') {
     const csv = reportToCsv(report);
     return new NextResponse(csv, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${REPORT_TITLES[type].replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}.csv"`,
+        'Content-Disposition': `attachment; filename="${baseFilename}.csv"`,
+      },
+    });
+  }
+
+  if (format === 'xlsx') {
+    const buffer = await reportToXlsx(report);
+    return new NextResponse(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="${baseFilename}.xlsx"`,
       },
     });
   }

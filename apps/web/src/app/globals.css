@@ -164,13 +164,21 @@
 
 /* Print: isolate the invoice/report document so "Print" yields a clean PDF */
 @media print {
+  @page { margin: 14mm; }
+  body { background: #fff; }
   body * { visibility: hidden; }
   #invoice-document, #invoice-document *,
   #report-document, #report-document * { visibility: visible; }
   #invoice-document, #report-document {
     position: absolute; left: 0; top: 0; width: 100%;
     border: none !important; border-radius: 0 !important; box-shadow: none !important;
+    /* Keep brand/accent colours accurate in the printed PDF. */
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
+  /* Only show the branded letterhead when printing. */
+  .print-letterhead { display: flex !important; }
+  /* Avoid awkward row splits across pages. */
+  #report-document tr, #invoice-document tr { break-inside: avoid; }
 }
 
 @keyframes fl-fade { from{opacity:0} to{opacity:1} }

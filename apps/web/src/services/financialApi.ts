@@ -348,6 +348,21 @@ export const downloadReportCsv = async (type: string, from: string, to: string) 
   return { blob, filename: match?.[1] || `${type}-report.csv` };
 };
 
+export const downloadReportXlsx = async (type: string, from: string, to: string) => {
+  const qs = new URLSearchParams({ type, from, to, format: 'xlsx' }).toString();
+  const url = `${apiBaseUrl()}/api/reports?${qs}`;
+  const response = await fetch(url, {
+    headers: { ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Failed to export report (${response.status})`);
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  return { blob, filename: match?.[1] || `${type}-report.xlsx` };
+};
+
 export const createInvoiceAPI = async (invoice: InvoiceInput) => {
   return apiRequest<Invoice>('/api/invoices/create', {
     method: 'POST',
