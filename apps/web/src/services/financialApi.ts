@@ -36,6 +36,33 @@ class ApiRequestError extends Error {
   }
 }
 
+// Guard so a burst of concurrent 401s only triggers one cleanup + redirect.
+let handlingExpiredSession = false;
+
+/**
+ * Recover from an invalid/expired session: clear the bad Supabase token locally
+ * and send the user to the login page. This prevents the app from getting stuck
+ * showing "Financial data is unavailable" while holding a token the backend
+ * rejects (e.g. it references a deleted-and-recreated Supabase user).
+ */
+const handleExpiredSession = async () => {
+  if (typeof window === 'undefined' || handlingExpiredSession) return;
+  handlingExpiredSession = true;
+
+  try {
+    if (!isDevAuthEnabled()) {
+      await getSupabaseBrowserClient().auth.signOut({ scope: 'local' });
+    }
+  } catch {
+    /* best effort — clearing the local session must not throw */
+  }
+
+  const path = window.location.pathname;
+  if (!path.startsWith('/login') && !path.startsWith('/register')) {
+    window.location.replace('/login?expired=1');
+  }
+};
+
 const parseServerError = (body?: string) => {
   if (!body) return undefined;
   try {
@@ -131,6 +158,11 @@ const apiRequest = async <T>(path: string, options: RequestInit = {}, resource: 
 
     if (!response.ok) {
       const responseBody = await response.text().catch(() => undefined);
+      // A 401 means the session token is invalid/expired (e.g. it points at a
+      // Supabase user that was deleted and re-created). Clear the bad session
+      // and send the user to log in, instead of leaving them stuck on a
+      // "Financial data is unavailable" screen with an unusable token.
+      if (response.status === 401) await handleExpiredSession();
       throw new ApiRequestError(`HTTP ${response.status}`, response.status, responseBody, parseServerError(responseBody));
     }
 

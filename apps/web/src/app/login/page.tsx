@@ -42,6 +42,11 @@ export default function LoginPage() {
     if (searchParams.get('reset') === '1') {
       setNotice('Password updated. Log in with your new password.');
       window.history.replaceState(null, '', '/login');
+      return;
+    }
+    if (searchParams.get('expired') === '1') {
+      setNotice('Your session expired. Please log in again.');
+      window.history.replaceState(null, '', '/login');
     }
   }, [searchParams]);
 
