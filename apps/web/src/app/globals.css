@@ -52,7 +52,7 @@
     /* ---- Layout ---- */
     --sidebar-w:260px; --sidebar-rail:72px; --header-h:60px; --content-max:1280px;
 
-    --font: var(--font-inter), 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --font: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
     color-scheme: light;
 
     /* ---- Backward Compatibility Aliases ---- */

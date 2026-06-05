@@ -3,9 +3,8 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 import { themeNoFlashScript } from '@/components/ThemeProvider';
 
-import { Inter, Cairo } from 'next/font/google';
+import { Cairo } from 'next/font/google';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const cairo = Cairo({ subsets: ['arabic'], variable: '--font-cairo' });
 
 export const metadata: Metadata = {
@@ -20,10 +19,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/haseeela_icon.png', sizes: '192x192', type: 'image/png' },
+      { url: '/haseeela_icon.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/haseeela_icon.png', sizes: '192x192', type: 'image/png' }],
   },
 };
 
@@ -42,6 +41,10 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
         {/* Set the theme class before first paint to avoid a light/dark flash. */}
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
         <script
@@ -58,7 +61,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} ${cairo.variable}`}>
+      <body className={`${cairo.variable}`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>

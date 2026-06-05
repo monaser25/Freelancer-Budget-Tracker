@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useUiStore } from '@/store/uiStore';
@@ -108,7 +109,7 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
         <Link href="/" onClick={onClose} className="flex items-center w-full rounded-md focus-ring">
           <span className={SLOT}>
             <span className="w-[30px] h-[30px] rounded-[9px] bg-accent flex items-center justify-center shadow-[0_2px_8px_color-mix(in_srgb,var(--accent)_40%,transparent)]">
-              <Icon name="wallet" size={18} className="text-white" />
+              <Image src="/haseeela_icon.png" alt="Haseeela logo" width={18} height={18} />
             </span>
           </span>
           <span className={label(collapsed, 'text-[16px] font-semibold tracking-[-0.02em] text-text')}>

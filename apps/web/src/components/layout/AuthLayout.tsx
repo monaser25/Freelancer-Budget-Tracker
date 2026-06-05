@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { Icon } from '@/components/ui/Icon';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
@@ -14,7 +15,7 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
       >
         <div className="flex items-center gap-[11px]">
           <div className="w-[34px] h-[34px] rounded-[10px] bg-[rgba(255,255,255,0.16)] flex items-center justify-center backdrop-blur-sm">
-            <Icon name="wallet" size={20} className="text-white" />
+            <Image src="/haseeela_icon.png" alt="Haseeela logo" width={22} height={22} />
           </div>
           <span className="text-[18px] font-semibold text-white">Haseeela</span>
         </div>
