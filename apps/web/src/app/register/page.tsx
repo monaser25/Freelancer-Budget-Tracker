@@ -13,6 +13,7 @@ import {
   setAuthEmailCooldown,
 } from '@/lib/authEmailRateLimit';
 import { isDevAuthEnabled } from '@/lib/devAuth';
+import { useLocale } from '@/lib/i18n';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { PasswordInput } from '@/components/auth/PasswordInput';
@@ -24,6 +25,7 @@ import { Icon } from '@/components/ui/Icon';
 const isEmailNotConfirmed = (message: string) => message.toLowerCase().includes('email not confirmed');
 
 export default function RegisterPage() {
+  const { t } = useLocale();
   const { signUp, resendConfirmation } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -68,15 +70,15 @@ export default function RegisterPage() {
       await signUp(email, submittedPassword, name);
       setAuthEmailCooldown(email);
       setConfirmationEmail(email);
-      setNotice('Check your email to confirm your account before logging in.');
+      setNotice(t('auth.register.notice.check_email'));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create account.';
+      const message = err instanceof Error ? err.message : t('auth.register.error.default');
       if (isAuthEmailRateLimited(message)) {
         setAuthEmailCooldown(email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
         setConfirmationEmail(email);
       }
       setError(isEmailNotConfirmed(message)
-        ? 'Email not confirmed. Please check your inbox and confirm your account before logging in.'
+        ? t('auth.login.error.email_not_confirmed')
         : getAuthErrorMessage(message));
       if (isEmailNotConfirmed(message)) setConfirmationEmail(email);
     } finally {
@@ -100,9 +102,9 @@ export default function RegisterPage() {
     try {
       await resendConfirmation(confirmationEmail);
       setAuthEmailCooldown(confirmationEmail);
-      setNotice(`Confirmation email sent to ${confirmationEmail}.`);
+      setNotice(t('auth.login.notice.resend_success', { email: confirmationEmail }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to resend confirmation email.';
+      const message = err instanceof Error ? err.message : t('auth.login.error.resend_failed');
       if (isAuthEmailRateLimited(message)) {
         setAuthEmailCooldown(confirmationEmail, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
       }
@@ -119,8 +121,8 @@ export default function RegisterPage() {
           <Icon name="mail" size={26} />
         </div>
         <AuthHeader 
-          title="Check your email" 
-          sub="We sent a confirmation link to your email. Click it to activate your account." 
+          title={t('auth.register.success.title')} 
+          sub={t('auth.register.success.subtitle')} 
         />
         <Button 
           variant="secondary" 
@@ -130,13 +132,13 @@ export default function RegisterPage() {
           icon="refreshCcw"
         >
           {isResending
-            ? 'Sending...'
+            ? t('auth.login.action.sending')
             : resendWaitSeconds > 0
-              ? `Resend in ${formatAuthWaitTime(resendWaitSeconds)}`
-              : 'Resend confirmation email'}
+              ? t('auth.login.action.resend_in', { time: formatAuthWaitTime(resendWaitSeconds) })
+              : t('auth.login.action.resend')}
         </Button>
         <div className="t-body text-text-secondary text-center mt-6">
-          <Link href="/login" className="text-accent font-semibold hover:underline">Return to log in</Link>
+          <Link href="/login" className="text-accent font-semibold hover:underline">{t('auth.register.success.return_login')}</Link>
         </div>
       </AuthLayout>
     );
@@ -144,12 +146,12 @@ export default function RegisterPage() {
 
   return (
     <AuthLayout>
-      <AuthHeader title="Create your account" sub="Start tracking your freelance finances in minutes." />
+      <AuthHeader title={t('auth.register.title')} sub={t('auth.register.subtitle')} />
       
       {error && (
         <InlineAlert 
           tone={confirmationEmail && error.includes('confirm') ? "warning" : "negative"} 
-          title={confirmationEmail && error.includes('confirm') ? "Confirm your email first" : "Registration error"} 
+          title={confirmationEmail && error.includes('confirm') ? t('auth.login.alert.confirm_title') : t('auth.register.alert.error_title')} 
           body={error}
           className="mb-[18px]"
         >
@@ -161,25 +163,25 @@ export default function RegisterPage() {
               className={`t-small font-semibold mt-2 ${resendWaitSeconds > 0 ? 'text-text-muted cursor-default' : 'text-accent hover:underline cursor-pointer'}`}
             >
               {isResending
-                ? 'Sending...'
+                ? t('auth.login.action.sending')
                 : resendWaitSeconds > 0
-                  ? `Resend in ${formatAuthWaitTime(resendWaitSeconds)}`
-                  : 'Resend confirmation email'}
+                  ? t('auth.login.action.resend_in', { time: formatAuthWaitTime(resendWaitSeconds) })
+                  : t('auth.login.action.resend')}
             </button>
           )}
         </InlineAlert>
       )}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="Name">
-          <Input name="name" type="text" placeholder="Your name" required autoFocus />
+        <Field label={t('auth.register.label.name')}>
+          <Input name="name" type="text" placeholder={t('auth.register.placeholder.name')} required autoFocus />
         </Field>
 
-        <Field label="Email">
-          <Input name="email" type="email" placeholder="you@email.com" required />
+        <Field label={t('auth.login.label.email')}>
+          <Input name="email" type="email" placeholder={t('auth.login.placeholder.email')} required />
         </Field>
 
-        <Field label="Password" hint="Minimum 8 characters">
+        <Field label={t('auth.login.label.password')} hint={t('auth.register.hint.password')}>
           <PasswordInput 
             name="password" 
             required 
@@ -191,12 +193,12 @@ export default function RegisterPage() {
         </Field>
 
         <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1">
-          {isSubmitting ? 'Creating account...' : 'Create account'}
+          {isSubmitting ? t('auth.register.action.creating') : t('auth.register.action.create')}
         </Button>
       </form>
 
       <div className="t-body text-text-secondary text-center mt-6">
-        Already have an account? <Link href="/login" className="text-accent font-semibold hover:underline">Log in</Link>
+        {t('auth.register.text.already_have')} <Link href="/login" className="text-accent font-semibold hover:underline">{t('auth.login.action.login')}</Link>
       </div>
     </AuthLayout>
   );

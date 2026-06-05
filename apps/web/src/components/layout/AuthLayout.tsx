@@ -1,9 +1,11 @@
 import React from 'react';
 import Image from 'next/image';
 import { Icon } from '@/components/ui/Icon';
+import { useLocale } from '@/lib/i18n';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 
 export function AuthLayout({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+  const { t } = useLocale();
   return (
     <div className="min-h-screen flex bg-background text-text">
       {/* Brand panel */}
@@ -32,29 +34,29 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
         
         <div className="relative z-10">
           <div className="text-[34px] leading-[42px] font-semibold text-white tracking-[-0.02em] max-w-[380px]">
-            See your money clearly.
+            {t('auth.marketing.headline')}
           </div>
           <p className="text-[16px] leading-[26px] text-[rgba(255,255,255,0.78)] max-w-[360px] mt-4">
-            Track who pays you, what you spend, and whether you&apos;re profitable - all in one calm, precise ledger.
+            {t('auth.marketing.description')}
           </p>
           <div className="flex gap-6 mt-9">
             <div>
-              <div className="text-[24px] font-semibold text-white">Income</div>
-              <div className="text-[12px] text-[rgba(255,255,255,0.66)] mt-0.5">what you earn</div>
+              <div className="text-[24px] font-semibold text-white">{t('auth.marketing.features.income.title')}</div>
+              <div className="text-[12px] text-[rgba(255,255,255,0.66)] mt-0.5">{t('auth.marketing.features.income.desc')}</div>
             </div>
             <div>
-              <div className="text-[24px] font-semibold text-white">Clients</div>
-              <div className="text-[12px] text-[rgba(255,255,255,0.66)] mt-0.5">who pays you</div>
+              <div className="text-[24px] font-semibold text-white">{t('auth.marketing.features.clients.title')}</div>
+              <div className="text-[12px] text-[rgba(255,255,255,0.66)] mt-0.5">{t('auth.marketing.features.clients.desc')}</div>
             </div>
             <div>
-              <div className="text-[24px] font-semibold text-white">Costs</div>
-              <div className="text-[12px] text-[rgba(255,255,255,0.66)] mt-0.5">what you spend</div>
+              <div className="text-[24px] font-semibold text-white">{t('auth.marketing.features.costs.title')}</div>
+              <div className="text-[12px] text-[rgba(255,255,255,0.66)] mt-0.5">{t('auth.marketing.features.costs.desc')}</div>
             </div>
           </div>
         </div>
         
         <div className="relative z-10 text-[13px] text-[rgba(255,255,255,0.6)] flex items-center justify-between">
-          <span>c 2026 Haseeela  Built for freelancers</span>
+          <span>c 2026 Haseeela  {t('auth.marketing.footer')}</span>
         </div>
       </div>
       

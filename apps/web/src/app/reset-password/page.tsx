@@ -7,6 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createIsolatedSupabaseClient, getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { logAuth, describeUser } from '@/lib/authDebug';
 import { getAuthErrorMessage } from '@/lib/authEmailRateLimit';
+import { useLocale } from '@/lib/i18n';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { PasswordInput } from '@/components/auth/PasswordInput';
@@ -19,6 +20,7 @@ type Status = 'verifying' | 'ready' | 'invalid' | 'done';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [status, setStatus] = useState<Status>('verifying');
   const [error, setError] = useState<string | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
@@ -128,11 +130,11 @@ export default function ResetPasswordPage() {
     event.preventDefault();
     setError(null);
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.resetPassword.passwordErrorLength'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('auth.resetPassword.confirmErrorMatch'));
       return;
     }
 
@@ -151,7 +153,7 @@ export default function ResetPasswordPage() {
       if (e) throw e;
 
       // Tear down the recovery session entirely. The user must now log in
-      // fresh with their new password — they are never auto-logged-in here.
+      // fresh with their new password - they are never auto-logged-in here.
       await isolated.auth.signOut({ scope: 'local' });
       logAuth('reset:update-password:success', { email: accountEmail });
 
@@ -159,7 +161,7 @@ export default function ResetPasswordPage() {
       setTimeout(() => router.replace('/login?reset=1'), 1500);
     } catch (err) {
       logAuth('reset:update-password:error', { message: err instanceof Error ? err.message : String(err) });
-      setError(getAuthErrorMessage(err instanceof Error ? err.message : 'Failed to update password.'));
+      setError(getAuthErrorMessage(err instanceof Error ? err.message : t('auth.resetPassword.defaultError')));
     } finally {
       setIsSubmitting(false);
     }
@@ -182,12 +184,12 @@ export default function ResetPasswordPage() {
         <div className="w-[56px] h-[56px] rounded-full bg-negative-tint text-negative flex items-center justify-center mb-5">
           <Icon name="alertTriangle" size={26} />
         </div>
-        <AuthHeader title="Reset link expired" sub="This password reset link is invalid or has expired. Request a new one to continue." />
+        <AuthHeader title={t('auth.resetPassword.invalidTitle')} sub={t('auth.resetPassword.invalidSubtitle')} />
         <Button onClick={() => router.push('/forgot-password')} size="lg" className="w-full">
-          Request a new link
+          {t('auth.resetPassword.requestNewLink')}
         </Button>
         <div className="t-body text-text-secondary text-center mt-6">
-          <Link href="/login" className="text-accent font-semibold hover:underline">Back to log in</Link>
+          <Link href="/login" className="text-accent font-semibold hover:underline">{t('auth.resetPassword.backToLoginLink')}</Link>
         </div>
       </AuthLayout>
     );
@@ -207,20 +209,20 @@ export default function ResetPasswordPage() {
   return (
     <AuthLayout>
       <AuthHeader
-        title="Set a new password"
+        title={t('auth.resetPassword.title')}
         sub={accountEmail
-          ? `Choose a strong password for ${accountEmail}.`
-          : 'Choose a strong password for your Haseeela account.'}
+          ? t('auth.resetPassword.subtitleAccount', { email: accountEmail })
+          : t('auth.resetPassword.subtitleDefault')}
       />
 
-      {error && <InlineAlert tone="negative" title="Couldn't update password" body={error} className="mb-[18px]" />}
+      {error && <InlineAlert tone="negative" title={t('auth.resetPassword.errorTitle')} body={error} className="mb-[18px]" />}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="New password" hint="Minimum 8 characters">
+        <Field label={t('auth.resetPassword.passwordLabel')} hint={t('auth.resetPassword.passwordHint')}>
           <PasswordInput name="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
           {password && <div className="mt-2"><StrengthMeter value={password} /></div>}
         </Field>
-        <Field label="Confirm password" error={confirm && confirm !== password ? 'Passwords do not match' : undefined}>
+        <Field label={t('auth.resetPassword.confirmLabel')} error={confirm && confirm !== password ? t('auth.resetPassword.confirmErrorMatch') : undefined}>
           <PasswordInput name="confirm" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
         <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1" disabled={strength(password) < 2}>

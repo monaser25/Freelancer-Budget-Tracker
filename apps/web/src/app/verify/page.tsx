@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { isDevAuthEnabled } from '@/lib/devAuth';
 import { logAuth, describeUser } from '@/lib/authDebug';
+import { useLocale } from '@/lib/i18n';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +15,7 @@ import { Icon } from '@/components/ui/Icon';
 type Status = 'verifying' | 'success' | 'email-changed' | 'invalid';
 
 export default function VerifyEmailPage() {
+  const { t } = useLocale();
   const router = useRouter();
   const [status, setStatus] = useState<Status>('verifying');
   // Guard against React StrictMode double-invoking the effect, which would
@@ -116,7 +118,7 @@ export default function VerifyEmailPage() {
         <div className="w-[56px] h-[56px] rounded-full bg-positive-tint text-positive flex items-center justify-center mb-5">
           <Icon name="checkCircle" size={26} />
         </div>
-        <AuthHeader title="Email updated" sub="Your sign-in email has been changed. Use the new address next time you log in." />
+        <AuthHeader title={t('auth.verify.email_updated.title')} sub={t('auth.verify.email_updated.subtitle')} />
         <Button onClick={() => router.replace('/profile')} size="lg" className="w-full">
           Back to your profile
         </Button>
@@ -130,7 +132,7 @@ export default function VerifyEmailPage() {
         <div className="w-[56px] h-[56px] rounded-full bg-positive-tint text-positive flex items-center justify-center mb-5">
           <Icon name="checkCircle" size={26} />
         </div>
-        <AuthHeader title="Email confirmed" sub="Your account is ready. Let's set up your workspace." />
+        <AuthHeader title={t('auth.verify.success.title')} sub={t('auth.verify.success.subtitle')} />
         <Button onClick={() => router.replace('/onboarding')} size="lg" className="w-full">
           Continue to Haseeela
         </Button>
@@ -144,14 +146,14 @@ export default function VerifyEmailPage() {
         <Icon name="alertTriangle" size={26} />
       </div>
       <AuthHeader
-        title="Confirmation link expired"
+        title={t('auth.verify.invalid.title')}
         sub="This link is invalid or has already been used. Try logging in — if your email isn't confirmed yet, you can resend the link from there."
       />
       <Button onClick={() => router.push('/login')} size="lg" className="w-full">
         Go to log in
       </Button>
       <div className="t-body text-text-secondary text-center mt-6">
-        Need a new account? <Link href="/register" className="text-accent font-semibold hover:underline">Sign up</Link>
+        {t('auth.verify.invalid.text_new_account')} <Link href="/register" className="text-accent font-semibold hover:underline">{t('auth.verify.invalid.action_signup')}</Link>
       </div>
     </AuthLayout>
   );

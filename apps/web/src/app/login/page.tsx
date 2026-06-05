@@ -13,6 +13,7 @@ import {
   isAuthEmailRateLimited,
   setAuthEmailCooldown,
 } from '@/lib/authEmailRateLimit';
+import { useLocale } from '@/lib/i18n';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { AuthHeader } from '@/components/auth/AuthHeader';
 import { PasswordInput } from '@/components/auth/PasswordInput';
@@ -25,6 +26,7 @@ const isEmailNotConfirmed = (message: string) => message.toLowerCase().includes(
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useLocale();
   const { signIn, resendConfirmation } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,20 +37,20 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (searchParams.get('confirmed') === '1') {
-      setNotice('Email confirmed. You can log in now.');
+      setNotice(t('auth.login.notice.email_confirmed'));
       window.history.replaceState(null, '', '/login');
       return;
     }
     if (searchParams.get('reset') === '1') {
-      setNotice('Password updated. Log in with your new password.');
+      setNotice(t('auth.login.notice.password_updated'));
       window.history.replaceState(null, '', '/login');
       return;
     }
     if (searchParams.get('expired') === '1') {
-      setNotice('Your session expired. Please log in again.');
+      setNotice(t('auth.login.notice.session_expired'));
       window.history.replaceState(null, '', '/login');
     }
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   useEffect(() => {
     if (!confirmationEmail) {
@@ -77,13 +79,13 @@ export default function LoginPage() {
       await signIn(email, password);
       router.replace(searchParams.get('redirect') || '/');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to log in.';
+      const message = err instanceof Error ? err.message : t('auth.login.error.default');
       if (isAuthEmailRateLimited(message)) {
         setAuthEmailCooldown(email, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
         setConfirmationEmail(email);
       }
       setError(isEmailNotConfirmed(message)
-        ? 'Email not confirmed. Please check your inbox and confirm your account before logging in.'
+        ? t('auth.login.error.email_not_confirmed')
         : getAuthErrorMessage(message));
       if (isEmailNotConfirmed(message)) setConfirmationEmail(email);
     } finally {
@@ -107,9 +109,9 @@ export default function LoginPage() {
     try {
       await resendConfirmation(confirmationEmail);
       setAuthEmailCooldown(confirmationEmail);
-      setNotice(`Confirmation email sent to ${confirmationEmail}.`);
+      setNotice(t('auth.login.notice.resend_success', { email: confirmationEmail }));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to resend confirmation email.';
+      const message = err instanceof Error ? err.message : t('auth.login.error.resend_failed');
       if (isAuthEmailRateLimited(message)) {
         setAuthEmailCooldown(confirmationEmail, AUTH_EMAIL_RATE_LIMIT_COOLDOWN_MS);
       }
@@ -121,12 +123,12 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <AuthHeader title="Welcome back" sub="Log in to your Haseeela workspace." />
+      <AuthHeader title={t('auth.login.title')} sub={t('auth.login.subtitle')} />
       
       {error && (
         <InlineAlert 
           tone={confirmationEmail && error.includes('confirm') ? "warning" : "negative"} 
-          title={confirmationEmail && error.includes('confirm') ? "Confirm your email first" : "Login error"} 
+          title={confirmationEmail && error.includes('confirm') ? t('auth.login.alert.confirm_title') : t('auth.login.alert.error_title')} 
           body={error}
           className="mb-[18px]"
         >
@@ -138,10 +140,10 @@ export default function LoginPage() {
               className={`t-small font-semibold mt-2 ${resendWaitSeconds > 0 ? 'text-text-muted cursor-default' : 'text-accent hover:underline cursor-pointer'}`}
             >
               {isResending
-                ? 'Sending...'
+                ? t('auth.login.action.sending')
                 : resendWaitSeconds > 0
-                  ? `Resend in ${formatAuthWaitTime(resendWaitSeconds)}`
-                  : 'Resend confirmation email'}
+                  ? t('auth.login.action.resend_in', { time: formatAuthWaitTime(resendWaitSeconds) })
+                  : t('auth.login.action.resend')}
             </button>
           )}
         </InlineAlert>
@@ -150,23 +152,23 @@ export default function LoginPage() {
       {notice && (
         <InlineAlert 
           tone="positive" 
-          title="Notice" 
+          title={t('auth.login.alert.notice_title')} 
           body={notice}
           className="mb-[18px]"
         />
       )}
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="Email">
-          <Input name="email" type="email" placeholder="you@email.com" required autoFocus />
+        <Field label={t('auth.login.label.email')}>
+          <Input name="email" type="email" placeholder={t('auth.login.placeholder.email')} required autoFocus />
         </Field>
 
         <Field
           label={
             <span className="flex items-center justify-between">
-              <span>Password</span>
+              <span>{t('auth.login.label.password')}</span>
               <Link href="/forgot-password" className="t-small font-medium text-accent hover:underline">
-                Forgot password?
+                {t('auth.login.action.forgot_password')}
               </Link>
             </span>
           }
@@ -175,12 +177,12 @@ export default function LoginPage() {
         </Field>
 
         <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1">
-          {isSubmitting ? 'Logging in...' : 'Log in'}
+          {isSubmitting ? t('auth.login.action.logging_in') : t('auth.login.action.login')}
         </Button>
       </form>
 
       <div className="t-body text-text-secondary text-center mt-6">
-        New to Haseeela? <Link href="/register" className="text-accent font-semibold hover:underline">Create an account</Link>
+        {t('auth.login.text.new_to')} <Link href="/register" className="text-accent font-semibold hover:underline">{t('auth.login.action.create_account')}</Link>
       </div>
     </AuthLayout>
   );
