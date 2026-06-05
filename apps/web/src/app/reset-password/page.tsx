@@ -172,7 +172,7 @@ export default function ResetPasswordPage() {
       <AuthLayout>
         <div className="flex flex-col items-center text-center gap-4 py-10">
           <span className="spinner w-7 h-7 text-accent" />
-          <p className="t-body text-text-secondary">Verifying your reset link…</p>
+          <p className="t-body text-text-secondary">{t('auth.resetPassword.verifying')}</p>
         </div>
       </AuthLayout>
     );
@@ -201,7 +201,7 @@ export default function ResetPasswordPage() {
         <div className="w-[56px] h-[56px] rounded-full bg-positive-tint text-positive flex items-center justify-center mb-5">
           <Icon name="checkCircle" size={26} />
         </div>
-        <AuthHeader title="Password updated" sub="Redirecting you to log in with your new password…" />
+        <AuthHeader title={t('auth.resetPassword.doneTitle')} sub={t('auth.resetPassword.doneSubtitle')} />
       </AuthLayout>
     );
   }
@@ -226,7 +226,7 @@ export default function ResetPasswordPage() {
           <PasswordInput name="confirm" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
         <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1" disabled={strength(password) < 2}>
-          {isSubmitting ? 'Updating…' : 'Update password'}
+          {isSubmitting ? t('auth.resetPassword.submitButtonLoading') : t('auth.resetPassword.submitButton')}
         </Button>
       </form>
     </AuthLayout>

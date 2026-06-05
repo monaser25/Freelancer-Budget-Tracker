@@ -106,7 +106,7 @@ export default function VerifyEmailPage() {
       <AuthLayout>
         <div className="flex flex-col items-center text-center gap-4 py-10">
           <span className="spinner w-7 h-7 text-accent" />
-          <p className="t-body text-text-secondary">Confirming your email…</p>
+          <p className="t-body text-text-secondary">{t('auth.verify.verifying')}</p>
         </div>
       </AuthLayout>
     );
@@ -120,7 +120,7 @@ export default function VerifyEmailPage() {
         </div>
         <AuthHeader title={t('auth.verify.email_updated.title')} sub={t('auth.verify.email_updated.subtitle')} />
         <Button onClick={() => router.replace('/profile')} size="lg" className="w-full">
-          Back to your profile
+          {t('auth.verify.email_updated.action')}
         </Button>
       </AuthLayout>
     );
@@ -134,7 +134,7 @@ export default function VerifyEmailPage() {
         </div>
         <AuthHeader title={t('auth.verify.success.title')} sub={t('auth.verify.success.subtitle')} />
         <Button onClick={() => router.replace('/onboarding')} size="lg" className="w-full">
-          Continue to Haseeela
+          {t('auth.verify.success.action')}
         </Button>
       </AuthLayout>
     );
@@ -147,10 +147,10 @@ export default function VerifyEmailPage() {
       </div>
       <AuthHeader
         title={t('auth.verify.invalid.title')}
-        sub="This link is invalid or has already been used. Try logging in — if your email isn't confirmed yet, you can resend the link from there."
+        sub={t('auth.verify.invalid.subtitle')}
       />
       <Button onClick={() => router.push('/login')} size="lg" className="w-full">
-        Go to log in
+        {t('auth.verify.invalid.action_login')}
       </Button>
       <div className="t-body text-text-secondary text-center mt-6">
         {t('auth.verify.invalid.text_new_account')} <Link href="/register" className="text-accent font-semibold hover:underline">{t('auth.verify.invalid.action_signup')}</Link>

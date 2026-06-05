@@ -6,23 +6,25 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useUiStore } from '@/store/uiStore';
 import { useTheme } from '@/components/ThemeProvider';
+import { useLocale } from '@/lib/i18n';
+import { MessageKey } from '@/messages/en';
 import { Icon } from '@/components/ui/Icon';
 import { Avatar } from '@/components/ui/Avatar';
 import { Menu } from '@/components/ui/Menu';
 
-const PRIMARY_NAV = [
-  { href: '/', label: 'Overview', icon: 'layoutDashboard' },
-  { href: '/transactions', label: 'Transactions', icon: 'walletCards' },
-  { href: '/invoices', label: 'Invoices', icon: 'fileText' },
-  { href: '/clients', label: 'Clients & Revenue', icon: 'users' },
-  { href: '/subscriptions', label: 'Subscriptions', icon: 'creditCard' },
-  { href: '/analytics', label: 'Analytics', icon: 'barChart3' },
-  { href: '/reports', label: 'Reports', icon: 'fileBarChart' },
+const PRIMARY_NAV: { href: string; labelKey: MessageKey; icon: string }[] = [
+  { href: '/', labelKey: 'nav.overview', icon: 'layoutDashboard' },
+  { href: '/transactions', labelKey: 'nav.transactions', icon: 'walletCards' },
+  { href: '/invoices', labelKey: 'nav.invoices', icon: 'fileText' },
+  { href: '/clients', labelKey: 'nav.clients', icon: 'users' },
+  { href: '/subscriptions', labelKey: 'nav.subscriptions', icon: 'creditCard' },
+  { href: '/analytics', labelKey: 'nav.analytics', icon: 'barChart3' },
+  { href: '/reports', labelKey: 'nav.reports', icon: 'fileBarChart' },
 ];
 
-const SECONDARY_NAV = [
-  { href: '/archive', label: 'Archive', icon: 'archive' },
-  { href: '/settings', label: 'Settings', icon: 'settings' },
+const SECONDARY_NAV: { href: string; labelKey: MessageKey; icon: string }[] = [
+  { href: '/archive', labelKey: 'nav.archive', icon: 'archive' },
+  { href: '/settings', labelKey: 'nav.settings', icon: 'settings' },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -37,7 +39,7 @@ const SLOT = 'grid place-items-center w-11 shrink-0';
 
 // Collapsible label: shrinks to zero width when collapsed (so it never spills
 // past the rail or shifts the icon) and fades/slides for a premium feel.
-function label(collapsed: boolean, extra = '') {
+function labelStyle(collapsed: boolean, extra = '') {
   return `flex-1 min-w-0 truncate transition-[opacity,transform] duration-200 ease-out ${
     collapsed ? 'opacity-0 -translate-x-1' : 'opacity-100 translate-x-0'
   } ${extra}`;
@@ -48,16 +50,18 @@ function NavLink({
   active,
   collapsed,
   onNavigate,
+  label,
 }: {
-  item: { href: string; label: string; icon: string };
+  item: { href: string; labelKey: MessageKey; icon: string };
   active: boolean;
   collapsed: boolean;
   onNavigate?: () => void;
+  label: string;
 }) {
   return (
     <Link
       href={item.href}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? label : undefined}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={`group relative flex items-center w-full h-[40px] rounded-md focus-ring transition-colors duration-base ease-out ${
@@ -75,7 +79,7 @@ function NavLink({
       <span className={SLOT}>
         <Icon name={item.icon} size={18} />
       </span>
-      <span className={label(collapsed, 'text-[14px] pr-3 text-left')}>{item.label}</span>
+      <span className={labelStyle(collapsed, 'text-[14px] pr-3 text-left')}>{label}</span>
     </Link>
   );
 }
@@ -86,9 +90,10 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
   const { user, signOut } = useAuth();
   const { sidebarCollapsed, toggleSidebar } = useUiStore();
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { t } = useLocale();
 
   const collapsed = mobile ? false : sidebarCollapsed;
-  const displayName = (user?.user_metadata?.name as string) || user?.email?.split('@')[0] || 'Freelancer';
+  const displayName = (user?.user_metadata?.name as string) || user?.email?.split('@')[0] || t('sidebar.fallback.freelancer');
 
   const handleSignOut = async () => {
     try {
@@ -112,7 +117,7 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
               <Image src="/haseeela_icon.png" alt="Haseeela logo" width={18} height={18} />
             </span>
           </span>
-          <span className={label(collapsed, 'text-[16px] font-semibold tracking-[-0.02em] text-text')}>
+          <span className={labelStyle(collapsed, 'text-[16px] font-semibold tracking-[-0.02em] text-text')}>
             Haseeela
           </span>
         </Link>
@@ -121,12 +126,12 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
       {/* Nav */}
       <nav className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col gap-0.5 px-3.5 py-3">
         {PRIMARY_NAV.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} onNavigate={onClose} />
+          <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} onNavigate={onClose} label={t(item.labelKey)} />
         ))}
         <div className="flex-1 min-h-[12px]" />
         <div className="h-px bg-border my-1.5 mx-2" />
         {SECONDARY_NAV.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} onNavigate={onClose} />
+          <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} onNavigate={onClose} label={t(item.labelKey)} />
         ))}
       </nav>
 
@@ -152,18 +157,18 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
               >
                 <span className="flex-1 min-w-0 text-left">
                   <span className="block t-body-m text-text truncate">{displayName}</span>
-                  <span className="block t-small text-text-muted truncate">{user?.email || 'Freelancer'}</span>
+                  <span className="block t-small text-text-muted truncate">{user?.email || t('sidebar.fallback.freelancer')}</span>
                 </span>
                 <Icon name="chevronDown" size={15} className="text-text-muted ml-1.5 shrink-0" />
               </span>
             </button>
           }
           items={[
-            { icon: 'user', label: 'Profile', onClick: () => router.push('/profile') },
-            { icon: 'settings', label: 'Settings', onClick: () => router.push('/settings') },
-            { icon: resolvedTheme === 'dark' ? 'sun' : 'moon', label: resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode', onClick: toggleTheme },
+            { icon: 'user', label: t('sidebar.menu.profile'), onClick: () => router.push('/profile') },
+            { icon: 'settings', label: t('sidebar.menu.settings'), onClick: () => router.push('/settings') },
+            { icon: resolvedTheme === 'dark' ? 'sun' : 'moon', label: resolvedTheme === 'dark' ? t('sidebar.menu.lightMode') : t('sidebar.menu.darkMode'), onClick: toggleTheme },
             { divider: true },
-            { icon: 'logOut', label: 'Log out', onClick: handleSignOut, danger: true },
+            { icon: 'logOut', label: t('sidebar.menu.logOut'), onClick: handleSignOut, danger: true },
           ]}
         />
       </div>
@@ -173,8 +178,8 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
         <div className="flex items-center border-t border-border h-10 w-full overflow-hidden">
           <button
             onClick={toggleSidebar}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? t('sidebar.tooltip.expand') : t('sidebar.tooltip.collapse')}
+            aria-label={collapsed ? t('sidebar.tooltip.expand') : t('sidebar.tooltip.collapse')}
             className="flex-1 h-full text-text-muted hover:text-text hover:bg-surface-hover flex items-center px-3.5 focus-ring transition-colors duration-base ease-out min-w-0"
           >
             <span className={SLOT}>
@@ -184,7 +189,7 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
                 className={`transition-transform duration-slow ease-out ${collapsed ? 'rotate-180' : ''}`}
               />
             </span>
-            <span className={label(collapsed, 't-small text-left')}>Collapse</span>
+            <span className={labelStyle(collapsed, 't-small text-left')}>{t('sidebar.collapse')}</span>
           </button>
         </div>
       )}

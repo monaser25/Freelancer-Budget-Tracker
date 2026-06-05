@@ -41,6 +41,8 @@ export const en = {
   'topbar.copy.notifications.subtitle': 'Reminders & events',
   'topbar.copy.fallback.title': 'Haseeela',
   'topbar.copy.fallback.subtitle': '',
+  
+  'brand.name': 'Haseeela',
 
   'topbar.menu.addRevenue': 'Add revenue',
   'topbar.menu.logExpense': 'Log expense',
@@ -175,6 +177,56 @@ export const en = {
   'commandPalette.actions.newInvoice': 'New invoice',
   'commandPalette.actions.addClient': 'Add client',
   'commandPalette.actions.addSubscription': 'Add subscription',
+
+  'onboarding.loading': 'Loading…',
+  'onboarding.steps.welcome': 'Welcome',
+  'onboarding.steps.currency': 'Currency',
+  'onboarding.steps.first_client': 'First client',
+  'onboarding.steps.first_tool': 'First tool',
+  'onboarding.steps.done': 'Done',
+  'onboarding.progress.step': 'Step {step} of {total}',
+
+  'onboarding.welcome.title': 'Welcome, {name}!',
+  'onboarding.welcome.fallback_name': 'there',
+  'onboarding.welcome.sub': 'Let\'s get your workspace ready in under a minute. You\'ll set your currency and can add your first client and tool.',
+  'onboarding.welcome.start': 'Get started',
+
+  'onboarding.currency.title': 'Choose your currency',
+  'onboarding.currency.sub': 'This sets how amounts are displayed. It\'s formatting only — Haseeela never converts your money.',
+  'onboarding.currency.back': 'Back',
+  'onboarding.currency.continue': 'Continue',
+
+  'onboarding.client.title': 'Add your first client',
+  'onboarding.client.sub': 'Who pays you? You can add more later — or skip this for now.',
+  'onboarding.client.name_label': 'Client name',
+  'onboarding.client.name_placeholder': 'Acme Inc.',
+  'onboarding.client.amount_label': 'Amount',
+  'onboarding.client.payment_type_label': 'Payment type',
+  'onboarding.client.payment_type_onetime': 'One-time',
+  'onboarding.client.payment_type_retainer': 'Retainer',
+  'onboarding.client.skip': 'Skip',
+  'onboarding.client.add': 'Add client',
+
+  'onboarding.tool.title': 'Add your first tool',
+  'onboarding.tool.sub': 'Track a recurring subscription like Adobe, Vercel, or Figma. Skippable.',
+  'onboarding.tool.name_label': 'Tool name',
+  'onboarding.tool.name_placeholder': 'Adobe Creative Cloud',
+  'onboarding.tool.cost_label': 'Cost',
+  'onboarding.tool.cycle_label': 'Billing cycle',
+  'onboarding.tool.cycle_monthly': 'Monthly',
+  'onboarding.tool.cycle_quarterly': 'Quarterly',
+  'onboarding.tool.cycle_yearly': 'Yearly',
+  'onboarding.tool.skip': 'Skip',
+  'onboarding.tool.add': 'Add tool',
+
+  'onboarding.done.title': 'You\'re all set!',
+  'onboarding.done.sub': 'Your workspace is ready. Jump into your dashboard to start tracking.',
+  'onboarding.done.summary_currency': 'Currency selected',
+  'onboarding.done.summary_client': 'First client',
+  'onboarding.done.summary_tool': 'First tool',
+  'onboarding.done.summary_added': 'Added',
+  'onboarding.done.summary_skipped': 'Skipped',
+  'onboarding.done.finish': 'Go to dashboard',
 };
 
 export type Messages = typeof en;

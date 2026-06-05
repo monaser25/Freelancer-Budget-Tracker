@@ -72,6 +72,10 @@
     --font: var(--font-cairo), 'Cairo', -apple-system, 'Segoe UI', system-ui, sans-serif;
   }
 
+  html[lang="ar"] [dir="ltr"], html[dir="rtl"] [dir="ltr"], .font-latin {
+    font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  }
+
   .dark {
     --accent:        #7C6FFF;
     --accent-hover:  #8B7FFF;
