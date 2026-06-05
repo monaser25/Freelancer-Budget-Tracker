@@ -8,6 +8,7 @@ import {
   markInvoicePaidAPI,
   sendInvoiceAPI,
   type InvoiceInput,
+  type SendInvoiceResult,
 } from '@/services/financialApi';
 import { useFinancialStore } from '@/store/financialStore';
 
@@ -22,7 +23,7 @@ interface InvoiceStore {
   updateInvoice: (id: string, input: InvoiceInput) => Promise<Invoice>;
   deleteInvoice: (id: string) => Promise<void>;
   markPaid: (id: string) => Promise<void>;
-  send: (id: string) => Promise<void>;
+  send: (id: string, payload: { to: string; message?: string }) => Promise<SendInvoiceResult>;
   getInvoice: (id: string) => Invoice | undefined;
   reset: () => void;
 }
@@ -78,9 +79,10 @@ export const useInvoiceStore = create<InvoiceStore>((set, get) => ({
     await refreshFinancials();
   },
 
-  send: async (id) => {
-    const updated = await sendInvoiceAPI(id);
-    set((state) => ({ invoices: state.invoices.map((i) => (i.id === id ? updated : i)), error: null }));
+  send: async (id, payload) => {
+    const result = await sendInvoiceAPI(id, payload);
+    set((state) => ({ invoices: state.invoices.map((i) => (i.id === id ? result.invoice : i)), error: null }));
+    return result;
   },
 
   getInvoice: (id) => get().invoices.find((i) => i.id === id),

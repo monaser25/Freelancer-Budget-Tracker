@@ -27,7 +27,10 @@ export const POST = async (request: Request) => withApiError(request, async () =
         clientId: data.clientId || null,
         issueDate: toDate(data.issueDate)!,
         dueDate: toDate(data.dueDate)!,
-        status: data.status,
+        // New invoices are always created as DRAFT. An invoice becomes SENT only
+        // through the /send endpoint (after a real email delivery) and PAID only
+        // through /mark-paid — never directly from create.
+        status: data.status === 'PAID' ? 'PAID' : 'DRAFT',
         currency: data.currency,
         subtotal,
         taxRate: data.taxRate,
@@ -36,7 +39,7 @@ export const POST = async (request: Request) => withApiError(request, async () =
         total,
         notes: data.notes || null,
         terms: data.terms || null,
-        sentAt: data.status === 'SENT' ? new Date() : null,
+        sentAt: null,
         userId,
         lineItems: { create: items },
       },

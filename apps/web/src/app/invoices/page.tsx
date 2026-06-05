@@ -14,6 +14,7 @@ import { Menu } from '@/components/ui/Menu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { InlineAlert } from '@/components/ui/InlineAlert';
+import { SendInvoiceModal } from '@/components/invoices/SendInvoiceModal';
 
 const STATUS_FILTERS: { id: 'all' | InvoiceStatus; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -30,10 +31,11 @@ const fmtDate = (v: string) => new Date(v).toLocaleDateString('en-US', { month: 
 
 export default function InvoicesPage() {
   const router = useRouter();
-  const { invoices, isLoaded, isLoading, error, loadInvoices, deleteInvoice, markPaid, send } = useInvoiceStore();
+  const { invoices, isLoaded, isLoading, error, loadInvoices, deleteInvoice, markPaid } = useInvoiceStore();
   const { toast } = useToast();
   const [filter, setFilter] = useState<'all' | InvoiceStatus>('all');
   const [deleting, setDeleting] = useState<Invoice | null>(null);
+  const [sendTarget, setSendTarget] = useState<Invoice | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -80,17 +82,7 @@ export default function InvoicesPage() {
     }
   };
 
-  const onSend = async (inv: Invoice) => {
-    setBusy(true);
-    try {
-      await send(inv.id);
-      toast(`${inv.number} marked as sent`);
-    } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to send', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
+  const onSend = (inv: Invoice) => setSendTarget(inv);
 
   const confirmDelete = async () => {
     if (!deleting) return;
@@ -181,7 +173,7 @@ export default function InvoicesPage() {
                             items={[
                               { icon: 'eye', label: 'View', onClick: () => router.push(`/invoices/${inv.id}`) },
                               { icon: 'pencil', label: 'Edit', onClick: () => router.push(`/invoices/${inv.id}/edit`), disabled: inv.status === 'PAID' },
-                              ...(inv.status === 'DRAFT' ? [{ icon: 'send', label: 'Mark as sent', onClick: () => onSend(inv) }] : []),
+                              ...(inv.status !== 'PAID' ? [{ icon: 'send', label: inv.status === 'SENT' ? 'Resend invoice' : 'Send invoice', onClick: () => onSend(inv) }] : []),
                               ...(inv.status !== 'PAID' ? [{ icon: 'checkCircle', label: 'Mark as paid', onClick: () => onMarkPaid(inv) }] : []),
                               { divider: true },
                               { icon: 'trash2', label: 'Delete', onClick: () => setDeleting(inv), danger: true },
@@ -208,6 +200,21 @@ export default function InvoicesPage() {
         loading={busy}
         onConfirm={confirmDelete}
       />
+
+      {sendTarget && (
+        <SendInvoiceModal
+          open={!!sendTarget}
+          onClose={() => setSendTarget(null)}
+          invoice={{
+            id: sendTarget.id,
+            number: sendTarget.number,
+            currency: sendTarget.currency,
+            total: sendTarget.total,
+            dueDate: fmtDate(sendTarget.dueDate),
+            client: sendTarget.client,
+          }}
+        />
+      )}
     </div>
   );
 }

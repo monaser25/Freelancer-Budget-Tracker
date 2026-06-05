@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useInvoiceStore } from '@/store/invoiceStore';
 import { InvoiceStatus } from '@/types/finance';
 import { Button, IconButton } from '@/components/ui/Button';
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
 import { InvoiceDocument } from '@/components/invoices/InvoiceDocument';
+import { SendInvoiceModal } from '@/components/invoices/SendInvoiceModal';
 
 const statusTone = (s: InvoiceStatus) =>
   s === 'PAID' ? 'positive' : s === 'OVERDUE' ? 'negative' : s === 'SENT' ? 'info' : 'neutral';
@@ -19,16 +20,27 @@ export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = String(params.id);
-  const { isLoaded, loadInvoices, getInvoice, markPaid, send, deleteInvoice } = useInvoiceStore();
+  const { isLoaded, loadInvoices, getInvoice, markPaid, deleteInvoice } = useInvoiceStore();
   const { toast } = useToast();
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDel, setConfirmDel] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (!isLoaded) loadInvoices();
   }, [isLoaded, loadInvoices]);
 
   const invoice = getInvoice(id);
+
+  // Opened from the editor's "Create & send" → launch the Send modal once.
+  useEffect(() => {
+    if (invoice && invoice.status !== 'PAID' && searchParams.get('send') === '1') {
+      setSendOpen(true);
+      window.history.replaceState(null, '', `/invoices/${id}`);
+    }
+  }, [invoice, searchParams, id]);
 
   if (!isLoaded) return <div className="py-24 text-center text-text-muted text-[13px]">Loading invoice…</div>;
   if (!invoice) {
@@ -95,9 +107,9 @@ export default function InvoiceDetailPage() {
                 Mark as paid
               </Button>
             )}
-            {invoice.status === 'DRAFT' && (
-              <Button variant="secondary" icon="send" className="w-full" loading={busy === 'send'} onClick={() => run('send', () => send(invoice.id), 'Marked as sent')}>
-                Mark as sent
+            {invoice.status !== 'PAID' && (
+              <Button variant="secondary" icon="send" className="w-full" onClick={() => setSendOpen(true)}>
+                {invoice.status === 'SENT' ? 'Resend invoice' : 'Send invoice'}
               </Button>
             )}
             {invoice.status !== 'PAID' && (
@@ -108,6 +120,19 @@ export default function InvoiceDetailPage() {
           </Card>
         </div>
       </div>
+
+      <SendInvoiceModal
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        invoice={{
+          id: invoice.id,
+          number: invoice.number,
+          currency: invoice.currency,
+          total: invoice.total,
+          dueDate: fmtDate(invoice.dueDate),
+          client: invoice.client,
+        }}
+      />
 
       <ConfirmDialog
         open={confirmDel}

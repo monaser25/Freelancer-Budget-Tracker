@@ -390,9 +390,51 @@ export const markInvoicePaidAPI = async (id: string) => {
   }, 'mark invoice paid');
 };
 
-export const sendInvoiceAPI = async (id: string) => {
-  return apiRequest<Invoice>(`/api/invoices/${id}/send`, {
+export type SendInvoiceResult = { invoice: Invoice; attached: boolean; sentTo: string };
+
+export class InvoiceSendError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.name = 'InvoiceSendError';
+  }
+}
+
+// Dedicated request (not via apiRequest) so the structured { code } from the
+// server survives — the UI needs `smtp_not_configured` to show the fallback.
+export const sendInvoiceAPI = async (id: string, payload: { to: string; message?: string }): Promise<SendInvoiceResult> => {
+  const url = `${apiBaseUrl()}/api/invoices/${id}/send`;
+  const response = await fetch(url, {
     method: 'POST',
-    body: JSON.stringify({}),
-  }, 'send invoice');
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({} as Record<string, unknown>));
+  if (!response.ok) {
+    throw new InvoiceSendError(
+      typeof data?.error === 'string' ? data.error : `Failed to send invoice (${response.status})`,
+      response.status,
+      typeof data?.code === 'string' ? data.code : undefined,
+    );
+  }
+  return data as SendInvoiceResult;
+};
+
+export const downloadInvoicePdf = async (id: string) => {
+  const url = `${apiBaseUrl()}/api/invoices/${id}/pdf`;
+  const response = await fetch(url, {
+    headers: { ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Failed to download PDF (${response.status})`);
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  return { blob, filename: match?.[1] || `invoice-${id}.pdf` };
 };
