@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/financialStore';
-import { loadReportAPI, downloadReportCsv, type ReportData } from '@/services/financialApi';
+import { loadReportAPI, downloadReportCsv, downloadReportXlsx, type ReportData } from '@/services/financialApi';
 import { makeCurrencyFormatter } from '@/lib/currency';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
@@ -26,8 +26,18 @@ const startOfYear = () => iso(new Date(new Date().getFullYear(), 0, 1));
 const todayStr = () => iso(new Date());
 
 export default function ReportsPage() {
-  const { currency } = useFinancialStore();
+  const { currency, transactions } = useFinancialStore();
   const { toast } = useToast();
+
+  // "All time" should start at the first recorded transaction, not an arbitrary
+  // year 2000 — keeps the range meaningful and the printed header tidy.
+  const earliestTxDate = useMemo(() => {
+    const dates = transactions
+      .map((t) => t.date)
+      .filter(Boolean)
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    return dates.length > 0 ? iso(new Date(dates[0])) : startOfYear();
+  }, [transactions]);
   const [type, setType] = useState('pl');
   const [from, setFrom] = useState(startOfYear());
   const [to, setTo] = useState(todayStr());
@@ -54,23 +64,29 @@ export default function ReportsPage() {
     if (preset === 'month') setFrom(startOfMonth());
     else if (preset === 'quarter') setFrom(startOfQuarter());
     else if (preset === 'year') setFrom(startOfYear());
-    else if (preset === 'all') setFrom('2000-01-01');
+    else if (preset === 'all') setFrom(earliestTxDate);
     setTo(todayStr());
   };
 
-  const exportCsv = async () => {
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAs = async (kind: 'csv' | 'xlsx') => {
     setExporting(true);
     try {
-      const { blob, filename } = await downloadReportCsv(type, from, to);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast('Report exported');
+      const { blob, filename } = kind === 'xlsx'
+        ? await downloadReportXlsx(type, from, to)
+        : await downloadReportCsv(type, from, to);
+      triggerDownload(blob, filename);
+      toast(kind === 'xlsx' ? 'Excel file exported' : 'CSV exported');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
@@ -123,7 +139,8 @@ export default function ReportsPage() {
         <div className="flex-1" />
         <div className="flex gap-2">
           <Button variant="secondary" icon="printer" onClick={() => window.print()} disabled={!report || report.rows.length === 0}>Print / PDF</Button>
-          <Button icon="download" loading={exporting} onClick={exportCsv} disabled={!report || report.rows.length === 0}>Export CSV</Button>
+          <Button variant="secondary" icon="download" loading={exporting} onClick={() => exportAs('csv')} disabled={!report || report.rows.length === 0}>CSV</Button>
+          <Button icon="download" loading={exporting} onClick={() => exportAs('xlsx')} disabled={!report || report.rows.length === 0}>Excel</Button>
         </div>
       </Card>
 
@@ -131,6 +148,24 @@ export default function ReportsPage() {
 
       {/* Preview */}
       <div id="report-document">
+        {/* Branded letterhead — only rendered in the printed/PDF output. */}
+        <div className="print-letterhead hidden items-center justify-between pb-4 mb-4 border-b-2 border-accent">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
+              <Icon name="wallet" size={20} className="text-white" />
+            </div>
+            <div>
+              <div className="text-[18px] font-semibold tracking-[-0.02em]">Haseeela</div>
+              <div className="text-[11px] text-text-muted">Freelance finance report</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-[14px] font-semibold">{report?.title || 'Report'}</div>
+            <div className="text-[11px] text-text-muted tnum">{from} → {to}</div>
+            <div className="text-[11px] text-text-muted">Generated {new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+
         <Card pad={0}>
           <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
             <div>

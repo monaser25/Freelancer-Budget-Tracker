@@ -160,9 +160,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       signOut: async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        resetWorkspaceStores();
+        // Always end up logged out locally, even if the server-side revoke
+        // fails. A stale token (e.g. it references a Supabase user that was
+        // deleted) makes the global signOut 403 — without the local fallback
+        // the user would be stuck unable to clear the bad session.
+        try {
+          const { error } = await supabase.auth.signOut();
+          if (error) await supabase.auth.signOut({ scope: 'local' });
+        } catch {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        } finally {
+          resetWorkspaceStores();
+        }
       },
     };
   }, [isLoading, session]);

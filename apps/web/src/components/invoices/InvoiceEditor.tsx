@@ -85,18 +85,21 @@ export function InvoiceEditor({ invoice }: { invoice?: Invoice }) {
       .map((li) => ({ description: li.description.trim(), quantity: Number(li.quantity) || 0, rate: Number(li.rate) || 0 })),
   });
 
-  const save = async (status: 'DRAFT' | 'SENT') => {
-    const input = buildInput(status);
+  const save = async (intent: 'draft' | 'send') => {
+    // An invoice is never persisted as SENT here — it becomes SENT only after a
+    // successful email send. New invoices save as DRAFT; edits keep their current
+    // status. "Create & send" saves first, then opens the Send modal (?send=1).
+    const input = buildInput((invoice?.status as 'DRAFT' | 'SENT') ?? 'DRAFT');
     if (input.lineItems.length === 0) {
       setError('Add at least one line item with a description.');
       return;
     }
     setError(null);
-    setSaving(status === 'SENT' ? 'send' : 'draft');
+    setSaving(intent === 'send' ? 'send' : 'draft');
     try {
       const result = invoice ? await updateInvoice(invoice.id, input) : await createInvoice(input);
-      toast(invoice ? 'Invoice updated' : status === 'SENT' ? 'Invoice created & sent' : 'Draft saved');
-      router.push(`/invoices/${result.id}`);
+      toast(invoice ? 'Invoice updated' : 'Invoice saved');
+      router.push(intent === 'send' ? `/invoices/${result.id}?send=1` : `/invoices/${result.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save invoice');
     } finally {
@@ -186,8 +189,8 @@ export function InvoiceEditor({ invoice }: { invoice?: Invoice }) {
           <Field label="Terms"><Textarea rows={2} value={terms} onChange={(e) => setTerms(e.target.value)} /></Field>
 
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-            <Button variant="secondary" loading={saving === 'draft'} disabled={!!saving} onClick={() => save('DRAFT')}>Save draft</Button>
-            <Button icon="send" loading={saving === 'send'} disabled={!!saving} onClick={() => save('SENT')}>{invoice ? 'Save & mark sent' : 'Create & send'}</Button>
+            <Button variant="secondary" loading={saving === 'draft'} disabled={!!saving} onClick={() => save('draft')}>Save draft</Button>
+            <Button icon="send" loading={saving === 'send'} disabled={!!saving} onClick={() => save('send')}>{invoice ? 'Save & send' : 'Create & send'}</Button>
           </div>
         </Card>
 

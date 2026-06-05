@@ -36,6 +36,33 @@ class ApiRequestError extends Error {
   }
 }
 
+// Guard so a burst of concurrent 401s only triggers one cleanup + redirect.
+let handlingExpiredSession = false;
+
+/**
+ * Recover from an invalid/expired session: clear the bad Supabase token locally
+ * and send the user to the login page. This prevents the app from getting stuck
+ * showing "Financial data is unavailable" while holding a token the backend
+ * rejects (e.g. it references a deleted-and-recreated Supabase user).
+ */
+const handleExpiredSession = async () => {
+  if (typeof window === 'undefined' || handlingExpiredSession) return;
+  handlingExpiredSession = true;
+
+  try {
+    if (!isDevAuthEnabled()) {
+      await getSupabaseBrowserClient().auth.signOut({ scope: 'local' });
+    }
+  } catch {
+    /* best effort — clearing the local session must not throw */
+  }
+
+  const path = window.location.pathname;
+  if (!path.startsWith('/login') && !path.startsWith('/register')) {
+    window.location.replace('/login?expired=1');
+  }
+};
+
 const parseServerError = (body?: string) => {
   if (!body) return undefined;
   try {
@@ -131,6 +158,11 @@ const apiRequest = async <T>(path: string, options: RequestInit = {}, resource: 
 
     if (!response.ok) {
       const responseBody = await response.text().catch(() => undefined);
+      // A 401 means the session token is invalid/expired (e.g. it points at a
+      // Supabase user that was deleted and re-created). Clear the bad session
+      // and send the user to log in, instead of leaving them stuck on a
+      // "Financial data is unavailable" screen with an unusable token.
+      if (response.status === 401) await handleExpiredSession();
       throw new ApiRequestError(`HTTP ${response.status}`, response.status, responseBody, parseServerError(responseBody));
     }
 
@@ -208,6 +240,12 @@ export const restoreSubscriptionAPI = async (id: string) => {
   return apiRequest<Subscription>(`/api/subscriptions/restore/${id}`, {
     method: 'PATCH',
   }, 'restore subscription');
+};
+
+export const deleteSubscriptionPermanentAPI = async (id: string) => {
+  return apiRequest<{ id: string }>(`/api/subscriptions/delete-permanent/${id}`, {
+    method: 'DELETE',
+  }, 'permanently delete subscription');
 };
 
 export const recordSubscriptionPaymentAPI = async (id: string) => {
@@ -310,6 +348,21 @@ export const downloadReportCsv = async (type: string, from: string, to: string) 
   return { blob, filename: match?.[1] || `${type}-report.csv` };
 };
 
+export const downloadReportXlsx = async (type: string, from: string, to: string) => {
+  const qs = new URLSearchParams({ type, from, to, format: 'xlsx' }).toString();
+  const url = `${apiBaseUrl()}/api/reports?${qs}`;
+  const response = await fetch(url, {
+    headers: { ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Failed to export report (${response.status})`);
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  return { blob, filename: match?.[1] || `${type}-report.xlsx` };
+};
+
 export const createInvoiceAPI = async (invoice: InvoiceInput) => {
   return apiRequest<Invoice>('/api/invoices/create', {
     method: 'POST',
@@ -337,9 +390,51 @@ export const markInvoicePaidAPI = async (id: string) => {
   }, 'mark invoice paid');
 };
 
-export const sendInvoiceAPI = async (id: string) => {
-  return apiRequest<Invoice>(`/api/invoices/${id}/send`, {
+export type SendInvoiceResult = { invoice: Invoice; attached: boolean; sentTo: string };
+
+export class InvoiceSendError extends Error {
+  status: number;
+  code?: string;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.name = 'InvoiceSendError';
+  }
+}
+
+// Dedicated request (not via apiRequest) so the structured { code } from the
+// server survives — the UI needs `smtp_not_configured` to show the fallback.
+export const sendInvoiceAPI = async (id: string, payload: { to: string; message?: string }): Promise<SendInvoiceResult> => {
+  const url = `${apiBaseUrl()}/api/invoices/${id}/send`;
+  const response = await fetch(url, {
     method: 'POST',
-    body: JSON.stringify({}),
-  }, 'send invoice');
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({} as Record<string, unknown>));
+  if (!response.ok) {
+    throw new InvoiceSendError(
+      typeof data?.error === 'string' ? data.error : `Failed to send invoice (${response.status})`,
+      response.status,
+      typeof data?.code === 'string' ? data.code : undefined,
+    );
+  }
+  return data as SendInvoiceResult;
+};
+
+export const downloadInvoicePdf = async (id: string) => {
+  const url = `${apiBaseUrl()}/api/invoices/${id}/pdf`;
+  const response = await fetch(url, {
+    headers: { ...(await authHeaders()) },
+    credentials: 'include',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Failed to download PDF (${response.status})`);
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  return { blob, filename: match?.[1] || `invoice-${id}.pdf` };
 };
