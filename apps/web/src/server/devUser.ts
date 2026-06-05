@@ -22,6 +22,23 @@ export const ensureUser = async (user: AuthenticatedUser) => {
     return;
   }
 
+  // No workspace row exists for this auth id yet. If the email is already taken
+  // by a DIFFERENT (stale) row — e.g. the Supabase account was deleted and then
+  // re-created with the same email, giving it a brand-new auth id — adopt that
+  // existing workspace by re-pointing it to the current id. All `userId`
+  // foreign keys are ON UPDATE CASCADE, so existing data (transactions,
+  // clients, …) moves with it.
+  //
+  // Without this, `prisma.user.create` below hits the unique-email constraint
+  // (P2002) and used to be swallowed silently — leaving NO row for `userId`, so
+  // every later write failed the userId foreign key (P2003) and surfaced as a
+  // 500 "Internal server error".
+  const existingByEmail = await prisma.user.findUnique({ where: { email } });
+  if (existingByEmail && existingByEmail.id !== userId) {
+    await prisma.user.update({ where: { email }, data: { id: userId } });
+    return;
+  }
+
   try {
     await prisma.user.create({
       data: {
@@ -32,6 +49,8 @@ export const ensureUser = async (user: AuthenticatedUser) => {
       },
     });
   } catch (err) {
+    // Lost a race to a concurrent create for the same id/email — the row exists
+    // now, so treat it as success.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return;
     throw err;
   }
