@@ -10,6 +10,7 @@ const mockPrisma = {
     findMany: jest.fn(),
     create: jest.fn(),
     findFirst: jest.fn(),
+    findUniqueOrThrow: jest.fn(),
     update: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -24,8 +25,11 @@ const mockPrisma = {
     findMany: jest.fn(),
     create: jest.fn(),
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn(),
+    upsert: jest.fn(),
+    delete: jest.fn(),
     deleteMany: jest.fn(),
     count: jest.fn(),
   },
@@ -37,6 +41,7 @@ import { GET as getClients } from '@/app/api/clients/route';
 import { DELETE as deleteClient } from '@/app/api/clients/delete/[id]/route';
 import { DELETE as deleteSubscription } from '@/app/api/subscriptions/delete/[id]/route';
 import { DELETE as deleteTransaction } from '@/app/api/transactions/delete/[id]/route';
+import { POST as createClient } from '@/app/api/clients/create/route';
 import { PUT as updateClient } from '@/app/api/clients/update/[id]/route';
 import { PUT as updateSubscription } from '@/app/api/subscriptions/update/[id]/route';
 import { PUT as updateTransaction } from '@/app/api/transactions/update/[id]/route';
@@ -61,6 +66,12 @@ describe('Next route handler safeguards', () => {
     jest.clearAllMocks();
     mockPrisma.$transaction.mockImplementation((callback: any) => callback(mockPrisma));
     mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-a', email: 'user-a@example.com' });
+    // The client one-time-payment sync looks up its single deterministic row;
+    // default to "none exists" so retainer/billing edits stay no-ops.
+    mockPrisma.transaction.findUnique.mockResolvedValue(null);
+    mockPrisma.client.findUniqueOrThrow.mockImplementation(({ where }: any) =>
+      Promise.resolve({ id: where.id, userId: 'user-a' }),
+    );
   });
 
   it('only reads data scoped to the authenticated user', async () => {
@@ -239,6 +250,42 @@ describe('Next route handler safeguards', () => {
 
     expect(response.status).toBe(400);
     expect(mockPrisma.transaction.create).not.toHaveBeenCalled();
+  });
+
+  it('records a one-time client payment as income when the client is created', async () => {
+    const created = { id: 'client-1', name: 'Acme', revenue: 122, status: 'ACTIVE', paymentType: 'onetime', paymentDate: new Date('2026-06-05T12:00:00Z'), billingDay: null, nextBillingDate: null, archivedAt: null };
+    mockPrisma.client.create.mockResolvedValue(created);
+    mockPrisma.transaction.findUnique.mockResolvedValue(null);
+    mockPrisma.transaction.upsert.mockResolvedValue({ id: 'auto-client-onetime-client-1' });
+    mockPrisma.client.findUniqueOrThrow.mockResolvedValue(created);
+
+    const response = await createClient(
+      request('POST', '/api/clients/create', 'user-a', {
+        name: 'Acme', revenue: 122, paymentType: 'onetime', paymentDate: '2026-06-05', clientType: 'INDIVIDUAL', status: 'ACTIVE',
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockPrisma.transaction.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'auto-client-onetime-client-1' },
+      create: expect.objectContaining({ amount: 122, type: 'INCOME', categoryId: 'CLIENT', clientId: 'client-1' }),
+    }));
+  });
+
+  it('does not record an income transaction for a retainer client on create', async () => {
+    const created = { id: 'client-2', name: 'Globex', revenue: 500, status: 'ACTIVE', paymentType: 'retainer', paymentDate: null, billingDay: 1, nextBillingDate: new Date('2026-07-01T12:00:00Z'), archivedAt: null };
+    mockPrisma.client.create.mockResolvedValue(created);
+    mockPrisma.transaction.findUnique.mockResolvedValue(null);
+    mockPrisma.client.findUniqueOrThrow.mockResolvedValue(created);
+
+    const response = await createClient(
+      request('POST', '/api/clients/create', 'user-a', {
+        name: 'Globex', revenue: 500, paymentType: 'retainer', nextBillingDate: '2026-07-01', clientType: 'COMPANY', status: 'ACTIVE',
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockPrisma.transaction.upsert).not.toHaveBeenCalled();
   });
 
   it('updates client billing settings without touching historical transactions', async () => {

@@ -3,11 +3,14 @@ import type { ReportResult } from './reports';
 
 // Brand palette (ARGB).
 const ACCENT = 'FF6D5EFC';
+const ACCENT_DARK = 'FF4F46E5';
 const MUTED = 'FF71717A';
 const INK = 'FF18181B';
 const POSITIVE = 'FF10B981';
 const NEGATIVE = 'FFEF4444';
 const HAIRLINE = 'FFEFEFF2';
+const ZEBRA = 'FFF7F7FB';
+const TINT = 'FFF1EFFE';
 
 const colLetter = (n: number) => {
   let s = '';
@@ -28,6 +31,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
 
   const ws = wb.addWorksheet(report.title.slice(0, 28) || 'Report', {
     pageSetup: { fitToWidth: 1, margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 } },
+    views: [{ showGridLines: false }],
   });
 
   const colCount = Math.max(report.columns.length, 2);
@@ -53,6 +57,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
       const label = ws.getCell(r, 1);
       label.value = s.label;
       label.font = { bold: true, color: { argb: MUTED } };
+      label.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } };
       const val = ws.getCell(r, 2);
       val.value = s.value;
       val.numFmt = '#,##0.00';
@@ -60,38 +65,76 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
         bold: true,
         color: { argb: s.tone === 'negative' ? NEGATIVE : s.tone === 'positive' ? POSITIVE : INK },
       };
+      val.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } };
+      val.alignment = { horizontal: 'right' };
+      ws.getRow(r).height = 17;
       r += 1;
     }
     r += 1;
   }
 
   // ── Table header ──
+  const headerRowIndex = r;
   const headerRow = ws.getRow(r);
   report.columns.forEach((c, i) => {
     const cell = headerRow.getCell(i + 1);
     cell.value = c.label;
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT } };
     cell.alignment = { horizontal: c.numeric ? 'right' : 'left', vertical: 'middle' };
+    cell.border = { bottom: { style: 'thin', color: { argb: ACCENT_DARK } } };
   });
-  headerRow.height = 18;
+  headerRow.height = 20;
   r += 1;
 
-  // ── Data rows ──
-  for (const row of report.rows) {
+  // ── Data rows (zebra striped) ──
+  const firstDataRow = r;
+  report.rows.forEach((row, rowIdx) => {
     const dataRow = ws.getRow(r);
-    row.forEach((value, i) => {
-      const col = report.columns[i];
+    const zebra = rowIdx % 2 === 1;
+    report.columns.forEach((col, i) => {
+      const value = row[i];
       const cell = dataRow.getCell(i + 1);
       cell.value = value as string | number;
+      cell.font = { name: 'Calibri', color: { argb: INK } };
+      cell.alignment = { horizontal: col?.numeric ? 'right' : 'left', vertical: 'middle' };
       if (col?.numeric && typeof value === 'number') {
         cell.numFmt = '#,##0.00';
-        cell.alignment = { horizontal: 'right' };
-        if (value < 0) cell.font = { color: { argb: NEGATIVE } };
+        if (value < 0) cell.font = { name: 'Calibri', color: { argb: NEGATIVE } };
       }
+      if (zebra) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } };
       cell.border = { bottom: { style: 'hair', color: { argb: HAIRLINE } } };
     });
+    dataRow.height = 16;
     r += 1;
+  });
+
+  // ── Totals row for numeric columns ──
+  if (report.rows.length) {
+    const totalRow = ws.getRow(r);
+    report.columns.forEach((col, i) => {
+      const cell = totalRow.getCell(i + 1);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } };
+      cell.border = { top: { style: 'thin', color: { argb: ACCENT } } };
+      if (i === 0) {
+        cell.value = 'Total';
+        cell.font = { name: 'Calibri', bold: true, color: { argb: INK } };
+      } else if (col?.numeric) {
+        const sum = report.rows.reduce((acc, row) => acc + (typeof row[i] === 'number' ? (row[i] as number) : 0), 0);
+        cell.value = sum;
+        cell.numFmt = '#,##0.00';
+        cell.alignment = { horizontal: 'right' };
+        cell.font = { name: 'Calibri', bold: true, color: { argb: sum < 0 ? NEGATIVE : INK } };
+      }
+    });
+    totalRow.height = 18;
+    r += 1;
+  }
+
+  // Freeze the header and let the user filter/sort the table.
+  ws.views = [{ state: 'frozen', ySplit: headerRowIndex, showGridLines: false }];
+  if (report.rows.length) {
+    ws.autoFilter = { from: { row: headerRowIndex, column: 1 }, to: { row: firstDataRow - 1 + report.rows.length, column: colCount } };
   }
 
   // ── Column widths (fit content, clamped) ──

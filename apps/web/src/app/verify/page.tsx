@@ -11,7 +11,7 @@ import { AuthHeader } from '@/components/auth/AuthHeader';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 
-type Status = 'verifying' | 'success' | 'invalid';
+type Status = 'verifying' | 'success' | 'email-changed' | 'invalid';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -61,8 +61,10 @@ export default function VerifyEmailPage() {
         const tokenHash = search.get('token_hash') || hashParams.get('token_hash');
         const code = search.get('code');
 
+        const isEmailChange = type === 'email_change';
+
         if (tokenHash) {
-          const otpType = (type as 'signup' | 'email' | 'magiclink' | null) ?? 'signup';
+          const otpType = (type as 'signup' | 'email' | 'magiclink' | 'email_change' | null) ?? 'signup';
           const { error } = await supabase.auth.verifyOtp({ type: otpType, token_hash: tokenHash });
           if (error) throw error;
         } else if (accessToken && refreshToken) {
@@ -80,11 +82,15 @@ export default function VerifyEmailPage() {
           return;
         }
 
+        // Pull the freshest session/JWT so the rest of the app (and the local
+        // workspace row, synced on the next authenticated request) sees the new
+        // email instead of the old one.
+        await supabase.auth.refreshSession().catch(() => undefined);
         const { data: userData } = await supabase.auth.getUser();
-        logAuth('verify:confirmed', { user: describeUser(userData.user) });
+        logAuth('verify:confirmed', { user: describeUser(userData.user), emailChange: isEmailChange });
 
         window.history.replaceState(null, '', '/verify');
-        setStatus('success');
+        setStatus(isEmailChange ? 'email-changed' : 'success');
       } catch (err) {
         logAuth('verify:invalid', { reason: 'token exchange failed', message: err instanceof Error ? err.message : String(err) });
         setStatus('invalid');
@@ -100,6 +106,20 @@ export default function VerifyEmailPage() {
           <span className="spinner w-7 h-7 text-accent" />
           <p className="t-body text-text-secondary">Confirming your email…</p>
         </div>
+      </AuthLayout>
+    );
+  }
+
+  if (status === 'email-changed') {
+    return (
+      <AuthLayout>
+        <div className="w-[56px] h-[56px] rounded-full bg-positive-tint text-positive flex items-center justify-center mb-5">
+          <Icon name="checkCircle" size={26} />
+        </div>
+        <AuthHeader title="Email updated" sub="Your sign-in email has been changed. Use the new address next time you log in." />
+        <Button onClick={() => router.replace('/profile')} size="lg" className="w-full">
+          Back to your profile
+        </Button>
       </AuthLayout>
     );
   }

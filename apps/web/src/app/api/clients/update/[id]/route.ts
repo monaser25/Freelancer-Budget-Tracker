@@ -4,6 +4,7 @@ import { HttpError, withApiError } from '@/server/errors';
 import { toDate } from '@/server/recurring-billing';
 import { prisma } from '@/server/prisma';
 import { ClientSchema } from '@/server/validation';
+import { syncOneTimeClientTransaction } from '@/server/linked-transactions';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,10 +27,14 @@ export const PUT = async (request: Request, { params }: RouteContext) => withApi
     const existingClient = await tx.client.findFirst({ where: { id: params.id, userId } });
     if (!existingClient) throw new HttpError(404, 'Client not found');
 
-    return tx.client.update({
+    const updated = await tx.client.update({
       where: { id: params.id },
       data: dataToUpdate,
     });
+    // Keep the one-time client's income transaction in step with edits to its
+    // amount, payment date, status, or payment type.
+    await syncOneTimeClientTransaction(tx, userId, updated);
+    return tx.client.findUniqueOrThrow({ where: { id: params.id } });
   });
 
   return NextResponse.json(client);

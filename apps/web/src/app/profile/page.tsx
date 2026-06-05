@@ -13,6 +13,7 @@ import { Field, Input, StrengthMeter, strength } from '@/components/ui/Form';
 import { PasswordInput } from '@/components/auth/PasswordInput';
 import { Modal } from '@/components/ui/Modal';
 import { Icon } from '@/components/ui/Icon';
+import { InlineAlert } from '@/components/ui/InlineAlert';
 import { useToast } from '@/components/ui/Toast';
 
 export default function ProfilePage() {
@@ -28,6 +29,8 @@ export default function ProfilePage() {
   // Email change requires the current password to confirm identity.
   const [emailCurrentPw, setEmailCurrentPw] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+  // The address the confirmation links were sent to (drives the success banner).
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   // Password change requires the current password.
   const [currentPw, setCurrentPw] = useState('');
@@ -83,7 +86,8 @@ export default function ProfilePage() {
       const { error } = await getSupabaseBrowserClient().auth.updateUser({ email: email.trim() });
       if (error) throw error;
       setEmailCurrentPw('');
-      toast('Check your new inbox to confirm the change', 'info');
+      setPendingEmail(email.trim());
+      toast('Confirmation links sent to both your old and new email', 'info');
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Failed to update email', 'error');
     } finally {
@@ -144,9 +148,26 @@ export default function ProfilePage() {
               <Button variant="secondary" loading={savingName} onClick={saveName}>Save</Button>
             </div>
           </Field>
-          <Field label="Email" hint={dev ? 'Disabled in local dev mode.' : 'Changing your email requires your current password and re-verification.'}>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={dev} />
+          <Field
+            label="Email"
+            hint={dev
+              ? 'Disabled in local dev mode.'
+              : 'Changing your email requires your current password. For your security, you’ll need to confirm links sent to both your old and new addresses to complete the change.'}
+          >
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setPendingEmail(null); }}
+              disabled={dev}
+            />
           </Field>
+          {!dev && pendingEmail && (
+            <InlineAlert
+              tone="info"
+              title="Confirm both inboxes to finish"
+              body={`We sent confirmation links to both your current (${user?.email}) and new (${pendingEmail}) email addresses. Please confirm both emails to complete the change — your email won’t update until you do.`}
+            />
+          )}
           {!dev && email !== user?.email && email.trim() && (
             <Field label="Current password">
               <div className="flex gap-2">

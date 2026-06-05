@@ -22,6 +22,19 @@ export const REPORT_TITLES: Record<ReportType, string> = {
   tax: 'Tax Summary',
 };
 
+// Categories are stored as short codes (CLIENT, TOOLS, …). Reports must show the
+// human label so a row reads "Tools" / "Client Payment" instead of a raw code.
+const CATEGORY_LABELS: Record<string, string> = {
+  CLIENT: 'Client Payment',
+  PROJECT: 'Project Revenue',
+  TOOLS: 'Tools',
+  OPERATIONS: 'Operations',
+  TAXES: 'Taxes',
+  OTHER: 'Other',
+};
+const categoryLabel = (id: string) =>
+  CATEGORY_LABELS[id] || (id ? id.charAt(0) + id.slice(1).toLowerCase() : 'Uncategorized');
+
 export interface ReportResult {
   type: ReportType;
   title: string;
@@ -58,7 +71,7 @@ export function buildReport(
   if (type === 'transactions') {
     const rows = [...txs]
       .sort((a, b) => new Date(iso(b.date)).getTime() - new Date(iso(a.date)).getTime())
-      .map((t) => [dateLabel(t.date), t.name || '—', t.type === 'INCOME' ? 'Revenue' : 'Expense', t.categoryId, t.type === 'INCOME' ? t.amount : -t.amount]);
+      .map((t) => [dateLabel(t.date), t.name || '—', t.type === 'INCOME' ? 'Revenue' : 'Expense', categoryLabel(t.categoryId), t.type === 'INCOME' ? t.amount : -t.amount]);
     const revenue = txs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
     const expenses = txs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
     return {
@@ -120,7 +133,7 @@ export function buildReport(
       byCat[key].amount += t.amount;
     }
     const rows = Object.entries(byCat)
-      .map(([key, v]) => [key.split(':')[1], v.type === 'INCOME' ? 'Revenue' : 'Expense', v.type === 'INCOME' ? v.amount : -v.amount])
+      .map(([key, v]) => [categoryLabel(key.split(':')[1]), v.type === 'INCOME' ? 'Revenue' : 'Expense', v.type === 'INCOME' ? v.amount : -v.amount])
       .sort((a, b) => (b[2] as number) - (a[2] as number));
     const revenue = txs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
     const expenses = txs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
