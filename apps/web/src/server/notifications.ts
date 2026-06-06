@@ -1,6 +1,7 @@
 import { formatDate } from '@/lib/format';
 import { DEFAULT_LOCALE } from '@/lib/locales';
 import { prisma } from '@/server/prisma';
+import { t } from '@/messages';
 
 const DAY = 24 * 60 * 60 * 1000;
 const fmtDate = (d: Date) => formatDate(d, DEFAULT_LOCALE, { month: 'short', day: 'numeric' });
@@ -32,8 +33,8 @@ export const generateNotifications = async (userId: string) => {
       const due = new Date(s.nextBillingDate);
       pending.push({
         type: 'BILLING_DUE',
-        title: `${s.name} renews ${fmtDate(due)}`,
-        body: 'A subscription payment is coming up.',
+        title: t(DEFAULT_LOCALE, 'notifications.msg.subRenewsTitle', { name: s.name, date: fmtDate(due) }),
+        body: t(DEFAULT_LOCALE, 'notifications.msg.subRenewsBody'),
         link: '/subscriptions',
         refKey: `billing-sub:${s.id}:${due.toISOString().slice(0, 10)}`,
         userId,
@@ -48,8 +49,8 @@ export const generateNotifications = async (userId: string) => {
       const due = new Date(c.nextBillingDate);
       pending.push({
         type: 'BILLING_DUE',
-        title: `${c.name} retainer due ${fmtDate(due)}`,
-        body: 'A client payment is coming up.',
+        title: t(DEFAULT_LOCALE, 'notifications.msg.clientDueTitle', { name: c.name, date: fmtDate(due) }),
+        body: t(DEFAULT_LOCALE, 'notifications.msg.clientDueBody'),
         link: '/clients',
         refKey: `billing-client:${c.id}:${due.toISOString().slice(0, 10)}`,
         userId,
@@ -64,8 +65,8 @@ export const generateNotifications = async (userId: string) => {
     for (const inv of invoices) {
       pending.push({
         type: 'INVOICE_OVERDUE',
-        title: `Invoice ${inv.number} is overdue`,
-        body: `Was due ${fmtDate(new Date(inv.dueDate))}.`,
+        title: t(DEFAULT_LOCALE, 'notifications.msg.invoiceOverdueTitle', { number: inv.number }),
+        body: t(DEFAULT_LOCALE, 'notifications.msg.invoiceOverdueBody', { date: fmtDate(new Date(inv.dueDate)) }),
         link: '/invoices',
         refKey: `invoice-overdue:${inv.id}`,
         userId,

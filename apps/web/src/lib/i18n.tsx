@@ -44,3 +44,24 @@ export const useLocale = () => {
   if (!ctx) throw new Error('useLocale must be used within LocaleProvider');
   return ctx;
 };
+
+const ERROR_KEYS_MAP: Record<string, MessageKey> = {
+  'Validation failed': 'errors.validationFailed',
+  'Resource not found': 'errors.resourceNotFound',
+  'Duplicate generated transaction for this billing date': 'errors.duplicateTransaction',
+  'Your account is not fully set up. Please sign out and sign in again.': 'errors.accountNotSetup',
+  'Internal server error': 'errors.internalServer',
+  'Invalid date': 'errors.invalidDate',
+  'Add at least one line item': 'errors.minLineItem',
+  'Client not found': 'errors.clientNotFound',
+  'Only monthly retainer clients can record recurring payments': 'errors.clientNotRetainer',
+  'Only active clients can record recurring payments': 'errors.clientNotActive',
+  'Subscription not found': 'errors.subNotFound',
+  'Only active subscriptions can record payments': 'errors.subNotActive',
+};
+
+export const translateError = (msg: string, t: (key: MessageKey, vars?: MessageVars) => string) => {
+  const key = Object.keys(ERROR_KEYS_MAP).find(k => msg.includes(k));
+  if (key) return t(ERROR_KEYS_MAP[key]);
+  return msg;
+};

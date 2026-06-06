@@ -1,0 +1,2 @@
+- Updated Sidebar, Topbar, and CommandPalette to use useLocale and t() for localization.
+- Fixed brand.name in AuthLayout.

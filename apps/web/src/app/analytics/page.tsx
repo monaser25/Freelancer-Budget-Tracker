@@ -67,14 +67,17 @@ function getMonthlySubscriptionAmount(subscription: Subscription) {
   return subscription.amount;
 }
 
-function getChartBuckets(period: Period, transactions: Transaction[]) {
+function getChartBuckets(period: Period, transactions: Transaction[], t: any) {
   const { start } = getPeriodRange(period);
   const y = start.getFullYear();
   const mo = start.getMonth();
 
   if (period === 'week') {
-    const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return DAYS.map((label, i) => {
+    const DAYS = [
+      t('charts.days.0'), t('charts.days.1'), t('charts.days.2'), t('charts.days.3'),
+      t('charts.days.4'), t('charts.days.5'), t('charts.days.6')
+    ];
+    return DAYS.map((label: string, i: number) => {
       const day = new Date(y, mo, start.getDate() + i);
       const ds = day.toISOString().slice(0, 10);
       const rev = transactions.filter(t => t.type === 'INCOME' && t.date.slice(0, 10) === ds).reduce((s, t) => s + t.amount, 0);
@@ -87,7 +90,7 @@ function getChartBuckets(period: Period, transactions: Transaction[]) {
     const daysInMonth = new Date(y, mo + 1, 0).getDate();
     const buckets: { label: string; startDay: number; endDay: number }[] = [];
     for (let w = 1; w <= daysInMonth; w += 7) {
-      buckets.push({ label: `Wk ${Math.ceil(w / 7)}`, startDay: w, endDay: Math.min(w + 6, daysInMonth) });
+      buckets.push({ label: t('analytics.chart.weekLabel', { number: Math.ceil(w / 7) }), startDay: w, endDay: Math.min(w + 6, daysInMonth) });
     }
     return buckets.map(({ label, startDay, endDay }) => {
       const rev = transactions.filter(t => {
@@ -103,8 +106,12 @@ function getChartBuckets(period: Period, transactions: Transaction[]) {
   }
 
   // year → monthly
-  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return MONTHS.map((label, i) => {
+  const MONTHS = [
+    t('charts.months.0'), t('charts.months.1'), t('charts.months.2'), t('charts.months.3'),
+    t('charts.months.4'), t('charts.months.5'), t('charts.months.6'), t('charts.months.7'),
+    t('charts.months.8'), t('charts.months.9'), t('charts.months.10'), t('charts.months.11')
+  ];
+  return MONTHS.map((label: string, i: number) => {
     const rev = transactions.filter(t => { const d = new Date(t.date); return t.type === 'INCOME' && d.getFullYear() === y && d.getMonth() === i; }).reduce((s, t) => s + t.amount, 0);
     const exp = transactions.filter(t => { const d = new Date(t.date); return t.type === 'EXPENSE' && d.getFullYear() === y && d.getMonth() === i; }).reduce((s, t) => s + t.amount, 0);
     return { label, revenue: rev, expenses: exp };
@@ -115,7 +122,7 @@ function getChartBuckets(period: Period, transactions: Transaction[]) {
 
 export default function AnalyticsPage() {
   const { transactions, clients, subscriptions, overview, currency } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale, dir } = useLocale();
   const [period, setPeriod] = useState<Period>('month');
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
 
@@ -132,7 +139,7 @@ export default function AnalyticsPage() {
   const periodProfit = periodRevenue - periodExpenses;
   const periodMargin = periodRevenue > 0 ? Math.round((periodProfit / periodRevenue) * 100) : 0;
 
-  const chartBuckets = useMemo(() => getChartBuckets(period, completedTransactions), [period, completedTransactions]);
+  const chartBuckets = useMemo(() => getChartBuckets(period, completedTransactions, t), [period, completedTransactions, t]);
   const chartEmpty = chartBuckets.every(b => b.revenue === 0 && b.expenses === 0);
 
   const categoryRows = useMemo(() => {
@@ -169,7 +176,7 @@ export default function AnalyticsPage() {
 
   const activeSubscriptions = activeSubs.length;
 
-  const periodLabel = period === 'week' ? 'This week' : period === 'month' ? 'This month' : 'This year';
+  const periodLabel = period === 'week' ? t('analytics.periodLabel.week') : period === 'month' ? t('analytics.periodLabel.month') : t('analytics.periodLabel.year');
   const allTimeMargin = overview.totalRevenue > 0 ? Math.round((overview.netProfit / overview.totalRevenue) * 100) : 0;
 
   return (
@@ -178,15 +185,15 @@ export default function AnalyticsPage() {
       {/* ── header + period tabs ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="t-h1">Analytics</h1>
-          <p className="t-body mt-1 text-text-muted">Detailed financial breakdown and trends</p>
+          <h1 className="t-h1">{t('nav.analytics')}</h1>
+          <p className="t-body mt-1 text-text-muted">{t('topbar.copy.analytics.subtitle')}</p>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end" dir={dir}>
           <Segmented 
             options={[
-              { label: 'Week', value: 'week' },
-              { label: 'Month', value: 'month' },
-              { label: 'Year', value: 'year' },
+              { label: t('analytics.period.week'), value: 'week' },
+              { label: t('analytics.period.month'), value: 'month' },
+              { label: t('analytics.period.year'), value: 'year' },
             ]}
             value={period}
             onChange={(v) => setPeriod(v as Period)}
@@ -196,17 +203,17 @@ export default function AnalyticsPage() {
 
       {/* ── period metrics ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Revenue" value={money.format(periodRevenue)} tone="positive" sub={periodLabel} />
-        <StatCard label="Expenses" value={money.format(periodExpenses)} tone="negative" sub={periodLabel} />
-        <StatCard label="Net profit" value={money.format(periodProfit)} tone={periodProfit >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
-        <StatCard label="Profit margin" value={`${periodMargin}%`} tone={periodMargin >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
+        <StatCard label={t('analytics.stats.revenue')} value={<span dir="ltr">{money.format(periodRevenue)}</span>} tone="positive" sub={periodLabel} />
+        <StatCard label={t('analytics.stats.expenses')} value={<span dir="ltr">{money.format(periodExpenses)}</span>} tone="negative" sub={periodLabel} />
+        <StatCard label={t('analytics.stats.netProfit')} value={<span dir="ltr">{money.format(periodProfit)}</span>} tone={periodProfit >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
+        <StatCard label={t('analytics.stats.profitMargin')} value={<span dir="ltr">{`${periodMargin}%`}</span>} tone={periodMargin >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
       </div>
 
       {/* ── revenue vs expenses chart ── */}
       <Card pad={22}>
-        <SectionHeader title="Revenue vs Expenses" sub={period === 'week' ? 'Daily breakdown this week' : period === 'month' ? 'Weekly breakdown this month' : 'Monthly breakdown this year'} />
+        <SectionHeader title={t('analytics.chart.revenueVsExpenses')} sub={period === 'week' ? t('analytics.chart.dailyBreakdown') : period === 'month' ? t('analytics.chart.weeklyBreakdown') : t('analytics.chart.monthlyBreakdown')} />
         {chartEmpty ? (
-          <div className="h-[220px] flex items-center justify-center text-sm text-text-muted">No transactions for this period</div>
+          <div className="h-[220px] flex items-center justify-center text-sm text-text-muted">{t('analytics.empty.transactions')}</div>
         ) : (
           <AnalyticsRevenueExpensesChart data={chartBuckets} formatAmount={money.format} />
         )}
@@ -216,30 +223,30 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* clients */}
         <Card pad={22}>
-          <SectionHeader title="Revenue by client" sub={`${clients.length} clients · ${money.format(totalClientRev)} total`} />
+          <SectionHeader title={t('analytics.clients.title')} sub={t('analytics.clients.subtitle', { clients: clients.length, amount: money.format(totalClientRev) })} />
 
           {clientRows.length === 0 ? (
-            <div className="py-10 text-center text-sm text-text-muted">No clients yet</div>
+            <div className="py-10 text-center text-sm text-text-muted">{t('analytics.clients.empty')}</div>
           ) : clientRows.every(r => r.revenue === 0) ? (
-            <div className="py-10 text-center text-sm text-text-muted">No client income recorded {periodLabel.toLowerCase()}</div>
+            <div className="py-10 text-center text-sm text-text-muted">{t('analytics.clients.noIncome', { period: periodLabel.toLowerCase() })}</div>
           ) : (
             <div className="flex flex-col gap-3 mt-4">
               {revenueClientRows.map(({ client, revenue }, i) => {
                 const pct = totalClientRev > 0 ? Math.round((revenue / totalClientRev) * 100) : 0;
                 return (
-                  <div key={client.id} className="flex items-center gap-3">
+                  <div key={client.id} className="flex items-center gap-3" dir={dir}>
                     <span className="t-body-m font-mono text-text-muted w-[18px]">{i + 1}</span>
                     <Avatar name={client.name} size={30} />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between mb-1.5">
                         <span className="t-body-m truncate">{client.name}</span>
-                        <span className="t-body-m font-mono">{money.format(revenue)}</span>
+                        <span className="t-body-m font-mono" dir="ltr">{money.format(revenue)}</span>
                       </div>
-                      <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
+                      <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden" dir="ltr">
                         <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
-                    <span className="text-xs font-mono text-text-muted w-9 text-right">{pct}%</span>
+                    <span className="text-xs font-mono text-text-muted w-9 text-right" dir="ltr">{pct}%</span>
                   </div>
                 );
               })}
@@ -249,10 +256,10 @@ export default function AnalyticsPage() {
 
         {/* expenses by category */}
         <Card pad={22}>
-          <SectionHeader title="Expenses by category" sub={`${categoryRows.length} categories`} />
+          <SectionHeader title={t('analytics.categories.title')} sub={t('analytics.categories.subtitle', { count: categoryRows.length })} />
 
           {categoryRows.length === 0 ? (
-            <div className="py-10 text-center text-sm text-text-muted">No expenses recorded {periodLabel.toLowerCase()}</div>
+            <div className="py-10 text-center text-sm text-text-muted">{t('analytics.categories.empty', { period: periodLabel.toLowerCase() })}</div>
           ) : (
             <AnalyticsCategoryBarChart data={categoryRows} formatAmount={money.format} />
           )}
@@ -263,29 +270,29 @@ export default function AnalyticsPage() {
       {(subCosts.length > 0 || activeSubscriptions > 0) && (
         <Card pad={22}>
           <SectionHeader 
-            title="Subscription costs" 
-            sub={`${activeSubscriptions} active subscription${activeSubscriptions !== 1 ? 's' : ''} · ${periodLabel.toLowerCase()}`}
+            title={t('analytics.subscriptions.title')} 
+            sub={activeSubscriptions === 1 ? t('analytics.subscriptions.subtitle', { count: activeSubscriptions, period: periodLabel.toLowerCase() }) : t('analytics.subscriptions.subtitlePlural', { count: activeSubscriptions, period: periodLabel.toLowerCase() })}
             action={
-              <div className="text-right">
-                <div className="t-body-m font-mono text-negative">{money.format(subscriptionPeriodTotal)}</div>
-                <div className="text-xs text-text-muted">total this period</div>
+              <div className={dir === 'rtl' ? 'text-left' : 'text-right'}>
+                <div className="t-body-m font-mono text-negative" dir="ltr">{money.format(subscriptionPeriodTotal)}</div>
+                <div className="text-xs text-text-muted">{t('analytics.subscriptions.total')}</div>
               </div>
             }
           />
           {subCosts.length === 0 ? (
-            <div className="py-8 text-center text-sm text-text-muted">No subscription charges recorded {periodLabel.toLowerCase()}</div>
+            <div className="py-8 text-center text-sm text-text-muted">{t('analytics.subscriptions.empty', { period: periodLabel.toLowerCase() })}</div>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 mt-4">
               {subCosts.map(({ sub, cost }) => {
                 const pct = periodExpenses > 0 ? Math.round((cost / periodExpenses) * 100) : 0;
                 return (
-                  <div key={sub.id} className="flex items-center gap-2.5 p-3 rounded-md border border-border">
+                  <div key={sub.id} className="flex items-center gap-2.5 p-3 rounded-md border border-border" dir={dir}>
                     <Avatar name={sub.name} size={32} />
                     <div className="flex-1 min-w-0">
                       <div className="t-body-m truncate">{sub.name}</div>
-                      <div className="text-xs text-text-muted">{pct}% of expenses · {formatEnumLabel(sub.billingCycle || sub.cycle)} billing</div>
+                      <div className="text-xs text-text-muted">{t('analytics.subscriptions.itemSubtitle', { percent: pct, cycle: formatEnumLabel(sub.billingCycle || sub.cycle) })}</div>
                     </div>
-                    <span className="t-body-m font-mono text-negative">{money.format(cost)}</span>
+                    <span className="t-body-m font-mono text-negative" dir="ltr">{money.format(cost)}</span>
                   </div>
                 );
               })}
@@ -293,7 +300,7 @@ export default function AnalyticsPage() {
           )}
           {activeSubscriptions > 0 && (
             <div className="mt-4 pt-4 border-t border-border text-sm text-text-muted">
-              Equivalent monthly tool cost: <span className="font-mono text-text">{money.format(activeSubs.reduce((sum, sub) => sum + getMonthlySubscriptionAmount(sub), 0))}/mo</span>
+              {t('analytics.subscriptions.monthlyCost')}<span className="font-mono text-text" dir="ltr">{t('analytics.subscriptions.perMonth', { amount: money.format(activeSubs.reduce((sum, sub) => sum + getMonthlySubscriptionAmount(sub), 0)) })}</span>
             </div>
           )}
         </Card>
@@ -301,16 +308,16 @@ export default function AnalyticsPage() {
 
       {/* ── all-time summary ── */}
       <Card pad={22}>
-        <SectionHeader title="All-time summary" />
+        <SectionHeader title={t('analytics.summary.title')} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-[1px] bg-border rounded-md overflow-hidden mt-4">
-          <SummaryBox label="Total revenue" value={money.format(overview.totalRevenue)} valueClass="text-positive" />
-          <SummaryBox label="Total expenses" value={money.format(overview.totalExpenses)} valueClass="text-negative" />
-          <SummaryBox label="Net profit" value={money.format(overview.netProfit)} valueClass={overview.netProfit >= 0 ? 'text-positive' : 'text-negative'} />
-          <SummaryBox label="Profit margin" value={`${allTimeMargin}%`} valueClass={allTimeMargin >= 0 ? 'text-positive' : 'text-negative'} />
-          <SummaryBox label="Active clients" value={overview.activeClients.toString()} />
-          <SummaryBox label="Avg / client" value={money.format(overview.totalClients > 0 ? overview.totalRevenue / overview.totalClients : 0)} />
-          <SummaryBox label="Active tools" value={activeSubscriptions.toString()} />
-          <SummaryBox label="Tools / mo" value={money.format(overview.subscriptionBurden)} valueClass="text-negative" />
+          <SummaryBox label={t('analytics.summary.totalRevenue')} value={money.format(overview.totalRevenue)} valueClass="text-positive" />
+          <SummaryBox label={t('analytics.summary.totalExpenses')} value={money.format(overview.totalExpenses)} valueClass="text-negative" />
+          <SummaryBox label={t('analytics.summary.netProfit')} value={money.format(overview.netProfit)} valueClass={overview.netProfit >= 0 ? 'text-positive' : 'text-negative'} />
+          <SummaryBox label={t('analytics.summary.profitMargin')} value={`${allTimeMargin}%`} valueClass={allTimeMargin >= 0 ? 'text-positive' : 'text-negative'} />
+          <SummaryBox label={t('analytics.summary.activeClients')} value={overview.activeClients.toString()} />
+          <SummaryBox label={t('analytics.summary.avgClient')} value={money.format(overview.totalClients > 0 ? overview.totalRevenue / overview.totalClients : 0)} />
+          <SummaryBox label={t('analytics.summary.activeTools')} value={activeSubscriptions.toString()} />
+          <SummaryBox label={t('analytics.summary.toolsPerMonth')} value={money.format(overview.subscriptionBurden)} valueClass="text-negative" />
         </div>
       </Card>
 
@@ -324,7 +331,7 @@ function SummaryBox({ label, value, valueClass = "text-text" }: { label: string;
   return (
     <div className="bg-surface p-4 sm:p-[16px_18px]">
       <div className="text-xs text-text-muted">{label}</div>
-      <div className={`t-h2 font-mono mt-1.5 ${valueClass}`}>{value}</div>
+      <div className={`t-h2 font-mono mt-1.5 ${valueClass}`} dir="ltr">{value}</div>
     </div>
   );
 }

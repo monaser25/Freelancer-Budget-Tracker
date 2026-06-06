@@ -19,14 +19,6 @@ import { useToast } from '@/components/ui/Toast';
 import { InlineAlert } from '@/components/ui/InlineAlert';
 import { SendInvoiceModal } from '@/components/invoices/SendInvoiceModal';
 
-const STATUS_FILTERS: { id: 'all' | InvoiceStatus; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'DRAFT', label: 'Draft' },
-  { id: 'SENT', label: 'Sent' },
-  { id: 'PAID', label: 'Paid' },
-  { id: 'OVERDUE', label: 'Overdue' },
-];
-
 const statusTone = (s: InvoiceStatus) =>
   s === 'PAID' ? 'positive' : s === 'OVERDUE' ? 'negative' : s === 'SENT' ? 'info' : 'neutral';
 
@@ -34,13 +26,21 @@ const fmtDate = (v: string, locale: Locale) => formatDate(v, locale, { month: 's
 
 export default function InvoicesPage() {
   const router = useRouter();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const { invoices, isLoaded, isLoading, error, loadInvoices, deleteInvoice, markPaid } = useInvoiceStore();
   const { toast } = useToast();
   const [filter, setFilter] = useState<'all' | InvoiceStatus>('all');
   const [deleting, setDeleting] = useState<Invoice | null>(null);
   const [sendTarget, setSendTarget] = useState<Invoice | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const STATUS_FILTERS: { id: 'all' | InvoiceStatus; label: string }[] = useMemo(() => [
+    { id: 'all', label: t('invoices.status.all') },
+    { id: 'DRAFT', label: t('invoices.status.draft') },
+    { id: 'SENT', label: t('invoices.status.sent') },
+    { id: 'PAID', label: t('invoices.status.paid') },
+    { id: 'OVERDUE', label: t('invoices.status.overdue') },
+  ], [t]);
 
   useEffect(() => {
     if (!isLoaded) loadInvoices();
@@ -70,7 +70,7 @@ export default function InvoicesPage() {
     const counts: Record<string, number> = { all: invoices.length };
     for (const f of STATUS_FILTERS) if (f.id !== 'all') counts[f.id] = invoices.filter((i) => i.status === f.id).length;
     return counts;
-  }, [invoices]);
+  }, [invoices, STATUS_FILTERS]);
 
   const filtered = filter === 'all' ? invoices : invoices.filter((i) => i.status === filter);
 
@@ -78,9 +78,9 @@ export default function InvoicesPage() {
     setBusy(true);
     try {
       await markPaid(inv.id);
-      toast(`${inv.number} marked as paid`);
+      toast(t('invoices.toast.markedPaid').replace('{number}', inv.number));
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to mark paid', 'error');
+      toast(e instanceof Error ? e.message : t('invoices.toast.failedMarkPaid'), 'error');
     } finally {
       setBusy(false);
     }
@@ -93,10 +93,10 @@ export default function InvoicesPage() {
     setBusy(true);
     try {
       await deleteInvoice(deleting.id);
-      toast(`${deleting.number} deleted`);
+      toast(t('invoices.toast.deleted').replace('{number}', deleting.number));
       setDeleting(null);
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to delete', 'error');
+      toast(e instanceof Error ? e.message : t('invoices.toast.failedDelete'), 'error');
     } finally {
       setBusy(false);
     }
@@ -106,23 +106,23 @@ export default function InvoicesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="t-h1">Invoices</h1>
-          <p className="t-body text-text-muted mt-1">Bill clients and track payment</p>
+          <h1 className="t-h1">{t('invoices.title')}</h1>
+          <p className="t-body text-text-muted mt-1">{t('invoices.subtitle')}</p>
         </div>
-        <Button icon="plus" onClick={() => router.push('/invoices/new')}>New invoice</Button>
+        <Button icon="plus" onClick={() => router.push('/invoices/new')}>{t('invoices.newInvoice')}</Button>
       </div>
 
-      {error && <InlineAlert tone="negative" title="Couldn't load invoices" body={error} />}
+      {error && <InlineAlert tone="negative" title={t('invoices.error.loadTitle')} body={error} />}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Outstanding" value={money0.format(summary.outstanding)} icon="clock" />
-        <StatCard label="Overdue" value={money0.format(summary.overdue)} tone={summary.overdue > 0 ? 'negative' : 'neutral'} icon="alertTriangle" />
-        <StatCard label="Paid this month" value={money0.format(summary.paidThisMonth)} tone="positive" icon="checkCircle" />
+        <StatCard label={t('invoices.summary.outstanding')} value={money0.format(summary.outstanding)} icon="clock" />
+        <StatCard label={t('invoices.summary.overdue')} value={money0.format(summary.overdue)} tone={summary.overdue > 0 ? 'negative' : 'neutral'} icon="alertTriangle" />
+        <StatCard label={t('invoices.summary.paidThisMonth')} value={money0.format(summary.paidThisMonth)} tone="positive" icon="checkCircle" />
       </div>
 
       <div className="flex flex-wrap gap-2">
         {STATUS_FILTERS.map((f) => (
-          <FilterChip key={f.id} active={filter === f.id} count={filterCounts[f.id]} onClick={() => setFilter(f.id)}>
+          <FilterChip key={f.id} active={filter === f.id} count={filterCounts[f.id]} onClick={() => setFilter(f.id as 'all' | InvoiceStatus)}>
             {f.label}
           </FilterChip>
         ))}
@@ -136,51 +136,52 @@ export default function InvoicesPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="fileText"
-            title={invoices.length === 0 ? 'Create your first invoice' : 'No invoices in this view'}
-            body={invoices.length === 0 ? 'Bill a client and track when they pay.' : 'Try a different filter.'}
-            action={invoices.length === 0 ? <Button icon="plus" onClick={() => router.push('/invoices/new')}>New invoice</Button> : undefined}
+            title={invoices.length === 0 ? t('invoices.empty.noInvoicesTitle') : t('invoices.empty.noMatchTitle')}
+            body={invoices.length === 0 ? t('invoices.empty.noInvoicesBody') : t('invoices.empty.noMatchBody')}
+            action={invoices.length === 0 ? <Button icon="plus" onClick={() => router.push('/invoices/new')}>{t('invoices.newInvoice')}</Button> : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-border">
-                  <Th>Invoice</Th>
-                  <Th>Client</Th>
-                  <Th>Issued</Th>
-                  <Th>Due</Th>
-                  <Th>Status</Th>
-                  <Th align="right">Amount</Th>
-                  <Th align="right">Actions</Th>
+                  <Th>{t('invoices.table.invoice')}</Th>
+                  <Th>{t('invoices.table.client')}</Th>
+                  <Th>{t('invoices.table.issued')}</Th>
+                  <Th>{t('invoices.table.due')}</Th>
+                  <Th>{t('invoices.table.status')}</Th>
+                  <Th align="right">{t('invoices.table.amount')}</Th>
+                  <Th align="right">{t('invoices.table.actions')}</Th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((inv) => {
                   const money = makeCurrencyFormatter(inv.currency, { minimumFractionDigits: 2 }, locale);
+                  const statusLabel = STATUS_FILTERS.find(f => f.id === inv.status)?.label || (inv.status[0] + inv.status.slice(1).toLowerCase());
                   return (
                     <tr
                       key={inv.id}
                       className="border-b border-border last:border-0 hover:bg-surface-hover transition-colors cursor-pointer"
                       onClick={() => router.push(`/invoices/${inv.id}`)}
                     >
-                      <td className="px-4 py-3 t-body-m">{inv.number}</td>
-                      <td className="px-4 py-3 text-text-secondary">{inv.client?.name || '—'}</td>
-                      <td className="px-4 py-3 text-text-secondary tnum">{fmtDate(inv.issueDate, locale)}</td>
-                      <td className={`px-4 py-3 tnum ${inv.status === 'OVERDUE' ? 'text-negative' : 'text-text-secondary'}`}>{fmtDate(inv.dueDate, locale)}</td>
-                      <td className="px-4 py-3"><Badge tone={statusTone(inv.status)}>{inv.status[0] + inv.status.slice(1).toLowerCase()}</Badge></td>
-                      <td className="px-4 py-3 text-right t-body-m tnum">{money.format(inv.total)}</td>
+                      <td className="px-4 py-3 t-body-m" dir="ltr">{inv.number}</td>
+                      <td className="px-4 py-3 text-text-secondary" dir="ltr">{inv.client?.name || '—'}</td>
+                      <td className="px-4 py-3 text-text-secondary tnum" dir="ltr">{fmtDate(inv.issueDate, locale)}</td>
+                      <td className={`px-4 py-3 tnum ${inv.status === 'OVERDUE' ? 'text-negative' : 'text-text-secondary'}`} dir="ltr">{fmtDate(inv.dueDate, locale)}</td>
+                      <td className="px-4 py-3"><Badge tone={statusTone(inv.status)}>{statusLabel}</Badge></td>
+                      <td className="px-4 py-3 text-right t-body-m tnum" dir="ltr">{money.format(inv.total)}</td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end">
                           <Menu
                             align="right"
-                            trigger={<IconButton icon="moreHorizontal" size="sm" title="Actions" />}
+                            trigger={<IconButton icon="moreHorizontal" size="sm" title={t('invoices.table.actions')} />}
                             items={[
-                              { icon: 'eye', label: 'View', onClick: () => router.push(`/invoices/${inv.id}`) },
-                              { icon: 'pencil', label: 'Edit', onClick: () => router.push(`/invoices/${inv.id}/edit`), disabled: inv.status === 'PAID' },
-                              ...(inv.status !== 'PAID' ? [{ icon: 'send', label: inv.status === 'SENT' ? 'Resend invoice' : 'Send invoice', onClick: () => onSend(inv) }] : []),
-                              ...(inv.status !== 'PAID' ? [{ icon: 'checkCircle', label: 'Mark as paid', onClick: () => onMarkPaid(inv) }] : []),
+                              { icon: 'eye', label: t('invoices.actions.view'), onClick: () => router.push(`/invoices/${inv.id}`) },
+                              { icon: 'pencil', label: t('invoices.actions.edit'), onClick: () => router.push(`/invoices/${inv.id}/edit`), disabled: inv.status === 'PAID' },
+                              ...(inv.status !== 'PAID' ? [{ icon: 'send', label: inv.status === 'SENT' ? t('invoices.actions.resend') : t('invoices.actions.send'), onClick: () => onSend(inv) }] : []),
+                              ...(inv.status !== 'PAID' ? [{ icon: 'checkCircle', label: t('invoices.actions.markPaid'), onClick: () => onMarkPaid(inv) }] : []),
                               { divider: true },
-                              { icon: 'trash2', label: 'Delete', onClick: () => setDeleting(inv), danger: true },
+                              { icon: 'trash2', label: t('invoices.actions.delete'), onClick: () => setDeleting(inv), danger: true },
                             ]}
                           />
                         </div>
@@ -198,9 +199,9 @@ export default function InvoicesPage() {
         open={!!deleting}
         onClose={() => !busy && setDeleting(null)}
         tone="danger"
-        title="Delete invoice?"
-        description={deleting ? `${deleting.number} will be permanently removed.` : ''}
-        confirmLabel="Delete invoice"
+        title={t('invoices.deleteDialog.title')}
+        description={deleting ? t('invoices.deleteDialog.description').replace('{number}', deleting.number) : ''}
+        confirmLabel={t('invoices.deleteDialog.confirm')}
         loading={busy}
         onConfirm={confirmDelete}
       />

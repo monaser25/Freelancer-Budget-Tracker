@@ -1,0 +1,4 @@
+- Localized auth pages (login, register, forgot-password, reset-password, verify) and onboarding page using \	()\ hook.
+- Added translation keys to \messages/en.ts\ and \messages/ar.ts\ grouping them under \uth.*\ and \onboarding.*\ logic.
+- Kept the Haseeela brand in English, but updated its display in the UI for Arabic.
+- Verified there are no i18n or Typescript errors.

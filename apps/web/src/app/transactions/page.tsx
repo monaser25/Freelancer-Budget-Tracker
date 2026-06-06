@@ -55,14 +55,14 @@ function titleCase(value: string) {
   return value.toLowerCase().replace(/(^|[_\s-])\w/g, (match) => match.toUpperCase()).replace(/_/g, ' ');
 }
 
-function transactionTitle(tx: Transaction) {
-  return tx.name || tx.notes || 'Unnamed transaction';
+function transactionTitle(tx: Transaction, t: any) {
+  return tx.name || tx.notes || t('transactions.labels.unnamed');
 }
 
-function sourceLabel(tx: Transaction) {
-  if (tx.sourceType === 'client') return 'Client payment';
-  if (tx.sourceType === 'subscription') return 'Subscription';
-  return 'Manual entry';
+function sourceLabel(tx: Transaction, t: any) {
+  if (tx.sourceType === 'client') return t('transactions.labels.clientPayment');
+  if (tx.sourceType === 'subscription') return t('transactions.labels.subscription');
+  return t('transactions.labels.manual');
 }
 
 function formatTransactionDate(value: string, locale: Locale) {
@@ -71,7 +71,7 @@ function formatTransactionDate(value: string, locale: Locale) {
 
 export default function TransactionsPage() {
   const { transactions, currency, addTransaction, updateTransaction, deleteTransaction } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -97,7 +97,7 @@ export default function TransactionsPage() {
       .filter((tx) => matchesFilter(tx, filter))
       .filter((tx) => {
         if (!normalizedQuery) return true;
-        return [tx.name, tx.notes, tx.categoryId, tx.sourceType, tx.type, tx.amount.toString()]
+        return [transactionTitle(tx, t), tx.notes, tx.categoryId, tx.sourceType, tx.type, tx.amount.toString()]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -134,7 +134,7 @@ export default function TransactionsPage() {
     const dateValue = String(formData.get('date') || '').trim();
 
     if (!name || !amount || amount <= 0) {
-      setModalError('Name and a positive amount are required.');
+      setModalError(t('transactions.form.errorNameAmount'));
       return;
     }
 
@@ -146,7 +146,7 @@ export default function TransactionsPage() {
       await updateTransaction(editing.id, payload);
       setEditing(null);
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Failed to update transaction');
+      setModalError(err instanceof Error ? err.message : t('transactions.form.errorUpdate'));
     } finally {
       setIsSaving(false);
     }
@@ -161,7 +161,7 @@ export default function TransactionsPage() {
     const categoryId = String(formData.get('categoryId') || (type === 'INCOME' ? 'CLIENT' : 'TOOLS'));
 
     if (!name || !amount || amount <= 0) {
-      setModalError('Name and a positive amount are required.');
+      setModalError(t('transactions.form.errorNameAmount'));
       return;
     }
 
@@ -181,7 +181,7 @@ export default function TransactionsPage() {
       });
       setAdding(false);
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Failed to create transaction');
+      setModalError(err instanceof Error ? err.message : t('transactions.form.errorCreate'));
     } finally {
       setIsSaving(false);
     }
@@ -202,7 +202,7 @@ export default function TransactionsPage() {
       await deleteTransaction(deleting.id);
       setDeleting(null);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Failed to delete transaction');
+      setDeleteError(err instanceof Error ? err.message : t('transactions.delete.error'));
     } finally {
       setIsDeleting(false);
     }
@@ -223,23 +223,23 @@ export default function TransactionsPage() {
       <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h1 className="t-h1">Transactions</h1>
-            <p className="t-body mt-1 text-text-muted">Centralized ledger of all financial events</p>
+            <h1 className="t-h1">{t('transactions.title')}</h1>
+            <p className="t-body mt-1 text-text-muted">{t('transactions.subtitle')}</p>
           </div>
-          <Button icon="Plus" onClick={openAddModal} className="w-full sm:w-auto">Add transaction</Button>
+          <Button icon="Plus" onClick={openAddModal} className="w-full sm:w-auto">{t('transactions.add')}</Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Revenue" value={money0.format(ledgerStats.revenue)} tone="positive" icon="TrendingUp" />
-          <StatCard label="Expenses" value={money0.format(ledgerStats.expenses)} tone="negative" icon="Receipt" />
-          <StatCard label="Manual entries" value={ledgerStats.manual} icon="Pencil" />
-          <StatCard label="Generated entries" value={ledgerStats.generated} icon="RefreshCw" />
+          <StatCard label={t('transactions.stats.revenue')} value={<span dir="ltr">{money0.format(ledgerStats.revenue)}</span>} tone="positive" icon="TrendingUp" />
+          <StatCard label={t('transactions.stats.expenses')} value={<span dir="ltr">{money0.format(ledgerStats.expenses)}</span>} tone="negative" icon="Receipt" />
+          <StatCard label={t('transactions.stats.manual')} value={<span dir="ltr">{ledgerStats.manual}</span>} icon="Pencil" />
+          <StatCard label={t('transactions.stats.generated')} value={<span dir="ltr">{ledgerStats.generated}</span>} icon="RefreshCw" />
         </div>
 
         <div className="flex flex-wrap gap-2">
           {filters.map((item) => (
             <FilterChip key={item.id} active={filter === item.id} count={filterCounts[item.id]} onClick={() => setFilter(item.id)}>
-              {item.label}
+              {t(`transactions.filters.${item.id}` as any)}
             </FilterChip>
           ))}
         </div>
@@ -247,15 +247,15 @@ export default function TransactionsPage() {
         <Card pad={0}>
           <div className="p-4 border-b border-border flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <SectionHeader
-              title="Ledger"
-              sub={`${filteredTransactions.length} transaction${filteredTransactions.length !== 1 ? 's' : ''} shown`}
+              title={t('transactions.ledger.title')}
+              sub={filteredTransactions.length === 1 ? t('transactions.ledger.shown', { count: 1 }) : t('transactions.ledger.shownPlural', { count: filteredTransactions.length })}
               className="mb-0"
             />
             <div className="w-full lg:w-[320px]">
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search transactions"
+                placeholder={t('transactions.search.placeholder')}
                 prefix={<Icon name="Search" size={15} />}
               />
             </div>
@@ -264,9 +264,9 @@ export default function TransactionsPage() {
           {filteredTransactions.length === 0 ? (
             <EmptyState
               icon="WalletCards"
-              title="No transactions found"
-              body={query ? 'Try a different search or clear the current filter.' : 'When you add revenue or expenses, they will show up here.'}
-              action={<Button icon="Plus" onClick={openAddModal}>Add transaction</Button>}
+              title={t('transactions.empty.title')}
+              body={query ? t('transactions.empty.bodySearch') : t('transactions.empty.body')}
+              action={<Button icon="Plus" onClick={openAddModal}>{t('transactions.add')}</Button>}
             />
           ) : (
             <>
@@ -274,12 +274,12 @@ export default function TransactionsPage() {
                 <table className="w-full min-w-[760px] text-left border-collapse">
                   <thead>
                     <tr className="border-b border-border bg-surface">
-                      <TableHead>Description</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead align="right">Amount</TableHead>
-                      <TableHead align="right">Actions</TableHead>
+                      <TableHead>{t('transactions.table.desc')}</TableHead>
+                      <TableHead>{t('transactions.table.category')}</TableHead>
+                      <TableHead>{t('transactions.table.date')}</TableHead>
+                      <TableHead>{t('transactions.table.type')}</TableHead>
+                      <TableHead align="right">{t('transactions.table.amount')}</TableHead>
+                      <TableHead align="right">{t('transactions.table.actions')}</TableHead>
                     </tr>
                   </thead>
                   <tbody>
@@ -291,6 +291,7 @@ export default function TransactionsPage() {
                         locale={locale}
                         onEdit={openEditModal}
                         onDelete={requestDelete}
+                        t={t}
                       />
                     ))}
                   </tbody>
@@ -306,15 +307,16 @@ export default function TransactionsPage() {
                     locale={locale}
                     onEdit={openEditModal}
                     onDelete={requestDelete}
+                    t={t}
                   />
                 ))}
               </div>
 
               <div className="px-4 py-3 border-t border-border flex items-center justify-between text-sm text-text-muted">
-                <span>{filteredTransactions.length} shown</span>
+                <span>{filteredTransactions.length === 1 ? t('transactions.ledger.shown', { count: 1 }) : t('transactions.ledger.shownPlural', { count: filteredTransactions.length })}</span>
                 {query && (
                   <button type="button" onClick={() => setQuery('')} className="font-medium text-accent hover:underline">
-                    Clear search
+                    {t('transactions.actions.clearSearch')}
                   </button>
                 )}
               </div>
@@ -333,6 +335,7 @@ export default function TransactionsPage() {
             isSaving={isSaving}
             onCancel={() => setEditing(null)}
             onSave={saveEdit}
+            t={t}
           />
         </ModalFrame>
       )}
@@ -345,22 +348,22 @@ export default function TransactionsPage() {
                 <Icon name="AlertTriangle" size={20} />
               </div>
               <div>
-                <h2 className="t-h3">Delete this transaction?</h2>
+                <h2 className="t-h3">{t('transactions.delete.title')}</h2>
                 <p className="text-sm text-text-secondary mt-1">
                   {isAutoTransaction(deleting)
-                    ? 'This will delete this payment record only. It will not delete the client or subscription.'
-                    : 'This will remove the manual transaction from your ledger.'}
+                    ? t('transactions.delete.descAuto')
+                    : t('transactions.delete.descManual')}
                 </p>
               </div>
             </div>
             <div className="rounded-md bg-surface-hover border border-border p-3 text-sm">
-              <div className="font-medium text-text">{transactionTitle(deleting)}</div>
-              <div className="mt-1 text-text-muted">{formatTransactionDate(deleting.date, locale)} - {deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</div>
+              <div className="font-medium text-text">{transactionTitle(deleting, t)}</div>
+              <div className="mt-1 text-text-muted"><span dir="ltr">{formatTransactionDate(deleting.date, locale)}</span> - <span dir="ltr">{deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</span></div>
             </div>
             {deleteError && <InlineAlert tone="negative">{deleteError}</InlineAlert>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-              <Button type="button" variant="ghost" disabled={isDeleting} onClick={closeDeleteModal}>Cancel</Button>
-              <Button type="button" variant="destructive" loading={isDeleting} onClick={confirmDelete}>{isDeleting ? 'Deleting...' : 'Delete transaction'}</Button>
+              <Button type="button" variant="ghost" disabled={isDeleting} onClick={closeDeleteModal}>{t('transactions.delete.cancel')}</Button>
+              <Button type="button" variant="destructive" loading={isDeleting} onClick={confirmDelete}>{isDeleting ? t('transactions.delete.deleting') : t('transactions.delete.confirm')}</Button>
             </div>
           </div>
         </ModalFrame>
@@ -375,6 +378,7 @@ export default function TransactionsPage() {
             isSaving={isSaving}
             onCancel={() => setAdding(false)}
             onSave={saveNew}
+            t={t}
           />
         </ModalFrame>
       )}
@@ -390,67 +394,67 @@ function TableHead({ children, align = 'left' }: { children: React.ReactNode; al
   );
 }
 
-function TransactionRow({ transaction, money, locale, onEdit, onDelete }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
+function TransactionRow({ transaction, money, locale, onEdit, onDelete, t }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void; t: any }) {
   return (
     <tr className="border-b border-border last:border-b-0 hover:bg-surface-hover transition-colors">
       <td className="px-4 py-3">
         <div className="flex items-start gap-3">
           <TransactionIcon type={transaction.type} />
           <div className="min-w-0">
-            <div className="t-body-m truncate">{transactionTitle(transaction)}</div>
+            <div className="t-body-m truncate">{transactionTitle(transaction, t)}</div>
             {transaction.notes && transaction.notes !== transaction.name && <div className="text-xs text-text-muted mt-0.5 truncate max-w-[320px]">{transaction.notes}</div>}
-            <div className="text-xs text-text-muted mt-1">{sourceLabel(transaction)}</div>
+            <div className="text-xs text-text-muted mt-1">{sourceLabel(transaction, t)}</div>
           </div>
         </div>
       </td>
       <td className="px-4 py-3"><Badge>{titleCase(transaction.categoryId)}</Badge></td>
-      <td className="px-4 py-3 text-sm text-text-secondary font-mono">{formatTransactionDate(transaction.date, locale)}</td>
+      <td className="px-4 py-3 text-sm text-text-secondary font-mono"><span dir="ltr">{formatTransactionDate(transaction.date, locale)}</span></td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? 'Revenue' : 'Expense'}</Badge>
-          {isAutoTransaction(transaction) && <Badge tone="neutral" icon="RefreshCw">Auto</Badge>}
-          {transaction.isEdited && <Badge tone="warning" icon="Pencil">Edited</Badge>}
+          <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? t('transactions.badges.revenue') : t('transactions.badges.expense')}</Badge>
+          {isAutoTransaction(transaction) && <Badge tone="neutral" icon="RefreshCw">{t('transactions.badges.auto')}</Badge>}
+          {transaction.isEdited && <Badge tone="warning" icon="Pencil">{t('transactions.badges.edited')}</Badge>}
         </div>
       </td>
       <td className={`px-4 py-3 text-right font-mono text-sm font-medium ${transaction.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
-        {transaction.type === 'INCOME' ? '+' : '-'}{money.format(transaction.amount)}
+        <span dir="ltr">{transaction.type === 'INCOME' ? '+' : '-'}{money.format(transaction.amount)}</span>
       </td>
       <td className="px-4 py-3">
         <div className="flex justify-end gap-1">
-          <IconButton icon="Pencil" size="sm" title={`Edit ${transactionTitle(transaction)}`} onClick={() => onEdit(transaction)} />
-          <IconButton icon="Trash2" size="sm" title={`Delete ${transactionTitle(transaction)}`} className="text-negative hover:text-negative" onClick={() => onDelete(transaction)} />
+          <IconButton icon="Pencil" size="sm" title={`${t('transactions.actions.edit')} ${transactionTitle(transaction, t)}`} onClick={() => onEdit(transaction)} />
+          <IconButton icon="Trash2" size="sm" title={`${t('transactions.actions.delete')} ${transactionTitle(transaction, t)}`} className="text-negative hover:text-negative" onClick={() => onDelete(transaction)} />
         </div>
       </td>
     </tr>
   );
 }
 
-function TransactionCard({ transaction, money, locale, onEdit, onDelete }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void }) {
+function TransactionCard({ transaction, money, locale, onEdit, onDelete, t }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void; t: any }) {
   return (
     <div className="p-4 flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <TransactionIcon type={transaction.type} />
           <div className="min-w-0">
-            <div className="t-body-m truncate">{transactionTitle(transaction)}</div>
-            <div className="text-xs text-text-muted mt-0.5">{formatTransactionDate(transaction.date, locale)} - {sourceLabel(transaction)}</div>
+            <div className="t-body-m truncate">{transactionTitle(transaction, t)}</div>
+            <div className="text-xs text-text-muted mt-0.5"><span dir="ltr">{formatTransactionDate(transaction.date, locale)}</span> - {sourceLabel(transaction, t)}</div>
           </div>
         </div>
         <div className={`font-mono text-sm font-medium shrink-0 ${transaction.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
-          {transaction.type === 'INCOME' ? '+' : '-'}{money.format(transaction.amount)}
+          <span dir="ltr">{transaction.type === 'INCOME' ? '+' : '-'}{money.format(transaction.amount)}</span>
         </div>
       </div>
       {transaction.notes && transaction.notes !== transaction.name && <div className="text-sm text-text-secondary">{transaction.notes}</div>}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5">
           <Badge>{titleCase(transaction.categoryId)}</Badge>
-          <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? 'Revenue' : 'Expense'}</Badge>
-          {isAutoTransaction(transaction) && <Badge tone="neutral" icon="RefreshCw">Auto</Badge>}
-          {transaction.isEdited && <Badge tone="warning" icon="Pencil">Edited</Badge>}
+          <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? t('transactions.badges.revenue') : t('transactions.badges.expense')}</Badge>
+          {isAutoTransaction(transaction) && <Badge tone="neutral" icon="RefreshCw">{t('transactions.badges.auto')}</Badge>}
+          {transaction.isEdited && <Badge tone="warning" icon="Pencil">{t('transactions.badges.edited')}</Badge>}
         </div>
         <div className="flex gap-1 shrink-0">
-          <IconButton icon="Pencil" size="sm" title={`Edit ${transactionTitle(transaction)}`} onClick={() => onEdit(transaction)} />
-          <IconButton icon="Trash2" size="sm" title={`Delete ${transactionTitle(transaction)}`} className="text-negative hover:text-negative" onClick={() => onDelete(transaction)} />
+          <IconButton icon="Pencil" size="sm" title={`${t('transactions.actions.edit')} ${transactionTitle(transaction, t)}`} onClick={() => onEdit(transaction)} />
+          <IconButton icon="Trash2" size="sm" title={`${t('transactions.actions.delete')} ${transactionTitle(transaction, t)}`} className="text-negative hover:text-negative" onClick={() => onDelete(transaction)} />
         </div>
       </div>
     </div>
@@ -481,7 +485,7 @@ function ModalFrame({ children, onClose, zIndex = 'z-[200]' }: { children: React
   );
 }
 
-function TransactionForm({ mode, transaction, currencyPrefix, error, isSaving, onCancel, onSave }: { mode: 'add' | 'edit'; transaction?: Transaction; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData) => void }) {
+function TransactionForm({ mode, transaction, currencyPrefix, error, isSaving, onCancel, onSave, t }: { mode: 'add' | 'edit'; transaction?: Transaction; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData) => void; t: any }) {
   const isEdit = mode === 'edit';
   const isAuto = transaction ? isAutoTransaction(transaction) : false;
 
@@ -494,61 +498,61 @@ function TransactionForm({ mode, transaction, currencyPrefix, error, isSaving, o
       className="flex flex-col gap-4"
     >
       <div>
-        <h2 className="t-h3">{isEdit ? 'Edit transaction' : 'Add transaction'}</h2>
+        <h2 className="t-h3">{isEdit ? t('transactions.form.editTitle') : t('transactions.form.addTitle')}</h2>
         <p className="text-sm text-text-muted mt-1">
-          {isEdit ? 'Update this ledger record without changing future recurring settings.' : 'Manual entries appear after the API confirms them.'}
+          {isEdit ? t('transactions.form.editSubtitle') : t('transactions.form.addSubtitle')}
         </p>
       </div>
 
       {isAuto && (
         <InlineAlert tone="warning">
-          You are editing this historical payment record only. Future billing settings will not change.
+          {t('transactions.form.autoWarning')}
         </InlineAlert>
       )}
 
       {error && <InlineAlert tone="negative">{error}</InlineAlert>}
 
-      <Field label="Transaction name">
-        <Input name="name" defaultValue={transaction?.name || transaction?.notes || ''} placeholder="Website design project" required autoFocus />
+      <Field label={t('transactions.form.nameLabel')}>
+        <Input name="name" defaultValue={transaction?.name || transaction?.notes || ''} placeholder={t('transactions.form.namePlaceholder')} required autoFocus />
       </Field>
 
       {!isEdit && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Type">
+          <Field label={t('transactions.form.typeLabel')}>
             <Select name="type" defaultValue="EXPENSE">
-              <option value="INCOME">Revenue</option>
-              <option value="EXPENSE">Expense</option>
+              <option value="INCOME">{t('transactions.form.typeIncome')}</option>
+              <option value="EXPENSE">{t('transactions.form.typeExpense')}</option>
             </Select>
           </Field>
-          <Field label="Category">
+          <Field label={t('transactions.form.catLabel')}>
             <Select name="categoryId" defaultValue="TOOLS">
-              <option value="CLIENT">Client Payment</option>
-              <option value="PROJECT">Project Revenue</option>
-              <option value="TOOLS">Tools</option>
-              <option value="OPERATIONS">Operations</option>
-              <option value="TAXES">Taxes</option>
-              <option value="OTHER">Other</option>
+              <option value="CLIENT">{t('transactions.form.catClient')}</option>
+              <option value="PROJECT">{t('transactions.form.catProject')}</option>
+              <option value="TOOLS">{t('transactions.form.catTools')}</option>
+              <option value="OPERATIONS">{t('transactions.form.catOperations')}</option>
+              <option value="TAXES">{t('transactions.form.catTaxes')}</option>
+              <option value="OTHER">{t('transactions.form.catOther')}</option>
             </Select>
           </Field>
         </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Amount">
-          <Input name="amount" type="number" min="0" step="0.01" defaultValue={transaction?.amount} required prefix={currencyPrefix} />
+        <Field label={t('transactions.form.amountLabel')}>
+          <Input name="amount" type="number" min="0" step="0.01" defaultValue={transaction?.amount} required prefix={<span dir="ltr">{currencyPrefix}</span>} />
         </Field>
-        <Field label="Date">
+        <Field label={t('transactions.form.dateLabel')}>
           <Input name="date" type="date" defaultValue={transaction?.date ? transaction.date.slice(0, 10) : today()} required={!isEdit} />
         </Field>
       </div>
 
-      <Field label="Notes" hint="Optional">
-        <Textarea name="notes" defaultValue={transaction?.notes || ''} placeholder="Add context" />
+      <Field label={t('transactions.form.notesLabel')} hint={t('transactions.form.notesHint')}>
+        <Textarea name="notes" defaultValue={transaction?.notes || ''} placeholder={t('transactions.form.notesPlaceholder')} />
       </Field>
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : isEdit ? 'Save changes' : 'Save transaction'}</Button>
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>{t('transactions.form.cancel')}</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? t('transactions.form.saving') : isEdit ? t('transactions.form.saveChanges') : t('transactions.form.saveTransaction')}</Button>
       </div>
     </form>
   );

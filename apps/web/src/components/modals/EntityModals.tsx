@@ -6,7 +6,7 @@ import { computeNextBillingDate } from '@/store/financialStore';
 import { useUiStore } from '@/store/uiStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
-import { useLocale } from '@/lib/i18n';
+import { useLocale, translateError } from '@/lib/i18n';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Field, Input, Select, Textarea, Segmented } from '@/components/ui/Form';
@@ -27,7 +27,7 @@ const toIsoDate = (date: string) => new Date(`${date}T12:00:00`).toISOString();
 export function EntityModals() {
   const { newModal, closeNewModal } = useUiStore();
   const { addTransaction, addClient, addSubscription, currency } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const { toast } = useToast();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -52,7 +52,7 @@ export function EntityModals() {
     const amount = Number(form.get('amount'));
     const name = String(form.get('name') || '').trim();
     if (!name || !amount || amount <= 0) {
-      setError('Name and a positive amount are required.');
+      setError(t('modals.error.nameAmount'));
       return;
     }
     const tx: Transaction = {
@@ -70,10 +70,10 @@ export function EntityModals() {
     setError(null);
     try {
       await addTransaction(tx);
-      toast(txType === 'INCOME' ? 'Revenue added' : 'Expense logged');
+      toast(txType === 'INCOME' ? t('modals.toast.revenueAdded') : t('modals.toast.expenseLogged'));
       closeNewModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save transaction');
+      setError(err instanceof Error ? translateError(err.message, t) : t('modals.error.saveTx'));
     } finally {
       setIsSaving(false);
     }
@@ -83,7 +83,7 @@ export function EntityModals() {
     const name = String(form.get('name') || '').trim();
     const revenue = Number(form.get('revenue') || 0);
     if (!name || revenue <= 0) {
-      setError('Name and a positive amount are required.');
+      setError(t('modals.error.nameAmount'));
       return;
     }
     const nextBillingDate =
@@ -111,10 +111,10 @@ export function EntityModals() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      toast('Client added');
+      toast(t('modals.toast.clientAdded'));
       closeNewModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create client');
+      setError(err instanceof Error ? translateError(err.message, t) : t('modals.error.saveClient'));
     } finally {
       setIsSaving(false);
     }
@@ -126,7 +126,7 @@ export function EntityModals() {
     const cycle = String(form.get('billingCycle') || 'MONTHLY') as Subscription['cycle'];
     const nextBillingDate = String(form.get('nextBillingDate') || computeNextBillingDate(new Date().getDate()));
     if (!name || amount <= 0) {
-      setError('Name and a positive amount are required.');
+      setError(t('modals.error.nameAmount'));
       return;
     }
     setIsSaving(true);
@@ -143,10 +143,10 @@ export function EntityModals() {
         nextBillingDate,
         status: 'ACTIVE',
       });
-      toast('Subscription added');
+      toast(t('modals.toast.subAdded'));
       closeNewModal();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create subscription');
+      setError(err instanceof Error ? translateError(err.message, t) : t('modals.error.saveSub'));
     } finally {
       setIsSaving(false);
     }
@@ -160,40 +160,28 @@ export function EntityModals() {
         open
         onClose={close}
         dismissable={!isSaving}
-        title={txType === 'INCOME' ? 'Add revenue' : 'Log expense'}
+        title={txType === 'INCOME' ? t('dashboard.forms.income.title') : t('dashboard.forms.expense.title')}
         description={
-          txType === 'INCOME' ? 'Record a client payment or project win.' : 'Record a tool, tax, or operating cost.'
+          txType === 'INCOME' ? t('dashboard.forms.income.subtitle') : t('dashboard.forms.expense.subtitle')
         }
       >
-        <TransactionForm type={txType} prefix={currencyPrefix} error={error} saving={isSaving} onCancel={close} onSave={saveTransaction} />
+        <TransactionForm type={txType} prefix={currencyPrefix} error={error} saving={isSaving} onCancel={close} onSave={saveTransaction} t={t} />
       </Modal>
     );
   }
   if (newModal === 'client') {
     return (
-      <Modal open onClose={close} dismissable={!isSaving} title="Add client" description="Create a one-time client or monthly retainer." maxWidth={520}>
-        <ClientForm prefix={currencyPrefix} error={error} saving={isSaving} onCancel={close} onSave={saveClient} />
+      <Modal open onClose={close} dismissable={!isSaving} title={t('dashboard.forms.client.title')} description={t('dashboard.forms.client.subtitle')} maxWidth={520}>
+        <ClientForm prefix={currencyPrefix} error={error} saving={isSaving} onCancel={close} onSave={saveClient} t={t} />
       </Modal>
     );
   }
   return (
-    <Modal open onClose={close} dismissable={!isSaving} title="Add subscription" description="Track a recurring software or service cost.">
-      <SubscriptionForm prefix={currencyPrefix} error={error} saving={isSaving} onCancel={close} onSave={saveSubscription} />
+    <Modal open onClose={close} dismissable={!isSaving} title={t('dashboard.forms.sub.title')} description={t('dashboard.forms.sub.subtitle')}>
+      <SubscriptionForm prefix={currencyPrefix} error={error} saving={isSaving} onCancel={close} onSave={saveSubscription} t={t} />
     </Modal>
   );
 }
-
-const INCOME_CATEGORIES = [
-  { value: 'CLIENT', label: 'Client Payment' },
-  { value: 'PROJECT', label: 'Project Revenue' },
-  { value: 'OTHER', label: 'Other Income' },
-];
-const EXPENSE_CATEGORIES = [
-  { value: 'TOOLS', label: 'Tools' },
-  { value: 'OPERATIONS', label: 'Operations' },
-  { value: 'TAXES', label: 'Taxes' },
-  { value: 'OTHER', label: 'Other Expense' },
-];
 
 function TransactionForm({
   type,
@@ -202,6 +190,7 @@ function TransactionForm({
   saving,
   onCancel,
   onSave,
+  t,
 }: {
   type: 'INCOME' | 'EXPENSE';
   prefix: string;
@@ -209,27 +198,40 @@ function TransactionForm({
   saving: boolean;
   onCancel: () => void;
   onSave: (form: FormData) => void;
+  t: any;
 }) {
-  const cats = type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const cats = type === 'INCOME' 
+    ? [
+        { value: 'CLIENT', label: t('dashboard.forms.tx.catClient') },
+        { value: 'PROJECT', label: t('dashboard.forms.tx.catProject') },
+        { value: 'OTHER', label: t('dashboard.forms.tx.catOtherIncome') },
+      ]
+    : [
+        { value: 'TOOLS', label: t('dashboard.forms.tx.catTools') },
+        { value: 'OPERATIONS', label: t('dashboard.forms.tx.catOps') },
+        { value: 'TAXES', label: t('dashboard.forms.tx.catTaxes') },
+        { value: 'OTHER', label: t('dashboard.forms.tx.catOtherExpense') },
+      ];
+
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(new FormData(e.currentTarget)); }} className="flex flex-col gap-4">
       {error && <p className="t-small text-negative">{error}</p>}
-      <Field label="Transaction name">
-        <Input name="name" placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required autoFocus />
+      <Field label={t('dashboard.forms.tx.nameLabel')}>
+        <Input name="name" placeholder={type === 'INCOME' ? t('dashboard.forms.tx.nameIncomePlaceholder') : t('dashboard.forms.tx.nameExpensePlaceholder')} required autoFocus />
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Amount"><Input name="amount" type="number" min="0" step="0.01" required prefix={prefix} /></Field>
-        <Field label="Date"><Input name="date" type="date" defaultValue={today()} required /></Field>
+        <Field label={t('dashboard.forms.tx.amountLabel')}><Input name="amount" type="number" min="0" step="0.01" required prefix={<span dir="ltr">{prefix}</span>} /></Field>
+        <Field label={t('dashboard.forms.tx.dateLabel')}><Input name="date" type="date" defaultValue={today()} required /></Field>
       </div>
-      <Field label="Category">
+      <Field label={t('dashboard.forms.tx.categoryLabel')}>
         <Select name="categoryId">
           {cats.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </Select>
       </Field>
-      <Field label="Notes"><Input name="notes" placeholder="Optional details" /></Field>
+      <Field label={t('dashboard.forms.tx.notesLabel')}><Input name="notes" placeholder={t('dashboard.forms.tx.notesPlaceholder')} /></Field>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={saving}>Save entry</Button>
+        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>{t('dashboard.forms.cancel')}</Button>
+        <Button type="submit" loading={saving}>{t('dashboard.forms.tx.save')}</Button>
       </div>
     </form>
   );
@@ -241,47 +243,49 @@ function ClientForm({
   saving,
   onCancel,
   onSave,
+  t,
 }: {
   prefix: string;
   error: string | null;
   saving: boolean;
   onCancel: () => void;
   onSave: (form: FormData, paymentType: Client['paymentType']) => void;
+  t: any;
 }) {
   const [paymentType, setPaymentType] = useState<Client['paymentType']>('onetime');
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(new FormData(e.currentTarget), paymentType); }} className="flex flex-col gap-4">
       {error && <p className="t-small text-negative">{error}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Client name"><Input name="name" required autoFocus /></Field>
-        <Field label="Amount"><Input name="revenue" type="number" min="0" step="0.01" required prefix={prefix} /></Field>
+        <Field label={t('dashboard.forms.client.nameLabel')}><Input name="name" required autoFocus /></Field>
+        <Field label={t('dashboard.forms.client.amountLabel')}><Input name="revenue" type="number" min="0" step="0.01" required prefix={<span dir="ltr">{prefix}</span>} /></Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Company"><Input name="company" /></Field>
-        <Field label="Email"><Input name="email" type="email" /></Field>
+        <Field label={t('dashboard.forms.client.companyLabel')}><Input name="company" /></Field>
+        <Field label={t('dashboard.forms.client.emailLabel')}><Input name="email" type="email" /></Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Client type">
+        <Field label={t('dashboard.forms.client.typeLabel')}>
           <Select name="clientType" defaultValue="COMPANY">
-            <option value="COMPANY">Company</option>
-            <option value="INDIVIDUAL">Individual</option>
+            <option value="COMPANY">{t('dashboard.forms.client.typeCompany')}</option>
+            <option value="INDIVIDUAL">{t('dashboard.forms.client.typeIndividual')}</option>
           </Select>
         </Field>
-        <Field label="Payment type">
+        <Field label={t('dashboard.forms.client.paymentTypeLabel')}>
           <Select name="paymentType" value={paymentType} onChange={(e) => setPaymentType(e.target.value as Client['paymentType'])}>
-            <option value="onetime">One-time payment</option>
-            <option value="retainer">Monthly retainer</option>
+            <option value="onetime">{t('dashboard.forms.client.paymentOneTime')}</option>
+            <option value="retainer">{t('dashboard.forms.client.paymentRetainer')}</option>
           </Select>
         </Field>
       </div>
       {paymentType === 'retainer' ? (
-        <Field label="Next billing date"><Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required /></Field>
+        <Field label={t('dashboard.forms.client.nextBillingLabel')}><Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required /></Field>
       ) : (
-        <Field label="Payment date"><Input name="paymentDate" type="date" defaultValue={today()} required /></Field>
+        <Field label={t('dashboard.forms.client.paymentDateLabel')}><Input name="paymentDate" type="date" defaultValue={today()} required /></Field>
       )}
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={saving}>Save client</Button>
+        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>{t('dashboard.forms.cancel')}</Button>
+        <Button type="submit" loading={saving}>{t('dashboard.forms.client.save')}</Button>
       </div>
     </form>
   );
@@ -293,32 +297,34 @@ function SubscriptionForm({
   saving,
   onCancel,
   onSave,
+  t,
 }: {
   prefix: string;
   error: string | null;
   saving: boolean;
   onCancel: () => void;
   onSave: (form: FormData) => void;
+  t: any;
 }) {
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSave(new FormData(e.currentTarget)); }} className="flex flex-col gap-4">
       {error && <p className="t-small text-negative">{error}</p>}
-      <Field label="Service name"><Input name="name" placeholder="Vercel Pro" required autoFocus /></Field>
+      <Field label={t('dashboard.forms.sub.nameLabel')}><Input name="name" placeholder={t('dashboard.forms.sub.namePlaceholder')} required autoFocus /></Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Cost"><Input name="amount" type="number" min="0" step="0.01" required prefix={prefix} /></Field>
-        <Field label="Next billing date"><Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required /></Field>
+        <Field label={t('dashboard.forms.sub.costLabel')}><Input name="amount" type="number" min="0" step="0.01" required prefix={<span dir="ltr">{prefix}</span>} /></Field>
+        <Field label={t('dashboard.forms.sub.nextBillingLabel')}><Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required /></Field>
       </div>
-      <Field label="Billing cycle">
+      <Field label={t('dashboard.forms.sub.cycleLabel')}>
         <Select name="billingCycle" defaultValue="MONTHLY">
-          <option value="MONTHLY">Monthly</option>
-          <option value="QUARTERLY">Quarterly</option>
-          <option value="YEARLY">Yearly</option>
+          <option value="MONTHLY">{t('dashboard.forms.sub.cycleMonthly')}</option>
+          <option value="QUARTERLY">{t('dashboard.forms.sub.cycleQuarterly')}</option>
+          <option value="YEARLY">{t('dashboard.forms.sub.cycleYearly')}</option>
         </Select>
       </Field>
-      <Field label="Notes"><Textarea name="notes" placeholder="Optional" rows={2} /></Field>
+      <Field label={t('dashboard.forms.sub.notesLabel')}><Textarea name="notes" placeholder={t('dashboard.forms.sub.notesPlaceholder')} rows={2} /></Field>
       <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={saving}>Save subscription</Button>
+        <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>{t('dashboard.forms.cancel')}</Button>
+        <Button type="submit" loading={saving}>{t('dashboard.forms.sub.save')}</Button>
       </div>
     </form>
   );

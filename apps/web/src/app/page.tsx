@@ -6,7 +6,8 @@ import { Client, Subscription, Transaction } from '@/types/finance';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { makeCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
-import { useLocale } from '@/lib/i18n';
+import { useLocale, translateError } from '@/lib/i18n';
+import { formatTransactionName } from '@/lib/format';
 import type { Locale } from '@/lib/locales';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -44,20 +45,20 @@ function toIsoDate(date: string) {
   return new Date(`${date}T12:00:00`).toISOString();
 }
 
-function getRelativeDate(isoDate: string, locale: Locale) {
+function getRelativeDate(isoDate: string, locale: Locale, t: any) {
   const txDate = new Date(isoDate);
   const diff = new Date().getTime() - txDate.getTime();
   if (diff < 0) return formatDate(txDate, locale, { month: 'short', day: 'numeric' });
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days} days ago`;
+  if (days === 0) return t('dashboard.relativeDate.today');
+  if (days === 1) return t('dashboard.relativeDate.yesterday');
+  if (days < 7) return t('dashboard.relativeDate.daysAgo', { days: String(days) });
   return formatDate(txDate, locale, { month: 'short', day: 'numeric' });
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const {
     transactions,
     subscriptions,
@@ -162,7 +163,7 @@ export default function DashboardPage() {
       await addTransaction(tx);
       setModal(null);
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Failed to create transaction');
+      setModalError(err instanceof Error ? translateError(err.message, t) : t('dashboard.error.createTransaction'));
     } finally {
       setIsSaving(false);
     }
@@ -178,7 +179,7 @@ export default function DashboardPage() {
       : undefined;
 
     if (!name || revenue <= 0) {
-      setModalError('Name and a positive amount are required.');
+      setModalError(t('dashboard.error.missingClientFields'));
       return;
     }
 
@@ -203,7 +204,7 @@ export default function DashboardPage() {
       });
       setModal(null);
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Failed to create client');
+      setModalError(err instanceof Error ? translateError(err.message, t) : t('dashboard.error.createClient'));
     } finally {
       setIsSaving(false);
     }
@@ -216,7 +217,7 @@ export default function DashboardPage() {
     const nextBillingDate = String(formData.get('nextBillingDate') || computeNextBillingDate(new Date().getDate()));
 
     if (!name || amount <= 0 || !nextBillingDate) {
-      setModalError('Name, amount, and next billing date are required.');
+      setModalError(t('dashboard.error.missingSubFields'));
       return;
     }
 
@@ -236,7 +237,7 @@ export default function DashboardPage() {
       });
       setModal(null);
     } catch (err) {
-      setModalError(err instanceof Error ? err.message : 'Failed to create subscription');
+      setModalError(err instanceof Error ? translateError(err.message, t) : t('dashboard.error.createSubscription'));
     } finally {
       setIsSaving(false);
     }
@@ -245,56 +246,56 @@ export default function DashboardPage() {
   const chartRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
   const chartExpenses = chartData.reduce((sum, item) => sum + item.expenses, 0);
   const chartMargin = chartRevenue > 0 ? Math.round(((chartRevenue - chartExpenses) / chartRevenue) * 100) : 0;
-  const chartMarginLabel = `${chartMargin > 0 ? '+' : ''}${chartMargin}% margin`;
+  const chartMarginLabel = t('dashboard.chart.margin', { margin: `${chartMargin > 0 ? '+' : ''}${chartMargin}` });
 
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
       {error && (
-        <InlineAlert tone="warning" title="Sync Issue">
+        <InlineAlert tone="warning" title={t('dashboard.alert.syncIssue')}>
           {error}
         </InlineAlert>
       )}
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2.5">
-        <Button icon="TrendingUp" onClick={() => { setModalError(null); setModal('income'); }}>Add revenue</Button>
-        <Button variant="secondary" icon="Receipt" onClick={() => { setModalError(null); setModal('expense'); }}>Log expense</Button>
-        <Button variant="secondary" icon="RefreshCw" onClick={() => { setModalError(null); setModal('subscription'); }}>Add subscription</Button>
-        <Button variant="secondary" icon="Users" onClick={() => { setModalError(null); setModal('client'); }}>Add client</Button>
+        <Button icon="TrendingUp" onClick={() => { setModalError(null); setModal('income'); }}>{t('dashboard.actions.addRevenue')}</Button>
+        <Button variant="secondary" icon="Receipt" onClick={() => { setModalError(null); setModal('expense'); }}>{t('dashboard.actions.logExpense')}</Button>
+        <Button variant="secondary" icon="RefreshCw" onClick={() => { setModalError(null); setModal('subscription'); }}>{t('dashboard.actions.addSubscription')}</Button>
+        <Button variant="secondary" icon="Users" onClick={() => { setModalError(null); setModal('client'); }}>{t('dashboard.actions.addClient')}</Button>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard 
-          label="Total clients" 
+          label={t('dashboard.stats.totalClients')} 
           value={overview.totalClients} 
           icon="Users" 
           onClick={() => router.push('/clients')} 
         />
         <StatCard 
-          label="Total revenue" 
+          label={t('dashboard.stats.totalRevenue')} 
           value={money0.format(overview.totalRevenue)} 
           tone="positive" 
           icon="TrendingUp" 
           onClick={() => router.push('/transactions?filter=revenue')} 
         />
         <StatCard 
-          label="Total expenses" 
+          label={t('dashboard.stats.totalExpenses')} 
           value={money0.format(overview.totalExpenses)} 
           tone="negative" 
           icon="Receipt" 
           onClick={() => router.push('/transactions?filter=expenses')} 
         />
         <StatCard 
-          label="Net profit" 
+          label={t('dashboard.stats.netProfit')} 
           value={money0.format(overview.netProfit)} 
           icon="Wallet" 
           onClick={() => router.push('/analytics')} 
         />
         <StatCard 
-          label="Active subscriptions" 
+          label={t('dashboard.stats.activeSubscriptions')} 
           value={overview.activeSubscriptionsCount} 
-          sub={`${money0.format(overview.subscriptionBurden)}/mo`} 
+          sub={`${money0.format(overview.subscriptionBurden)}${t('dashboard.stats.perMonth')}`} 
           icon="RefreshCw" 
           onClick={() => router.push('/subscriptions')} 
         />
@@ -304,8 +305,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         <Card className="lg:col-span-2 h-full" pad={22}>
           <SectionHeader 
-            title="Revenue vs Expenses" 
-            sub="Last 6 months" 
+            title={t('dashboard.chart.title')} 
+            sub={t('dashboard.chart.subtitle')} 
             action={<Badge tone={chartMargin >= 0 ? 'positive' : 'negative'} icon={chartMargin >= 0 ? 'TrendingUp' : 'TrendingDown'}>{chartMarginLabel}</Badge>} 
           />
           <DashboardMonthlyChart data={chartData} formatAmount={money0.format} />
@@ -314,10 +315,10 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-4">
           <Card pad={20}>
             <SectionHeader 
-              title="Active subscriptions" 
+              title={t('dashboard.subs.title')} 
               action={
                 <button onClick={() => router.push('/subscriptions')} className="text-sm font-medium text-accent hover:underline">
-                  View all
+                  {t('dashboard.subs.viewAll')}
                 </button>
               } 
             />
@@ -328,30 +329,30 @@ export default function DashboardPage() {
                     <Avatar name={s.name} size={32} />
                     <div className="flex-1 min-w-0">
                       <div className="t-body-m truncate">{s.name}</div>
-                      <div className="text-xs text-text-muted">Renews {formatDate(s.nextBillingDate, locale, { month: 'short', day: 'numeric' })}</div>
+                      <div className="text-xs text-text-muted">{t('dashboard.subs.renews', { date: formatDate(s.nextBillingDate, locale, { month: 'short', day: 'numeric' }) })}</div>
                     </div>
-                    <span className="t-body-m font-mono">{money0.format(s.amount)}<span className="text-text-muted font-sans text-xs">/{s.cycle === 'YEARLY' ? 'yr' : 'mo'}</span></span>
+                    <span className="t-body-m font-mono" dir="ltr">{money0.format(s.amount)}<span className="text-text-muted font-sans text-xs">{s.cycle === 'YEARLY' ? t('dashboard.subs.perYear') : t('dashboard.subs.perMonth')}</span></span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-text-muted py-4 text-center">No active subscriptions</div>
+              <div className="text-sm text-text-muted py-4 text-center">{t('dashboard.subs.empty')}</div>
             )}
           </Card>
 
           {topClient && (
             <Card pad={20}>
-              <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">Top client</div>
+              <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-3">{t('dashboard.topClient.title')}</div>
               <div className="flex items-center gap-3">
                 <Avatar name={topClient.name} size={40} />
                 <div className="flex-1 min-w-0">
                   <div className="t-h3 truncate">{topClient.name}</div>
-                  <div className="text-sm text-text-muted truncate">{topClient.email || topClient.company || 'Client'}</div>
+                  <div className="text-sm text-text-muted truncate">{topClient.email || topClient.company || t('dashboard.topClient.fallbackRole')}</div>
                 </div>
               </div>
               <div className="mt-4 pt-3.5 border-t border-border flex justify-between items-baseline">
-                <span className="text-sm text-text-muted">Total paid</span>
-                <span className="t-h3 font-mono text-positive">{money0.format(topClient.value)}</span>
+                <span className="text-sm text-text-muted">{t('dashboard.topClient.totalPaid')}</span>
+                <span className="t-h3 font-mono text-positive" dir="ltr">{money0.format(topClient.value)}</span>
               </div>
             </Card>
           )}
@@ -361,21 +362,21 @@ export default function DashboardPage() {
       {/* Recent Transactions */}
       <Card pad={0}>
         <div className="px-5 py-4 flex items-center justify-between border-b border-border">
-          <span className="t-h3">Recent transactions</span>
+          <span className="t-h3">{t('dashboard.recent.title')}</span>
           <button 
             onClick={() => router.push('/transactions')} 
             className="text-sm font-medium text-accent hover:underline inline-flex items-center gap-1"
           >
-            View ledger <Icon name="ChevronRight" size={14} />
+            {t('dashboard.recent.viewLedger')} <Icon name="ChevronRight" size={14} className="rtl:-scale-x-100" />
           </button>
         </div>
         
         {recentTransactions.length === 0 ? (
           <div className="text-center py-10 px-4 text-text-muted">
             <div className="mb-3 text-border-strong flex justify-center"><Icon name="Inbox" size={34} /></div>
-            <p className="text-sm">No transactions yet.</p>
+            <p className="text-sm">{t('dashboard.recent.empty')}</p>
             <button onClick={() => setModal('income')} className="mt-4 text-sm font-medium text-accent hover:underline">
-              Add revenue to get started
+              {t('dashboard.recent.emptyAction')}
             </button>
           </div>
         ) : (
@@ -402,13 +403,13 @@ export default function DashboardPage() {
                           <Icon name={tx.type === 'INCOME' ? 'ArrowDown' : 'ArrowUp'} size={15} strokeWidth={2.2} />
                         </div>
                         <div>
-                          <div className="t-body-m">{tx.name || tx.notes || tx.sourceType}</div>
-                          <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date, locale)}</div>
+                          <div className="t-body-m">{formatTransactionName(tx.name || tx.notes || tx.sourceType, t)}</div>
+                          <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date, locale, t)}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <span className={`t-body-m font-mono ${tx.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
+                      <span className={`t-body-m font-mono ${tx.type === 'INCOME' ? 'text-positive' : 'text-negative'}`} dir="ltr">
                         {tx.type === 'INCOME' ? '+' : '−'}{money2.format(tx.amount)}
                       </span>
                     </td>
@@ -459,6 +460,7 @@ export default function DashboardPage() {
 }
 
 function DashboardTransactionForm({ type, currencyPrefix, error, isSaving, onCancel, onSave }: { type: 'INCOME' | 'EXPENSE'; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, type: 'INCOME' | 'EXPENSE') => void }) {
+  const { t } = useLocale();
   return (
     <form
       onSubmit={(event) => {
@@ -468,139 +470,141 @@ function DashboardTransactionForm({ type, currencyPrefix, error, isSaving, onCan
       className="flex flex-col gap-4"
     >
       <div>
-        <h2 id="dashboard-modal-title" className="t-h3">{type === 'INCOME' ? 'Add revenue' : 'Log expense'}</h2>
-        <p className="text-sm text-text-muted mt-1">Record a {type === 'INCOME' ? 'client payment or project win' : 'tool, tax, or operating cost'}.</p>
+        <h2 id="dashboard-modal-title" className="t-h3">{type === 'INCOME' ? t('dashboard.forms.income.title') : t('dashboard.forms.expense.title')}</h2>
+        <p className="text-sm text-text-muted mt-1">{type === 'INCOME' ? t('dashboard.forms.income.subtitle') : t('dashboard.forms.expense.subtitle')}</p>
         {error && <p className="text-sm text-negative mt-2">{error}</p>}
       </div>
-      <Field label="Transaction name">
-        <Input name="name" placeholder={type === 'INCOME' ? 'Website design project' : 'Adobe Creative Cloud'} required autoFocus />
+      <Field label={t('dashboard.forms.tx.nameLabel')}>
+        <Input name="name" placeholder={type === 'INCOME' ? t('dashboard.forms.tx.nameIncomePlaceholder') : t('dashboard.forms.tx.nameExpensePlaceholder')} required autoFocus />
       </Field>
-      <Field label="Notes">
-        <Input name="notes" placeholder="Optional details" />
+      <Field label={t('dashboard.forms.tx.notesLabel')}>
+        <Input name="notes" placeholder={t('dashboard.forms.tx.notesPlaceholder')} />
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Amount">
+        <Field label={t('dashboard.forms.tx.amountLabel')}>
           <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
         </Field>
-        <Field label="Date">
+        <Field label={t('dashboard.forms.tx.dateLabel')}>
           <Input name="date" type="date" defaultValue={today()} required />
         </Field>
       </div>
-      <Field label="Category">
+      <Field label={t('dashboard.forms.tx.categoryLabel')}>
         <Select name="categoryId">
           {type === 'INCOME' ? (
             <>
-              <option value="CLIENT">Client Payment</option>
-              <option value="PROJECT">Project Revenue</option>
-              <option value="OTHER">Other Income</option>
+              <option value="CLIENT">{t('dashboard.forms.tx.catClient')}</option>
+              <option value="PROJECT">{t('dashboard.forms.tx.catProject')}</option>
+              <option value="OTHER">{t('dashboard.forms.tx.catOtherIncome')}</option>
             </>
           ) : (
             <>
-              <option value="TOOLS">Tools</option>
-              <option value="OPERATIONS">Operations</option>
-              <option value="TAXES">Taxes</option>
-              <option value="OTHER">Other Expense</option>
+              <option value="TOOLS">{t('dashboard.forms.tx.catTools')}</option>
+              <option value="OPERATIONS">{t('dashboard.forms.tx.catOps')}</option>
+              <option value="TAXES">{t('dashboard.forms.tx.catTaxes')}</option>
+              <option value="OTHER">{t('dashboard.forms.tx.catOtherExpense')}</option>
             </>
           )}
         </Select>
       </Field>
       <div className="flex justify-end gap-2 pt-2 mt-2">
-        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save entry'}</Button>
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>{t('dashboard.forms.cancel')}</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? t('dashboard.forms.saving') : t('dashboard.forms.tx.save')}</Button>
       </div>
     </form>
   );
 }
 
 function DashboardClientForm({ currencyPrefix, error, isSaving, onCancel, onSave }: { currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData) => void }) {
+  const { t } = useLocale();
   const [paymentType, setPaymentType] = useState<Client['paymentType']>('onetime');
 
   return (
     <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
       <div>
-        <h2 id="dashboard-modal-title" className="t-h3">Add client</h2>
-        <p className="text-sm text-text-muted mt-1">Create a one-time client or monthly retainer from here.</p>
+        <h2 id="dashboard-modal-title" className="t-h3">{t('dashboard.forms.client.title')}</h2>
+        <p className="text-sm text-text-muted mt-1">{t('dashboard.forms.client.subtitle')}</p>
         {error && <p className="text-sm text-negative mt-2">{error}</p>}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Client name">
+        <Field label={t('dashboard.forms.client.nameLabel')}>
           <Input name="name" required autoFocus />
         </Field>
-        <Field label="Amount">
+        <Field label={t('dashboard.forms.client.amountLabel')}>
           <Input name="revenue" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Company">
+        <Field label={t('dashboard.forms.client.companyLabel')}>
           <Input name="company" />
         </Field>
-        <Field label="Email">
+        <Field label={t('dashboard.forms.client.emailLabel')}>
           <Input name="email" type="email" />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Client type">
+        <Field label={t('dashboard.forms.client.typeLabel')}>
           <Select name="clientType" defaultValue="COMPANY">
-            <option value="COMPANY">Company</option>
-            <option value="INDIVIDUAL">Individual</option>
+            <option value="COMPANY">{t('dashboard.forms.client.typeCompany')}</option>
+            <option value="INDIVIDUAL">{t('dashboard.forms.client.typeIndividual')}</option>
           </Select>
         </Field>
-        <Field label="Payment type">
+        <Field label={t('dashboard.forms.client.paymentTypeLabel')}>
           <Select name="paymentType" value={paymentType} onChange={(event) => setPaymentType(event.target.value as Client['paymentType'])}>
-            <option value="onetime">One-time payment</option>
-            <option value="retainer">Monthly retainer</option>
+            <option value="onetime">{t('dashboard.forms.client.paymentOneTime')}</option>
+            <option value="retainer">{t('dashboard.forms.client.paymentRetainer')}</option>
           </Select>
         </Field>
       </div>
       {paymentType === 'retainer' ? (
-        <Field label="Next billing date">
+        <Field label={t('dashboard.forms.client.nextBillingLabel')}>
           <Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required />
         </Field>
       ) : (
-        <Field label="Payment date">
+        <Field label={t('dashboard.forms.client.paymentDateLabel')}>
           <Input name="paymentDate" type="date" defaultValue={today()} required />
         </Field>
       )}
       <div className="flex justify-end gap-2 pt-2 mt-2">
-        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save client'}</Button>
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>{t('dashboard.forms.cancel')}</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? t('dashboard.forms.saving') : t('dashboard.forms.client.save')}</Button>
       </div>
     </form>
   );
 }
 
 function DashboardSubscriptionForm({ currencyPrefix, error, isSaving, onCancel, onSave }: { currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData) => void }) {
+  const { t } = useLocale();
   return (
     <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget)); }} className="flex flex-col gap-4">
       <div>
-        <h2 id="dashboard-modal-title" className="t-h3">Add subscription</h2>
-        <p className="text-sm text-text-muted mt-1">Track a recurring software or service cost.</p>
+        <h2 id="dashboard-modal-title" className="t-h3">{t('dashboard.forms.sub.title')}</h2>
+        <p className="text-sm text-text-muted mt-1">{t('dashboard.forms.sub.subtitle')}</p>
         {error && <p className="text-sm text-negative mt-2">{error}</p>}
       </div>
-      <Field label="Service name">
-        <Input name="name" placeholder="Vercel Pro" required autoFocus />
+      <Field label={t('dashboard.forms.sub.nameLabel')}>
+        <Input name="name" placeholder={t('dashboard.forms.sub.namePlaceholder')} required autoFocus />
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Cost">
+        <Field label={t('dashboard.forms.sub.costLabel')}>
           <Input name="amount" type="number" min="0" step="0.01" required prefix={currencyPrefix} />
         </Field>
-        <Field label="Next billing date">
+        <Field label={t('dashboard.forms.sub.nextBillingLabel')}>
           <Input name="nextBillingDate" type="date" defaultValue={computeNextBillingDate(new Date().getDate())} required />
         </Field>
       </div>
-      <Field label="Billing cycle">
+      <Field label={t('dashboard.forms.sub.cycleLabel')}>
         <Select name="billingCycle" defaultValue="MONTHLY">
-          <option value="MONTHLY">Monthly</option>
-          <option value="QUARTERLY">Quarterly</option>
-          <option value="YEARLY">Yearly</option>
+          <option value="MONTHLY">{t('dashboard.forms.sub.cycleMonthly')}</option>
+          <option value="QUARTERLY">{t('dashboard.forms.sub.cycleQuarterly')}</option>
+          <option value="YEARLY">{t('dashboard.forms.sub.cycleYearly')}</option>
         </Select>
       </Field>
-      <Field label="Notes">
-        <Input name="notes" placeholder="Optional" />
+      <Field label={t('dashboard.forms.sub.notesLabel')}>
+        <Input name="notes" placeholder={t('dashboard.forms.sub.notesPlaceholder')} />
       </Field>
       <div className="flex justify-end gap-2 pt-2 mt-2">
-        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save subscription'}</Button>
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>{t('dashboard.forms.cancel')}</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? t('dashboard.forms.saving') : t('dashboard.forms.sub.save')}</Button>
       </div>
     </form>
   );

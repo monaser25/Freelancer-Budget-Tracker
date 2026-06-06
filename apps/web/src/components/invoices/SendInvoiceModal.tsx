@@ -44,7 +44,7 @@ export function SendInvoiceModal({
   onSent?: (updated: Invoice) => void;
 }) {
   const { send } = useInvoiceStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [to, setTo] = useState('');
   const [message, setMessage] = useState('');
   const [view, setView] = useState<'form' | 'success' | 'fallback'>('form');
@@ -84,24 +84,26 @@ export function SendInvoiceModal({
       const { blob, filename } = await downloadInvoicePdf(invoice.id);
       triggerBlob(blob, filename);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not download the PDF.');
+      setError(e instanceof Error ? e.message : t('invoices.send.errorDownload'));
     } finally {
       setDownloading(false);
     }
   };
 
   const mailtoHref = () => {
-    const subject = `Invoice ${invoice.number} from Haseeela`;
-    const body =
-      (message.trim() ? `${message.trim()}\n\n` : '') +
-      `Invoice ${invoice.number}\nAmount due: ${money(invoice.total, invoice.currency, locale)}\nDue: ${invoice.dueDate}`;
+    const subject = t('invoices.send.emailSubject').replace('{number}', invoice.number);
+    const bodyTemplate = t('invoices.send.emailBody')
+      .replace('{number}', invoice.number)
+      .replace('{amount}', money(invoice.total, invoice.currency, locale))
+      .replace('{date}', invoice.dueDate);
+    const body = (message.trim() ? `${message.trim()}\n\n` : '') + bodyTemplate;
     return `mailto:${encodeURIComponent(to.trim())}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   const submit = async () => {
     setError(null);
     if (!emailValid) {
-      setError('Please enter a valid recipient email address.');
+      setError(t('invoices.send.errorInvalidEmail'));
       return;
     }
     setSending(true);
@@ -115,7 +117,7 @@ export function SendInvoiceModal({
         setView('fallback');
         return;
       }
-      setError(e instanceof Error ? e.message : 'Failed to send invoice.');
+      setError(e instanceof Error ? e.message : t('invoices.send.errorSend'));
     } finally {
       setSending(false);
     }
@@ -124,15 +126,19 @@ export function SendInvoiceModal({
   // ── Success ──
   if (view === 'success') {
     return (
-      <Modal open={open} onClose={onClose} title="Invoice sent" maxWidth={460}>
+      <Modal open={open} onClose={onClose} title={t('invoices.send.successTitle')} maxWidth={460}>
         <div className="flex flex-col items-center text-center gap-3 py-2">
           <div className="w-12 h-12 rounded-full bg-positive-tint text-positive flex items-center justify-center">
             <Icon name="checkCircle" size={24} />
           </div>
           <p className="t-body text-text-secondary">
-            Invoice {invoice.number} was emailed to <span className="text-text font-medium">{sentTo}</span> and marked as sent.
+            {t('invoices.send.successMessagePart1')}
+            <span dir="ltr">{invoice.number}</span>
+            {t('invoices.send.successMessagePart2')}
+            <span className="text-text font-medium" dir="ltr">{sentTo}</span>
+            {t('invoices.send.successMessagePart3')}
           </p>
-          <Button className="w-full mt-2" onClick={onClose}>Done</Button>
+          <Button className="w-full mt-2" onClick={onClose}>{t('invoices.send.done')}</Button>
         </div>
       </Modal>
     );
@@ -141,24 +147,24 @@ export function SendInvoiceModal({
   // ── SMTP-not-configured fallback ──
   if (view === 'fallback') {
     return (
-      <Modal open={open} onClose={onClose} title="Email isn't set up yet" maxWidth={480}>
+      <Modal open={open} onClose={onClose} title={t('invoices.send.fallbackTitle')} maxWidth={480}>
         <div className="flex flex-col gap-4">
-          <InlineAlert tone="warning" title="SMTP is not configured" body="Automatic email sending isn't configured yet, so the invoice was not sent or marked as sent. Use one of these instead:" />
+          <InlineAlert tone="warning" title={t('invoices.send.fallbackAlertTitle')} body={t('invoices.send.fallbackAlertBody')} />
           {error && <InlineAlert tone="negative" body={error} />}
           <div className="flex flex-col gap-2">
             <Button icon="download" loading={downloading} onClick={downloadPdf} className="w-full">
-              Download invoice PDF
+              {t('invoices.send.downloadPdf')}
             </Button>
             <a href={mailtoHref()} className="w-full">
-              <Button variant="secondary" icon="send" className="w-full">Open in my email app</Button>
+              <Button variant="secondary" icon="send" className="w-full">{t('invoices.send.openEmailApp')}</Button>
             </a>
           </div>
-          <p className="t-small text-text-muted">
-            To enable one-click sending, add the SMTP environment variables in Vercel (see docs/SMTP_EMAIL_SETUP.md).
+          <p className="t-small text-text-muted" dir="auto">
+            {t('invoices.send.fallbackHint')}
           </p>
         </div>
         <div className="flex justify-end mt-4">
-          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button variant="ghost" onClick={onClose}>{t('invoices.send.close')}</Button>
         </div>
       </Modal>
     );
@@ -169,40 +175,45 @@ export function SendInvoiceModal({
     <Modal
       open={open}
       onClose={() => !sending && onClose()}
-      title={`Send invoice ${invoice.number}`}
-      description={`${money(invoice.total, invoice.currency, locale)} · due ${invoice.dueDate}`}
+      title={t('invoices.send.modalTitle').replace('{number}', invoice.number)}
+      description={t('invoices.send.modalDesc').replace('{amount}', money(invoice.total, invoice.currency, locale)).replace('{date}', invoice.dueDate)}
       dismissable={!sending}
       maxWidth={480}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={sending}>Cancel</Button>
-          <Button icon="send" loading={sending} disabled={!emailValid} onClick={submit}>Send invoice</Button>
+          <Button variant="ghost" onClick={onClose} disabled={sending}>{t('invoices.send.cancel')}</Button>
+          <Button icon="send" loading={sending} disabled={!emailValid} onClick={submit}>{t('invoices.send.sendInvoice')}</Button>
         </>
       }
     >
       <div className="flex flex-col gap-4">
-        {error && <InlineAlert tone="negative" title="Couldn't send" body={error} />}
-        <Field label="Recipient email" error={to.length > 0 && !emailValid ? 'Enter a valid email address' : undefined}>
+        {error && <InlineAlert tone="negative" title={t('invoices.send.errorModalTitle')} body={error} />}
+        <Field label={t('invoices.send.recipientEmail')} error={to.length > 0 && !emailValid ? t('invoices.send.errorEmailHint') : undefined}>
           <Input
             type="email"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            placeholder="client@email.com"
+            placeholder={t('invoices.send.emailPlaceholder')}
+            dir="ltr"
+            style={{ textAlign: locale === 'ar' ? 'right' : 'left' }}
             autoFocus
           />
         </Field>
-        <Field label="Message" hint="Optional — added to the email body">
+        <Field label={t('invoices.send.messageLabel')} hint={t('invoices.send.messageHint')}>
           <Textarea
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={`Hi ${invoice.client?.name || 'there'}, please find your invoice attached.`}
+            placeholder={t('invoices.send.emailMessagePlaceholder').replace('{name}', invoice.client?.name || (locale === 'ar' ? 'هناك' : 'there'))}
           />
         </Field>
         <p className="t-small text-text-muted">
-          A branded PDF is attached automatically. The invoice is marked <span className="font-medium">Sent</span> only after the email is delivered.
+          {t('invoices.send.footerHintPart1')}
+          <span className="font-medium">{t('invoices.send.footerHintPart2')}</span>
+          {t('invoices.send.footerHintPart3')}
         </p>
       </div>
     </Modal>
   );
 }
+

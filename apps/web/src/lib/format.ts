@@ -39,3 +39,18 @@ export function formatCurrency(amount: number, currency: string, locale: Locale,
 export function formatNumber(value: number, locale: Locale, options?: NumberFormatOptions) {
   return createNumberFormatter(locale, options).format(value);
 }
+
+import { type MessageKey, type MessageVars } from '../messages';
+
+export function formatTransactionName(name: string, t: (key: MessageKey, vars?: MessageVars) => string) {
+  if (name.endsWith(' retainer payment')) {
+    return name.replace(' retainer payment', t('tx.suffix.retainer'));
+  }
+  if (name.endsWith(' one-time payment')) {
+    return name.replace(' one-time payment', t('tx.suffix.oneTime'));
+  }
+  if (name.endsWith(' subscription payment')) {
+    return name.replace(' subscription payment', t('tx.suffix.subscription'));
+  }
+  return name;
+}
