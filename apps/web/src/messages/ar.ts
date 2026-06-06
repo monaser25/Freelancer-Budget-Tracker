@@ -941,4 +941,5 @@ export const ar: Messages = {
   'tx.suffix.retainer': ' (دفعة اشتراك عميل)',
   'tx.suffix.oneTime': ' (دفعة لمرة واحدة)',
   'tx.suffix.subscription': ' (دفعة اشتراك)',
+  'dashboard.alert.retry': 'مسح ذاكرة التخزين المؤقت والمحاولة مرة أخرى',
 };

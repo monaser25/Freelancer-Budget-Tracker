@@ -1,9 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useFinancialStore } from '@/store/useFinancialStore';
+import { useFinancialStore } from '@/store/financialStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
 import { computeNextBillingDate } from '@/store/financialStore';
+import { getOverviewStats } from '@/selectors/financialSelectors';
 import { makeCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale, translateError } from '@/lib/i18n';
@@ -63,7 +64,6 @@ export default function DashboardPage() {
     transactions,
     subscriptions,
     clients,
-    overview,
     currency,
     error,
     addTransaction,
@@ -73,6 +73,8 @@ export default function DashboardPage() {
   const [modal, setModal] = useState<ModalType>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  
+  const overview = useMemo(() => getOverviewStats(transactions, clients, subscriptions), [transactions, clients, subscriptions]);
   
   const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
@@ -252,7 +254,26 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
       {error && (
         <InlineAlert tone="warning" title={t('dashboard.alert.syncIssue')}>
-          {error}
+          <div className="flex flex-col gap-2 items-start">
+            <p>{error}</p>
+            <button 
+              className="text-sm font-semibold underline text-warning-strong hover:text-warning"
+              onClick={() => {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                      registration.unregister();
+                    }
+                  });
+                }
+                const userId = useFinancialStore.getState().storageUserId;
+                if (userId) localStorage.removeItem(`flowledger-financial-state:${userId}`);
+                window.location.reload();
+              }}
+            >
+              {t('dashboard.alert.retry')}
+            </button>
+          </div>
         </InlineAlert>
       )}
 

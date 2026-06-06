@@ -61,7 +61,7 @@ export default function ArchivePage() {
     restoreClient, restoreSubscription,
     deleteClientPermanently, deleteSubscriptionPermanently,
   } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
 
@@ -97,14 +97,14 @@ export default function ArchivePage() {
   return (
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
       <div>
-        <h1 className="t-h1">Archive</h1>
-        <p className="t-body mt-1 text-text-muted">Paused clients and subscriptions with preserved historical records</p>
+        <h1 className="t-h1">{t('archive.title')}</h1>
+        <p className="t-body mt-1 text-text-muted">{t('archive.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Archived clients" value={archivedClients.length} icon="Users" />
-        <StatCard label="Archived tools" value={archivedSubscriptions.length} icon="CreditCard" />
-        <StatCard label="Historical records" value={archivedTransactionCount} icon="Archive" />
+        <StatCard label={t('archive.stats.clients')} value={archivedClients.length} icon="Users" />
+        <StatCard label={t('archive.stats.tools')} value={archivedSubscriptions.length} icon="CreditCard" />
+        <StatCard label={t('archive.stats.records')} value={archivedTransactionCount} icon="Archive" />
       </div>
 
       <InlineAlert tone="info">
@@ -117,7 +117,7 @@ export default function ArchivePage() {
 
       {isEmpty ? (
         <Card pad={0}>
-          <EmptyState icon="Archive" title="No archived items" body="Clients and subscriptions you remove will appear here, ready to restore later." />
+          <EmptyState icon="Archive" title={t('archive.empty.title')} body={t('archive.empty.body')} />
         </Card>
       ) : (
         <>

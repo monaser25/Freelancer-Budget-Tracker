@@ -16,8 +16,8 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
         }}
       >
         <div className="flex items-center gap-[11px]">
-          <div className="w-[34px] h-[34px] rounded-[10px] bg-[rgba(255,255,255,0.16)] flex items-center justify-center backdrop-blur-sm">
-            <Image src="/haseeela_icon.png" alt="Haseeela logo" width={22} height={22} />
+          <div className="w-[34px] h-[34px] rounded-[9px] overflow-hidden flex items-center justify-center shadow-md shrink-0">
+            <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={34} height={34} />
           </div>
           <span className="text-[18px] font-semibold text-white">{t('brand.name')}</span>
         </div>

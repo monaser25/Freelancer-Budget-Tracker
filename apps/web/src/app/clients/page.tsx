@@ -28,7 +28,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 export default function ClientsPage() {
   const { clients, transactions, currency, isInitialized, addClient, updateClient, deleteClient, deleteClientPermanently, recordClientPayment } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -183,17 +183,17 @@ export default function ClientsPage() {
       <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h1 className="t-h1">Clients</h1>
-            <p className="t-body mt-1 text-text-muted">Revenue sources, payment schedules, and total earnings</p>
+            <h1 className="t-h1">{t('clients.title')}</h1>
+            <p className="t-body mt-1 text-text-muted">{t('clients.subtitle')}</p>
           </div>
-          <Button icon="Plus" onClick={openAddModal} className="w-full sm:w-auto">Add client</Button>
+          <Button icon="Plus" onClick={openAddModal} className="w-full sm:w-auto">{t('clients.addClient')}</Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Active clients" value={clientStats.active} icon="Users" />
-          <StatCard label="Retainers" value={clientStats.retainers} icon="Repeat" />
-          <StatCard label="Recorded revenue" value={money.format(clientStats.recordedRevenue)} tone="positive" icon="TrendingUp" />
-          <StatCard label="Archived" value={clientStats.archived} icon="Archive" />
+          <StatCard label={t('clients.stats.active')} value={clientStats.active} icon="Users" />
+          <StatCard label={t('clients.stats.retainers')} value={clientStats.retainers} icon="Repeat" />
+          <StatCard label={t('clients.stats.recordedRevenue')} value={money.format(clientStats.recordedRevenue)} tone="positive" icon="TrendingUp" />
+          <StatCard label={t('clients.stats.archived')} value={clientStats.archived} icon="Archive" />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
@@ -210,7 +210,7 @@ export default function ClientsPage() {
           {actionError && <div className="mx-4 mt-4 sm:mx-5"><InlineAlert tone="negative">{actionError}</InlineAlert></div>}
 
           {visibleClients.length === 0 ? (
-            <EmptyState icon="Users" title="No clients yet" body="Add a one-time payment or monthly retainer client to start tracking revenue." action={<Button icon="Plus" onClick={openAddModal}>Add client</Button>} />
+            <EmptyState icon="Users" title={t('clients.empty.title')} body={t('clients.empty.body')} action={<Button icon="Plus" onClick={openAddModal}>{t('clients.addClient')}</Button>} />
           ) : (
             <div className="divide-y divide-border">
               {visibleClients.map((client) => {
@@ -226,7 +226,7 @@ export default function ClientsPage() {
                         <span className="t-body-m text-text">{client.name}</span>
                         <Badge tone={client.paymentType === 'retainer' ? 'accent' : 'positive'}>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
                         <Badge tone={client.status === 'ACTIVE' ? 'positive' : client.status === 'PROSPECT' ? 'warning' : 'neutral'}>{client.status}</Badge>
-                        {client.archivedAt && <Badge>Archived</Badge>}
+                        {client.archivedAt && <Badge>{t('clients.badges.archived')}</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
                         {client.paymentType === 'retainer'
@@ -238,7 +238,7 @@ export default function ClientsPage() {
                   <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <div className="text-left sm:text-right">
                       <div className="text-sm font-mono font-semibold text-positive">{money.format(totalPaid)}</div>
-                      <div className="text-xs text-text-muted">total paid</div>
+                      <div className="text-xs text-text-muted">{t('clients.payment.totalPaid')}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       {client.paymentType === 'retainer' && client.status === 'ACTIVE' && !client.archivedAt && (
@@ -257,7 +257,7 @@ export default function ClientsPage() {
                       {client.paymentType === 'retainer' && <span>Next billing: {client.nextBillingDate ? formatDate(client.nextBillingDate, locale) : 'not scheduled'}</span>}
                     </div>
                     {clientTransactions.length === 0 ? (
-                      <div className="text-xs text-text-muted mt-2">No payments recorded yet.</div>
+                      <div className="text-xs text-text-muted mt-2">{t('clients.history.empty')}</div>
                     ) : (
                       <div className="mt-2 space-y-1">
                         {clientTransactions.slice(0, 3).map((tx) => (
@@ -292,7 +292,7 @@ export default function ClientsPage() {
                 <div className="t-display font-mono text-positive mt-2">{money.format(revenueForClient(topClient.id))}</div>
                 <p className="text-sm text-text-muted mt-1">Total recorded revenue</p>
               </div>
-            ) : <p className="text-sm text-text-muted mt-4">No clients yet</p>}
+            ) : <p className="text-sm text-text-muted mt-4">{t('clients.top.empty')}</p>}
           </Card>
         </div>
         </div>

@@ -938,6 +938,7 @@ export const en = {
   'tx.suffix.retainer': ' retainer payment',
   'tx.suffix.oneTime': ' one-time payment',
   'tx.suffix.subscription': ' subscription payment',
+  'dashboard.alert.retry': 'Clear cache & retry',
 };
 
 export type Messages = typeof en;

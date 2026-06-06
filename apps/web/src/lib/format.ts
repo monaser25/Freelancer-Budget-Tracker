@@ -24,6 +24,7 @@ export function createCurrencyFormatter(currency: string, locale: Locale, option
   return createNumberFormatter(locale, {
     style: 'currency',
     currency,
+    currencyDisplay: locale === 'ar' ? 'code' : 'symbol',
     ...options,
   });
 }

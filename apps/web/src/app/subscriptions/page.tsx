@@ -28,7 +28,7 @@ const monthlyEquivalent = (subscription: Subscription) => {
 
 export default function SubscriptionsPage() {
   const { subscriptions, transactions, currency, isInitialized, addSubscription, updateSubscription, deleteSubscription, recordSubscriptionPayment } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -142,17 +142,17 @@ export default function SubscriptionsPage() {
       <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h1 className="t-h1">Tool subscriptions</h1>
-            <p className="t-body mt-1 text-text-muted">Software and services that generate recurring expenses</p>
+            <h1 className="t-h1">{t('subscriptions.title')}</h1>
+            <p className="t-body mt-1 text-text-muted">{t('subscriptions.subtitle')}</p>
           </div>
-          <Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="w-full sm:w-auto">Add subscription</Button>
+          <Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="w-full sm:w-auto">{t('subscriptions.addSubscription')}</Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Active tools" value={subscriptionStats.active} icon="CreditCard" />
-          <StatCard label="Monthly cost" value={money.format(subscriptionStats.monthlyCost)} tone="negative" icon="Receipt" />
-          <StatCard label="Annual run rate" value={money.format(subscriptionStats.yearlyRunRate)} tone="negative" icon="TrendingDown" />
-          <StatCard label="Archived" value={subscriptionStats.archived} icon="Archive" />
+          <StatCard label={t('subscriptions.stats.active')} value={subscriptionStats.active} icon="CreditCard" />
+          <StatCard label={t('subscriptions.stats.monthlyCost')} value={money.format(subscriptionStats.monthlyCost)} tone="negative" icon="Receipt" />
+          <StatCard label={t('subscriptions.stats.yearlyRunRate')} value={money.format(subscriptionStats.yearlyRunRate)} tone="negative" icon="TrendingDown" />
+          <StatCard label={t('subscriptions.stats.archived')} value={subscriptionStats.archived} icon="Archive" />
         </div>
 
         <Card pad={0} className="overflow-hidden">
@@ -166,7 +166,7 @@ export default function SubscriptionsPage() {
           {actionError && <div className="mx-4 mt-4 sm:mx-5"><InlineAlert tone="negative">{actionError}</InlineAlert></div>}
 
           {visibleSubscriptions.length === 0 ? (
-            <EmptyState icon="CreditCard" title="No tool subscriptions yet" body="Add recurring software costs here to keep monthly expenses visible." action={<Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }}>Add subscription</Button>} />
+            <EmptyState icon="CreditCard" title={t('subscriptions.empty.title')} body={t('subscriptions.empty.body')} action={<Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }}>{t('subscriptions.addSubscription')}</Button>} />
           ) : (
             <div className="divide-y divide-border">
               {visibleSubscriptions.map((sub) => (
@@ -180,7 +180,7 @@ export default function SubscriptionsPage() {
                         <span className="t-body-m text-text">{sub.name}</span>
                         <Badge tone={sub.status === 'ACTIVE' ? 'positive' : 'neutral'}>{sub.status}</Badge>
                         <Badge tone="accent">{(sub.billingCycle || sub.cycle).toLowerCase()}</Badge>
-                        {sub.archivedAt && <Badge>Archived</Badge>}
+                        {sub.archivedAt && <Badge>{t('subscriptions.badges.archived')}</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
                         next {formatDate(sub.nextBillingDate, locale)}
@@ -191,7 +191,7 @@ export default function SubscriptionsPage() {
                   <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <div className="text-left sm:text-right">
                       <div className="text-sm font-mono font-semibold text-negative">{money.format(monthlyEquivalent(sub))}/mo</div>
-                      <div className="text-xs text-text-muted">{money.format(sub.amount)} billed</div>
+                      <div className="text-xs text-text-muted"><span dir="ltr">{money.format(sub.amount)}</span> billed</div>
                     </div>
                     <div className="flex items-center gap-2">
                       {sub.status === 'ACTIVE' && !sub.archivedAt && (

@@ -63,7 +63,7 @@ export function Topbar() {
         className="hidden sm:flex items-center gap-2.5 h-9 px-3 min-w-[200px] rounded-md border border-border bg-background text-text-muted hover:border-border-strong focus-ring transition-colors"
       >
         <Icon name="search" size={16} />
-        <span className="t-body flex-1 text-left">{t('topbar.search')}</span>
+        <span className="t-body flex-1 text-start">{t('topbar.search')}</span>
       </button>
       <IconButton icon="search" title={t('topbar.search')} className="sm:hidden" onClick={() => setPaletteOpen(true)} />
 

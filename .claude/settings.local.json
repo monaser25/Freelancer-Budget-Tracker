@@ -3,12 +3,7 @@
     "allow": [
       "mcp__Claude_Preview__preview_start",
       "Bash(kill 58937)",
-      "Bash(npm run *)",
-      "Bash([ -f \"$f\" ])",
-      "Read(//c/Users/MoNaser/.claude/**)",
-      "Bash(node *)",
-      "PowerShell(node --version; \\(Get-Command node\\).Source)",
-      "PowerShell(claude *)"
+      "Bash(npm run *)"
     ]
   }
 }

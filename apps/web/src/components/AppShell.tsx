@@ -39,7 +39,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const { mobileNavOpen, setMobileNavOpen, togglePalette, paletteOpen, newModal } = useUiStore();
   const isBareRoute = bareRoutes.has(pathname);
-  const { dir } = useLocale();
+  const { t, dir } = useLocale();
 
   useEffect(() => {
     if (isLoading) return;
@@ -73,7 +73,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
-        Loading Haseeela…
+        {t('onboarding.loading')}
       </div>
     );
   }
@@ -83,7 +83,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-background text-[13px] text-text-muted">
-        Redirecting to login…
+        {t('auth.login.action.logging_in')}
       </div>
     );
   }

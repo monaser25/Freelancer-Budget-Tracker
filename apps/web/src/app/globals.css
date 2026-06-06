@@ -69,7 +69,7 @@
   }
 
   html[lang="ar"], html[dir="rtl"] {
-    --font: var(--font-cairo), 'Cairo', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --font: 'Inter', var(--font-cairo), 'Cairo', -apple-system, 'Segoe UI', system-ui, sans-serif;
   }
 
   html[lang="ar"] [dir="ltr"], html[dir="rtl"] [dir="ltr"], .font-latin {
@@ -123,7 +123,8 @@
   }
 
   ::selection { 
-    background: var(--accent-tint); 
+    background: var(--accent); 
+    color: var(--accent-fg);
   }
 
   .tnum { 

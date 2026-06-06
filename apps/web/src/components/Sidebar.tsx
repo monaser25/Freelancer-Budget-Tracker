@@ -41,7 +41,7 @@ const SLOT = 'grid place-items-center w-11 shrink-0';
 // past the rail or shifts the icon) and fades/slides for a premium feel.
 function labelStyle(collapsed: boolean, extra = '') {
   return `flex-1 min-w-0 truncate transition-[opacity,transform] duration-200 ease-out ${
-    collapsed ? 'opacity-0 -translate-x-1' : 'opacity-100 translate-x-0'
+    collapsed ? 'opacity-0 rtl:translate-x-1 ltr:-translate-x-1' : 'opacity-100 translate-x-0'
   } ${extra}`;
 }
 
@@ -72,14 +72,14 @@ function NavLink({
     >
       {/* Active rail indicator */}
       <span
-        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full bg-accent transition-opacity duration-base ease-out ${
+        className={`absolute start-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-e-full bg-accent transition-opacity duration-base ease-out ${
           active ? 'opacity-100' : 'opacity-0'
         }`}
       />
       <span className={SLOT}>
         <Icon name={item.icon} size={18} />
       </span>
-      <span className={labelStyle(collapsed, 'text-[14px] pr-3 text-left')}>{label}</span>
+      <span className={labelStyle(collapsed, 'text-[14px] pe-3 text-start')}>{label}</span>
     </Link>
   );
 }
@@ -107,18 +107,18 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
   return (
     <aside
       style={{ width: collapsed ? 'var(--sidebar-rail)' : 'var(--sidebar-w)' }}
-      className="h-full bg-surface border-r border-border flex flex-col shrink-0 transition-[width] duration-slow ease-out"
+      className="h-full bg-surface border-e border-border flex flex-col shrink-0 transition-[width] duration-slow ease-out"
     >
       {/* Brand */}
       <div className="h-[var(--header-h)] flex items-center border-b border-border shrink-0 px-3.5">
         <Link href="/" onClick={onClose} className="flex items-center w-full rounded-md focus-ring">
           <span className={SLOT}>
-            <span className="w-[30px] h-[30px] rounded-[9px] bg-accent flex items-center justify-center shadow-[0_2px_8px_color-mix(in_srgb,var(--accent)_40%,transparent)]">
-              <Image src="/haseeela_icon.png" alt="Haseeela logo" width={18} height={18} />
+            <span className="w-[30px] h-[30px] rounded-[9px] overflow-hidden flex items-center justify-center shadow-md">
+              <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={30} height={30} />
             </span>
           </span>
           <span className={labelStyle(collapsed, 'text-[16px] font-semibold tracking-[-0.02em] text-text')}>
-            Haseeela
+            {t('brand.name')}
           </span>
         </Link>
       </div>
@@ -151,15 +151,15 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
                 <Avatar name={displayName} size={34} />
               </span>
               <span
-                className={`flex-1 min-w-0 flex items-center overflow-hidden pr-2 transition-[opacity,transform] duration-200 ease-out ${
-                  collapsed ? 'opacity-0 -translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0'
+                className={`flex-1 min-w-0 flex items-center overflow-hidden pe-2 transition-[opacity,transform] duration-200 ease-out ${
+                  collapsed ? 'opacity-0 rtl:translate-x-1 ltr:-translate-x-1 pointer-events-none' : 'opacity-100 translate-x-0'
                 }`}
               >
-                <span className="flex-1 min-w-0 text-left">
+                <span className="flex-1 min-w-0 text-start">
                   <span className="block t-body-m text-text truncate">{displayName}</span>
-                  <span className="block t-small text-text-muted truncate">{user?.email || t('sidebar.fallback.freelancer')}</span>
+                  <span className="block t-small text-text-muted truncate"><span dir="ltr">{user?.email || t('sidebar.fallback.freelancer')}</span></span>
                 </span>
-                <Icon name="chevronDown" size={15} className="text-text-muted ml-1.5 shrink-0" />
+                <Icon name="chevronDown" size={15} className="text-text-muted ms-1.5 shrink-0" />
               </span>
             </button>
           }
@@ -189,7 +189,7 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
                 className={`transition-transform duration-slow ease-out ${collapsed ? 'rotate-180' : ''}`}
               />
             </span>
-            <span className={labelStyle(collapsed, 't-small text-left')}>{t('sidebar.collapse')}</span>
+            <span className={labelStyle(collapsed, 't-small text-start')}>{t('sidebar.collapse')}</span>
           </button>
         </div>
       )}

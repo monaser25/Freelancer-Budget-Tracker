@@ -56,9 +56,9 @@ export function Menu({ trigger, items, align = 'right', width = 200, side = 'bot
       </span>
       {open && (
         <div
-          role="menu"
-          style={{ width, [align]: 0, [side === 'bottom' ? 'top' : 'bottom']: 'calc(100% + 6px)' }}
-          className="absolute z-[120] p-1.5 rounded-md border border-border bg-surface-elevated shadow-lg anim-scale origin-top"
+        role="menu"
+        style={{ width, [align === 'right' ? 'insetInlineEnd' : 'insetInlineStart']: 0, [side === 'bottom' ? 'top' : 'bottom']: 'calc(100% + 6px)' }}
+        className="absolute z-[120] p-1.5 rounded-md border border-border bg-surface-elevated shadow-lg anim-scale origin-top"
         >
           {items.map((item, i) =>
             item.divider ? (

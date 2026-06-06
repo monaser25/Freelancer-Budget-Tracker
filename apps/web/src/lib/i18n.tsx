@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { t as translate, type MessageKey, type MessageVars } from '../messages';
 import { DEFAULT_LOCALE, dirFor, type Locale, type LocaleDir } from './locales';
 
@@ -20,6 +20,20 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children, initialLocale = DEFAULT_LOCALE }: LocaleProviderProps) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('haseeela.locale') as Locale;
+      if (stored === 'ar' || stored === 'en') {
+        setLocale(stored);
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = dirFor(locale);
+  }, [locale]);
 
   const t = useCallback(
     (key: MessageKey, vars?: MessageVars) => translate(locale, key, vars),

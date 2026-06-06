@@ -136,7 +136,7 @@ export default function ProfilePage() {
         <Avatar name={name || email} size={48} />
         <div>
           <h1 className="t-h1">{name || t('profile.title')}</h1>
-          <p className="t-body text-text-muted" dir="ltr">{email}</p>
+          <p className="t-body text-text-muted"><span dir="ltr">{email}</span></p>
         </div>
       </div>
 
