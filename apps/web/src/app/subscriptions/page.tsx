@@ -191,7 +191,7 @@ export default function SubscriptionsPage() {
                   <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <div className="text-left sm:text-right">
                       <div className="text-sm font-mono font-semibold text-negative">{money.format(monthlyEquivalent(sub))}/mo</div>
-                      <div className="text-xs text-text-muted"><span dir="ltr">{money.format(sub.amount)}</span> billed</div>
+                      <div className="text-xs text-text-muted"><span dir="ltr"><span dir="ltr">{money.format(sub.amount)}</span></span> billed</div>
                     </div>
                     <div className="flex items-center gap-2">
                       {sub.status === 'ACTIVE' && !sub.archivedAt && (
@@ -210,9 +210,9 @@ export default function SubscriptionsPage() {
         </Card>
 
         <Card pad={20} className="max-w-md">
-          <div className="t-caption text-text-muted">Total monthly cost</div>
-          <div className="t-display font-mono text-negative mt-1">{money.format(totalMonthlyCost)}</div>
-          <p className="text-sm text-text-muted mt-1">Converted from monthly, quarterly, and yearly billing cycles.</p>
+          <div className="t-caption text-text-muted">{t('subscriptions.cost.title')}</div>
+          <div className="t-display font-mono text-negative mt-1"><span dir="ltr">{money.format(totalMonthlyCost)}</span></div>
+          <p className="text-sm text-text-muted mt-1">{t('subscriptions.cost.desc')}</p>
         </Card>
       </div>
 

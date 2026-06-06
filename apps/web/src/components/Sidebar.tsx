@@ -113,7 +113,7 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
       <div className="h-[var(--header-h)] flex items-center border-b border-border shrink-0 px-3.5">
         <Link href="/" onClick={onClose} className="flex items-center w-full rounded-md focus-ring">
           <span className={SLOT}>
-            <span className="w-[30px] h-[30px] rounded-[9px] overflow-hidden flex items-center justify-center shadow-md">
+            <span className="w-[30px] h-[30px] rounded-[8px] bg-white flex items-center justify-center shadow-sm overflow-hidden ring-1 ring-black/5">
               <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={30} height={30} />
             </span>
           </span>

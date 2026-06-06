@@ -254,9 +254,9 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
       {error && (
         <InlineAlert tone="warning" title={t('dashboard.alert.syncIssue')}>
-          <div className="flex flex-col gap-2 items-start">
-            <p>{error}</p>
-            <button 
+        <div className="flex flex-col gap-2 items-start">
+        <p>{translateError(error, t)}</p>
+        <button 
               className="text-sm font-semibold underline text-warning-strong hover:text-warning"
               onClick={() => {
                 if ('serviceWorker' in navigator) {

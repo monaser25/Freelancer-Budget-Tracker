@@ -5,6 +5,7 @@ import { loadFinancialSnapshot } from '@/services/financialApi';
 import { useFinancialStore } from '@/store/financialStore';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useAuth } from '@/components/AuthProvider';
+import { useLocale } from '@/lib/i18n';
 
 const getStorageKey = (userId: string) => `flowledger-financial-state:${userId}`;
 
@@ -12,6 +13,7 @@ export function FinancialBootstrap() {
   const { user } = useAuth();
   const userId = user?.id;
   const { setInitialData, setError, setStorageUserId } = useFinancialStore();
+  const { t } = useLocale();
 
   useEffect(() => {
     if (!userId) return;
@@ -65,11 +67,11 @@ export function FinancialBootstrap() {
         if (cancelled) return;
         console.warn('Backend unavailable.', err);
         if (hasCachedSnapshot) {
-          setError('Using locally cached data. API sync will resume when the backend is available.');
+          setError(err instanceof Error ? `${t('errors.cachedData')} (${err.message})` : t('errors.cachedData'));
           return;
         }
 
-        setError('Financial data is unavailable. Check the API connection and try again.');
+        setError(err instanceof Error ? `${t('errors.dataUnavailable')} (${err.message})` : t('errors.dataUnavailable'));
         setInitialData({
           clients: [],
           subscriptions: [],

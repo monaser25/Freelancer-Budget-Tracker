@@ -7,7 +7,7 @@ import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
 import { Client } from '@/types/finance';
 import { makeCurrencyFormatter } from '@/lib/currency';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatTransactionName } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { Avatar, Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
 
@@ -200,11 +200,11 @@ export default function ClientsPage() {
         <Card pad={0} className="overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-border flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <SectionHeader title="Client book" sub={`${visibleClients.length} client${visibleClients.length === 1 ? '' : 's'} shown`} className="mb-0" />
+              <SectionHeader title={t('clients.book.title')} sub={visibleClients.length === 1 ? t('clients.book.shown', { count: String(visibleClients.length) }) : t('clients.book.shownPlural', { count: String(visibleClients.length) })} className="mb-0" />
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-              <button type="button" onClick={() => setShowArchived(false)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${!showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>Active</button>
-              <button type="button" onClick={() => setShowArchived(true)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>Include archived</button>
+              <button type="button" onClick={() => setShowArchived(false)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${!showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>{t('clients.filters.active')}</button>
+              <button type="button" onClick={() => setShowArchived(true)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>{t('clients.filters.archived')}</button>
             </div>
           </div>
           {actionError && <div className="mx-4 mt-4 sm:mx-5"><InlineAlert tone="negative">{actionError}</InlineAlert></div>}
@@ -224,14 +224,14 @@ export default function ClientsPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="t-body-m text-text">{client.name}</span>
-                        <Badge tone={client.paymentType === 'retainer' ? 'accent' : 'positive'}>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
-                        <Badge tone={client.status === 'ACTIVE' ? 'positive' : client.status === 'PROSPECT' ? 'warning' : 'neutral'}>{client.status}</Badge>
+                        <Badge tone={client.paymentType === 'retainer' ? 'accent' : 'positive'}>{client.paymentType === 'retainer' ? t('clients.badges.retainer') : t('clients.badges.onetime')}</Badge>
+                        <Badge tone={client.status === 'ACTIVE' ? 'positive' : client.status === 'PROSPECT' ? 'warning' : 'neutral'}>{client.status === 'ACTIVE' ? t('clients.form.statusActive') : client.status === 'PROSPECT' ? t('clients.form.statusProspect') : client.status === 'COMPLETED' ? t('clients.form.statusCompleted') : t('clients.form.statusInactive')}</Badge>
                         {client.archivedAt && <Badge>{t('clients.badges.archived')}</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
                         {client.paymentType === 'retainer'
-                          ? `${money.format(client.revenue)}/mo - next ${client.nextBillingDate ? formatDate(client.nextBillingDate, locale) : 'not scheduled'}`
-                          : `${money.format(client.revenue)} - payment ${client.paymentDate ? formatDate(client.paymentDate, locale) : 'not scheduled'}`}
+                        ? t('clients.payment.monthlyNext', { amount: <span dir="ltr">{money.format(client.revenue)}</span>, date: client.nextBillingDate ? <span dir="ltr">{formatDate(client.nextBillingDate, locale)}</span> : t('clients.payment.notScheduled') })
+                        : t('clients.payment.onetime', { amount: <span dir="ltr">{money.format(client.revenue)}</span>, date: client.paymentDate ? <span dir="ltr">{formatDate(client.paymentDate, locale)}</span> : t('clients.payment.notScheduled') })}
                       </div>
                     </div>
                   </div>
@@ -253,8 +253,8 @@ export default function ClientsPage() {
                   </div>
                   <div className="rounded-md bg-surface-hover border border-border p-3">
                     <div className="flex flex-col gap-1 text-xs text-text-secondary sm:flex-row sm:items-center sm:justify-between">
-                      <span>Payment history</span>
-                      {client.paymentType === 'retainer' && <span>Next billing: {client.nextBillingDate ? formatDate(client.nextBillingDate, locale) : 'not scheduled'}</span>}
+                      <span>{t('clients.history.title')}</span>
+                      {client.paymentType === 'retainer' && <span>{t('clients.history.nextBilling', { date: client.nextBillingDate ? <span dir="ltr">{formatDate(client.nextBillingDate, locale)}</span> : t('clients.payment.notScheduled') })}</span>}
                     </div>
                     {clientTransactions.length === 0 ? (
                       <div className="text-xs text-text-muted mt-2">{t('clients.history.empty')}</div>
@@ -262,7 +262,7 @@ export default function ClientsPage() {
                       <div className="mt-2 space-y-1">
                         {clientTransactions.slice(0, 3).map((tx) => (
                           <div key={tx.id} className="flex items-center justify-between gap-3 text-xs">
-                            <span className="truncate text-text">{tx.name || tx.notes || 'Payment'}</span>
+                            <span className="truncate text-text">{formatTransactionName(tx.name || tx.notes || t('clients.history.paymentFallback'), t as any)}</span>
                             <span className="shrink-0 text-text-muted">{formatDate(tx.date, locale)} - {money.format(tx.amount)}</span>
                           </div>
                         ))}
@@ -277,20 +277,20 @@ export default function ClientsPage() {
 
         <div className="space-y-6">
           <Card className="h-[300px] overflow-hidden" pad={20}>
-            <SectionHeader title="Revenue overview" sub="Recorded client payments" />
+            <SectionHeader title={t('clients.revenue.title')} sub={t('clients.revenue.subtitle')} />
             {chartData.length === 0 ? (
-              <div className="h-[210px] flex items-center justify-center text-sm text-text-muted">No recorded client revenue yet</div>
+              <div className="h-[210px] flex items-center justify-center text-sm text-text-muted">{t('clients.revenue.empty')}</div>
             ) : (
               <ClientRevenuePieChart data={chartData} formatAmount={money.format} />
             )}
           </Card>
           <Card pad={20}>
-            <SectionHeader title="Top client" sub="Highest recorded revenue" />
+            <SectionHeader title={t('clients.top.title')} sub={t('clients.top.subtitle')} />
             {topClient ? (
               <div className="mt-4">
                 <div className="t-h3 text-text">{topClient.name}</div>
-                <div className="t-display font-mono text-positive mt-2">{money.format(revenueForClient(topClient.id))}</div>
-                <p className="text-sm text-text-muted mt-1">Total recorded revenue</p>
+                <div className="t-display font-mono text-positive mt-2"><span dir="ltr">{money.format(revenueForClient(topClient.id))}</span></div>
+                <p className="text-sm text-text-muted mt-1">{t('clients.top.totalRevenue')}</p>
               </div>
             ) : <p className="text-sm text-text-muted mt-4">{t('clients.top.empty')}</p>}
           </Card>
@@ -309,23 +309,23 @@ export default function ClientsPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[220] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
           <Card role="dialog" aria-modal="true" className="w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto shadow-xl my-8" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <h2 className="t-h3">Archive {deleteTarget.client.name}?</h2>
+            <h2 className="t-h3">{t('clients.delete.title', { name: deleteTarget.client.name })}</h2>
             <p className="text-sm text-text-secondary mt-2">
-              Archiving keeps past payments in history and stops future billing. Permanent delete is still available if you need to wipe the client and linked transactions.
+              {t('clients.delete.desc')}
             </p>
             <div className="mt-4 space-y-2">
               <div className="rounded-md bg-info-tint border border-info-border p-3 text-sm text-info">
-                <span className="font-medium">Archive:</span> {deleteTarget.transactionCount} historical transaction{deleteTarget.transactionCount === 1 ? '' : 's'} totaling {money.format(deleteTarget.revenueTotal)} will stay in analytics and payment history.
+                <span className="font-medium">{t('clients.delete.archiveLabel')}</span> {deleteTarget.transactionCount === 1 ? t('clients.delete.archiveNotice', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) }) : t('clients.delete.archiveNoticePlural', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) })}
               </div>
               <div className="rounded-md bg-negative-tint border border-negative-border p-3 text-sm text-negative">
-                <span className="font-medium">Delete permanently:</span> {deleteTarget.transactionCount} historical transaction{deleteTarget.transactionCount === 1 ? '' : 's'} totaling {money.format(deleteTarget.revenueTotal)} will be removed from analytics and the ledger. This cannot be undone.
+                <span className="font-medium">{t('clients.delete.deleteLabel')}</span> {deleteTarget.transactionCount === 1 ? t('clients.delete.deleteNotice', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) }) : t('clients.delete.deleteNoticePlural', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) })}
               </div>
             </div>
             {deleteError && <div className="mt-3"><InlineAlert tone="negative">{deleteError}</InlineAlert></div>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
-              <Button type="button" variant="ghost" disabled={isDeleting || isDeletingPermanent} onClick={closeDeleteModal}>Cancel</Button>
-              <Button type="button" variant="secondary" loading={isDeleting} disabled={isDeletingPermanent} onClick={confirmDelete}>{isDeleting ? 'Archiving...' : 'Archive'}</Button>
-              <Button type="button" variant="destructive" loading={isDeletingPermanent} disabled={isDeleting} onClick={confirmDeletePermanently}>{isDeletingPermanent ? 'Deleting...' : 'Delete permanently'}</Button>
+              <Button type="button" variant="ghost" disabled={isDeleting || isDeletingPermanent} onClick={closeDeleteModal}>{t('clients.delete.cancel')}</Button>
+              <Button type="button" variant="secondary" loading={isDeleting} disabled={isDeletingPermanent} onClick={confirmDelete}>{isDeleting ? t('clients.delete.archiving') : t('clients.actions.archive')}</Button>
+              <Button type="button" variant="destructive" loading={isDeletingPermanent} disabled={isDeleting} onClick={confirmDeletePermanently}>{isDeletingPermanent ? t('clients.delete.deleting') : t('clients.delete.deletePermanently')}</Button>
             </div>
           </Card>
         </div>
@@ -335,66 +335,67 @@ export default function ClientsPage() {
 }
 
 function ClientForm({ client, currencyPrefix, error, isSaving, onCancel, onSave }: { client?: Client; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Client) => void }) {
+  const { t } = useLocale();
   const [paymentType, setPaymentType] = useState<Client['paymentType']>(client?.paymentType || 'onetime');
 
   return (
     <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget), client); }} className="space-y-4">
       <div>
-        <h2 className="t-h3">{client ? 'Edit client' : 'Add client'}</h2>
-        <p className="text-sm text-text-muted mt-1">One-time clients record once. Retainers auto-record monthly income.</p>
+        <h2 className="t-h3">{client ? t('clients.form.editTitle') : t('clients.form.addTitle')}</h2>
+        <p className="text-sm text-text-muted mt-1">{t('clients.form.subtitle')}</p>
       </div>
-      {client && <InlineAlert tone="warning">Changes to amount or billing date only affect future billings. Past transactions remain unchanged.</InlineAlert>}
+      {client && <InlineAlert tone="warning">{t('clients.form.warning')}</InlineAlert>}
       {error && <InlineAlert tone="negative">{error}</InlineAlert>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Client name">
+        <Field label={t('clients.form.nameLabel')}>
           <Input name="name" defaultValue={client?.name} required />
         </Field>
-        <Field label="Amount">
-          <Input name="revenue" type="number" min="0" step="0.01" defaultValue={client?.revenue} required prefix={currencyPrefix} />
+        <Field label={t('clients.form.amountLabel')}>
+          <Input name="revenue" type="number" min="0" step="0.01" defaultValue={client?.revenue} required prefix={<span dir="ltr">{currencyPrefix}</span>} />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Company">
+        <Field label={t('clients.form.companyLabel')}>
           <Input name="company" defaultValue={client?.company} />
         </Field>
-        <Field label="Email">
+        <Field label={t('clients.form.emailLabel')}>
           <Input name="email" type="email" defaultValue={client?.email} />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Client Type">
+        <Field label={t('clients.form.clientTypeLabel')}>
           <Select name="clientType" defaultValue={client?.clientType || 'COMPANY'}>
-            <option value="COMPANY">Company</option>
-            <option value="INDIVIDUAL">Individual</option>
+            <option value="COMPANY">{t('clients.form.typeCompany')}</option>
+            <option value="INDIVIDUAL">{t('clients.form.typeIndividual')}</option>
           </Select>
         </Field>
-        <Field label="Status">
+        <Field label={t('clients.form.statusLabel')}>
           <Select name="status" defaultValue={client?.status || 'ACTIVE'}>
-            <option value="ACTIVE">Active</option>
-            <option value="PROSPECT">Prospect</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="INACTIVE">Inactive</option>
+            <option value="ACTIVE">{t('clients.form.statusActive')}</option>
+            <option value="PROSPECT">{t('clients.form.statusProspect')}</option>
+            <option value="COMPLETED">{t('clients.form.statusCompleted')}</option>
+            <option value="INACTIVE">{t('clients.form.statusInactive')}</option>
           </Select>
         </Field>
       </div>
-      <Field label="Payment type">
+      <Field label={t('clients.form.paymentTypeLabel')}>
         <Select name="paymentType" value={paymentType} onChange={(event) => setPaymentType(event.target.value as Client['paymentType'])}>
-          <option value="onetime">One-time payment</option>
-          <option value="retainer">Monthly retainer</option>
+          <option value="onetime">{t('clients.form.paymentOneTime')}</option>
+          <option value="retainer">{t('clients.form.paymentRetainer')}</option>
         </Select>
       </Field>
       {paymentType === 'onetime' ? (
-        <Field label="Payment date">
+        <Field label={t('clients.form.paymentDateLabel')}>
           <Input name="paymentDate" type="date" defaultValue={client?.paymentDate ? String(client.paymentDate).slice(0, 10) : today()} required />
         </Field>
       ) : (
-        <Field label="Next billing date">
+        <Field label={t('clients.form.nextBillingLabel')}>
           <Input name="nextBillingDate" type="date" defaultValue={client?.nextBillingDate ? String(client.nextBillingDate).slice(0, 10) : computeNextBillingDate(new Date().getDate())} required />
         </Field>
       )}
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save client'}</Button>
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>{t('clients.form.cancel')}</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? t('clients.form.saving') : t('clients.form.save')}</Button>
       </div>
     </form>
   );

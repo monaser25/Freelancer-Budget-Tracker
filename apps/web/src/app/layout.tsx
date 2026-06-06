@@ -3,9 +3,9 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 import { themeNoFlashScript } from '@/components/ThemeProvider';
 
-import { Cairo } from 'next/font/google';
+import { IBM_Plex_Sans_Arabic } from 'next/font/google';
 
-const cairo = Cairo({ subsets: ['arabic'], variable: '--font-cairo' });
+const plexArabic = IBM_Plex_Sans_Arabic({ weight: ['400', '500', '600', '700'], subsets: ['arabic'], variable: '--font-plex-arabic' });
 
 export const metadata: Metadata = {
   title: 'Haseeela - Freelancer Budget Tracker',
@@ -61,7 +61,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${cairo.variable}`}>
+      <body className={`${plexArabic.variable}`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>

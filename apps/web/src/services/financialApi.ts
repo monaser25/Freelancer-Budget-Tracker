@@ -9,16 +9,12 @@ export type FinancialSnapshot = {
 };
 
 const apiBaseUrl = () => {
+  if (typeof window !== 'undefined') return '';
+
   const raw = process.env.NEXT_PUBLIC_API_URL || '';
   const value = raw.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
 
-  // The production app uses Next.js Route Handlers on the same origin. Older
-  // local environments may still point to the removed Express API on :4000.
   if (!value || /localhost:4000|127\.0\.0\.1:4000/.test(value)) return '';
-
-  // Local dev/prod checks should exercise the local Next route handlers even if
-  // an old env file still points at a deployed URL.
-  if (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) return '';
 
   return value;
 };

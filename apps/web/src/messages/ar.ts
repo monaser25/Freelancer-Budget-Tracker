@@ -44,7 +44,7 @@ export const ar: Messages = {
   'topbar.copy.fallback.title': 'حصيلة',
   'topbar.copy.fallback.subtitle': '',
   
-  'brand.name': 'حصيلة',
+  'brand.name': 'حصيــــلة',
 
   'topbar.menu.addRevenue': 'إضافة إيرادات',
   'topbar.menu.logExpense': 'تسجيل النفقات',
@@ -938,6 +938,8 @@ export const ar: Messages = {
   'errors.clientNotActive': 'فقط العملاء النشطون يمكنهم تسجيل مدفوعات متكررة',
   'errors.subNotFound': 'الاشتراك غير موجود',
   'errors.subNotActive': 'فقط الاشتراكات النشطة يمكنها تسجيل المدفوعات',
+  'errors.cachedData': 'يتم استخدام البيانات المخبأة محلياً. ستستأنف مزامنة واجهة برمجة التطبيقات عند توفر الواجهة الخلفية.',
+  'errors.dataUnavailable': 'البيانات المالية غير متاحة. تحقق من اتصال واجهة برمجة التطبيقات وحاول مرة أخرى.',
   'tx.suffix.retainer': ' (دفعة اشتراك عميل)',
   'tx.suffix.oneTime': ' (دفعة لمرة واحدة)',
   'tx.suffix.subscription': ' (دفعة اشتراك)',

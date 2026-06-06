@@ -935,6 +935,8 @@ export const en = {
   'errors.clientNotActive': 'Only active clients can record recurring payments',
   'errors.subNotFound': 'Subscription not found',
   'errors.subNotActive': 'Only active subscriptions can record payments',
+  'errors.cachedData': 'Using locally cached data. API sync will resume when the backend is available.',
+  'errors.dataUnavailable': 'Financial data is unavailable. Check the API connection and try again.',
   'tx.suffix.retainer': ' retainer payment',
   'tx.suffix.oneTime': ' one-time payment',
   'tx.suffix.subscription': ' subscription payment',

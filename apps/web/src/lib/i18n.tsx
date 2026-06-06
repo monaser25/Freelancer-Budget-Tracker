@@ -72,6 +72,8 @@ const ERROR_KEYS_MAP: Record<string, MessageKey> = {
   'Only active clients can record recurring payments': 'errors.clientNotActive',
   'Subscription not found': 'errors.subNotFound',
   'Only active subscriptions can record payments': 'errors.subNotActive',
+  'Using locally cached data. API sync will resume when the backend is available.': 'errors.cachedData',
+  'Financial data is unavailable. Check the API connection and try again.': 'errors.dataUnavailable',
 };
 
 export const translateError = (msg: string, t: (key: MessageKey, vars?: MessageVars) => string) => {
