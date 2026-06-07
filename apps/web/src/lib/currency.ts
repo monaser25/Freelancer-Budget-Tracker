@@ -23,12 +23,52 @@ export const makeCurrencyFormatter = (currency: CurrencyCode, options?: NumberFo
   createCurrencyFormatter(currency, locale, options)
 );
 
-export const makeCompactCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => (
-  new Intl.NumberFormat(locale === 'ar' ? 'en-US' : intlTagFor(locale), {
+export const makeLongCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => (
+  new Intl.NumberFormat(intlTagFor(locale), {
     style: 'currency',
     currency,
-    currencyDisplay: 'symbol',
+    currencyDisplay: 'name',
     numberingSystem: 'latn',
     ...options,
   })
 );
+
+export const makeCompactCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => {
+  if (locale !== 'ar') {
+    return new Intl.NumberFormat(intlTagFor(locale), {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+      numberingSystem: 'latn',
+      ...options,
+    });
+  }
+
+  const currencyDefaults = new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions();
+  const defaultMaximumFractionDigits = currencyDefaults.maximumFractionDigits ?? 2;
+  const defaultMinimumFractionDigits = currencyDefaults.minimumFractionDigits ?? defaultMaximumFractionDigits;
+  const maximumFractionDigits = options?.maximumFractionDigits ?? defaultMaximumFractionDigits;
+  const minimumFractionDigits = Math.min(
+    options?.minimumFractionDigits ?? (options?.maximumFractionDigits === 0 ? 0 : defaultMinimumFractionDigits),
+    maximumFractionDigits,
+  );
+  const number = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits,
+    maximumFractionDigits,
+    useGrouping: options?.useGrouping,
+  });
+  const symbol = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'narrowSymbol',
+  }).formatToParts(0).find((part) => part.type === 'currency')?.value || currency;
+
+  return {
+    format: (value: number) => `${number.format(value)} ${symbol}`,
+    formatToParts: (value: number) => [
+      ...number.formatToParts(value),
+      { type: 'literal' as const, value: ' ' },
+      { type: 'currency' as const, value: symbol },
+    ],
+  };
+};

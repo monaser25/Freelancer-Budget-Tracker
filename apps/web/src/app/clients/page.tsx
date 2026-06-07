@@ -6,7 +6,7 @@ import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
 import { Client } from '@/types/finance';
-import { makeCompactCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate, formatTransactionName } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { Avatar, Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
@@ -41,6 +41,7 @@ export default function ClientsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const moneyWithCents = useMemo(() => makeCompactCurrencyFormatter(currency, undefined, locale), [currency, locale]);
+  const moneyLong = useMemo(() => makeLongCurrencyFormatter(currency, undefined, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => moneyWithCents.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, moneyWithCents]);
 
   const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
@@ -289,7 +290,7 @@ export default function ClientsPage() {
             {topClient ? (
               <div className="mt-4">
                 <div className="t-h3 text-text">{topClient.name}</div>
-                <div className="t-display font-mono text-positive mt-2"><span dir="ltr">{money.format(revenueForClient(topClient.id))}</span></div>
+                <div className="t-display text-positive mt-2">{moneyLong.format(revenueForClient(topClient.id))}</div>
                 <p className="text-sm text-text-muted mt-1">{t('clients.top.totalRevenue')}</p>
               </div>
             ) : <p className="text-sm text-text-muted mt-4">{t('clients.top.empty')}</p>}
@@ -315,10 +316,10 @@ export default function ClientsPage() {
             </p>
             <div className="mt-4 space-y-2">
               <div className="rounded-md bg-info-tint border border-info-border p-3 text-sm text-info">
-                <span className="font-medium">{t('clients.delete.archiveLabel')}</span> {deleteTarget.transactionCount === 1 ? t('clients.delete.archiveNotice', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) }) : t('clients.delete.archiveNoticePlural', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) })}
+                <span className="font-medium">{t('clients.delete.archiveLabel')}</span> {deleteTarget.transactionCount === 1 ? t('clients.delete.archiveNotice', { count: String(deleteTarget.transactionCount), amount: moneyLong.format(deleteTarget.revenueTotal) }) : t('clients.delete.archiveNoticePlural', { count: String(deleteTarget.transactionCount), amount: moneyLong.format(deleteTarget.revenueTotal) })}
               </div>
               <div className="rounded-md bg-negative-tint border border-negative-border p-3 text-sm text-negative">
-                <span className="font-medium">{t('clients.delete.deleteLabel')}</span> {deleteTarget.transactionCount === 1 ? t('clients.delete.deleteNotice', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) }) : t('clients.delete.deleteNoticePlural', { count: String(deleteTarget.transactionCount), amount: money.format(deleteTarget.revenueTotal) })}
+                <span className="font-medium">{t('clients.delete.deleteLabel')}</span> {deleteTarget.transactionCount === 1 ? t('clients.delete.deleteNotice', { count: String(deleteTarget.transactionCount), amount: moneyLong.format(deleteTarget.revenueTotal) }) : t('clients.delete.deleteNoticePlural', { count: String(deleteTarget.transactionCount), amount: moneyLong.format(deleteTarget.revenueTotal) })}
               </div>
             </div>
             {deleteError && <div className="mt-3"><InlineAlert tone="negative">{deleteError}</InlineAlert></div>}

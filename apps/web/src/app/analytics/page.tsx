@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription, Transaction } from '@/types/finance';
-import { makeCompactCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { useLocale } from '@/lib/i18n';
 import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
 import { Segmented } from '@/components/ui/Form';
@@ -125,6 +125,7 @@ export default function AnalyticsPage() {
   const { t, locale, dir } = useLocale();
   const [period, setPeriod] = useState<Period>('month');
   const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const moneyLong = useMemo(() => makeLongCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
 
   const { start, end } = useMemo(() => getPeriodRange(period), [period]);
   const completedTransactions = useMemo(() => transactions.filter(tx => tx.status === 'COMPLETED'), [transactions]);
@@ -310,14 +311,14 @@ export default function AnalyticsPage() {
       <Card pad={22}>
         <SectionHeader title={t('analytics.summary.title')} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-[1px] bg-border rounded-md overflow-hidden mt-4">
-          <SummaryBox label={t('analytics.summary.totalRevenue')} value={money.format(overview.totalRevenue)} valueClass="text-positive" />
-          <SummaryBox label={t('analytics.summary.totalExpenses')} value={money.format(overview.totalExpenses)} valueClass="text-negative" />
-          <SummaryBox label={t('analytics.summary.netProfit')} value={money.format(overview.netProfit)} valueClass={overview.netProfit >= 0 ? 'text-positive' : 'text-negative'} />
+          <SummaryBox label={t('analytics.summary.totalRevenue')} value={moneyLong.format(overview.totalRevenue)} valueClass="text-positive" />
+          <SummaryBox label={t('analytics.summary.totalExpenses')} value={moneyLong.format(overview.totalExpenses)} valueClass="text-negative" />
+          <SummaryBox label={t('analytics.summary.netProfit')} value={moneyLong.format(overview.netProfit)} valueClass={overview.netProfit >= 0 ? 'text-positive' : 'text-negative'} />
           <SummaryBox label={t('analytics.summary.profitMargin')} value={`${allTimeMargin}%`} valueClass={allTimeMargin >= 0 ? 'text-positive' : 'text-negative'} />
           <SummaryBox label={t('analytics.summary.activeClients')} value={overview.activeClients.toString()} />
-          <SummaryBox label={t('analytics.summary.avgClient')} value={money.format(overview.totalClients > 0 ? overview.totalRevenue / overview.totalClients : 0)} />
+          <SummaryBox label={t('analytics.summary.avgClient')} value={moneyLong.format(overview.totalClients > 0 ? overview.totalRevenue / overview.totalClients : 0)} />
           <SummaryBox label={t('analytics.summary.activeTools')} value={activeSubscriptions.toString()} />
-          <SummaryBox label={t('analytics.summary.toolsPerMonth')} value={money.format(overview.subscriptionBurden)} valueClass="text-negative" />
+          <SummaryBox label={t('analytics.summary.toolsPerMonth')} value={moneyLong.format(overview.subscriptionBurden)} valueClass="text-negative" />
         </div>
       </Card>
 
@@ -331,7 +332,7 @@ function SummaryBox({ label, value, valueClass = "text-text" }: { label: string;
   return (
     <div className="bg-surface p-4 sm:p-[16px_18px]">
       <div className="text-xs text-text-muted">{label}</div>
-      <div className={`t-h2 font-mono mt-1.5 ${valueClass}`} dir="ltr">{value}</div>
+      <div className={`t-h2 mt-1.5 ${valueClass}`}>{value}</div>
     </div>
   );
 }

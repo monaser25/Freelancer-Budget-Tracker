@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription } from '@/types/finance';
-import { makeCompactCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
@@ -39,6 +39,7 @@ export default function SubscriptionsPage() {
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const money = useMemo(() => makeCompactCurrencyFormatter(currency, undefined, locale), [currency, locale]);
+  const moneyLong = useMemo(() => makeLongCurrencyFormatter(currency, undefined, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   useEffect(() => {
@@ -215,7 +216,7 @@ export default function SubscriptionsPage() {
 
         <Card pad={20} className="max-w-md">
           <div className="t-caption text-text-muted">{t('subscriptions.cost.title')}</div>
-          <div className="t-display font-mono text-negative mt-1"><span dir="ltr">{money.format(totalMonthlyCost)}</span></div>
+          <div className="t-display text-negative mt-1">{moneyLong.format(totalMonthlyCost)}</div>
           <p className="text-sm text-text-muted mt-1">{t('subscriptions.cost.desc')}</p>
         </Card>
       </div>
