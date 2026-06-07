@@ -90,29 +90,32 @@
     font-family: var(--font);
   }
 
+  /* English wordmark is a proper logotype: heavy weight, tight tracking. */
   .brand-wordmark {
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     line-height: 1.1;
   }
 
   /* The Arabic wordmark (حصيــــلة) reads as a logotype, so it carries more
-     size and weight to balance the icon and feel like a real brand mark. */
+     size to balance the icon. Weight stays at 700 — the Arabic font's 800
+     gets cramped at these sizes. */
   html[dir="rtl"] .brand-wordmark {
-    font-size: 21px;
+    font-size: 22px;
     font-weight: 700;
     letter-spacing: 0;
     line-height: 1;
   }
 
   .auth-brand-wordmark {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
   }
 
   html[dir="rtl"] .auth-brand-wordmark {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 700;
   }
 

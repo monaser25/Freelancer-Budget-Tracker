@@ -192,12 +192,22 @@ export default function ReportsPage() {
       <div id="report-document" dir={dir}>
         {/* Branded letterhead — only rendered in the printed/PDF output. */}
         <div className="print-letterhead hidden items-center justify-between pb-4 mb-4 border-b-2 border-accent">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center overflow-hidden ring-1 ring-black/5">
-              <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={72} height={72} className="h-full w-full max-w-none object-cover scale-150" />
-            </div>
+          <div className="flex items-center gap-3">
+            {/* The PNG already carries a rounded-rect Haseeela mark with its own
+                white margin baked in (the asset is RGB, not transparent). For
+                print we therefore render it *as-is* without any wrapper box —
+                no white-on-white floating square, no ring, no clipping of the
+                rounded corners. The intentional padding is part of the asset. */}
+            <Image
+              src="/haseeela_icon.png"
+              alt={`${t('brand.name')} logo`}
+              width={44}
+              height={44}
+              className="h-11 w-11 shrink-0"
+              priority
+            />
             <div>
-              <div className="text-[18px] font-semibold tracking-[-0.02em]">Haseeela</div>
+              <div className="text-[20px] brand-wordmark">{t('brand.name')}</div>
               <div className="text-[11px] text-text-muted">{t('reports.ui.freelanceFinanceReport')}</div>
             </div>
           </div>

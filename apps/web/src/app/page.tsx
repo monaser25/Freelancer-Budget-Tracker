@@ -9,6 +9,7 @@ import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/c
 import { formatDate } from '@/lib/format';
 import { useLocale, translateError } from '@/lib/i18n';
 import { formatTransactionName } from '@/lib/format';
+import { categoryLabel } from '@/lib/enumLabels';
 import { latinTokenClass } from '@/lib/textDirection';
 import type { Locale } from '@/lib/locales';
 import { useRouter } from 'next/navigation';
@@ -428,7 +429,7 @@ export default function DashboardPage() {
                         </div>
                         <div>
                           <div className={`t-body-m ${latinTokenClass(tx.name || tx.notes)}`}>{formatTransactionName(tx.name || tx.notes || tx.sourceType, t)}</div>
-                          <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date, locale, t)}</div>
+                          <div className="text-xs text-text-muted mt-0.5">{categoryLabel(tx.categoryId, t)} &middot; {getRelativeDate(tx.date, locale, t)}</div>
                         </div>
                       </div>
                     </td>

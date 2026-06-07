@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
 import { makeCompactCurrencyFormatter } from '@/lib/currency';
+import { categoryLabel } from '@/lib/enumLabels';
 import { formatDate as formatLocaleDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { latinTokenClass } from '@/lib/textDirection';
@@ -54,18 +55,6 @@ function matchesFilter(tx: Transaction, filter: Filter) {
 
 function transactionTitle(tx: Transaction, t: any) {
   return tx.name || tx.notes || t('transactions.labels.unnamed');
-}
-
-function categoryLabel(value: string, t: any) {
-  const labels: Record<string, string> = {
-    CLIENT: t('transactions.form.catClient'),
-    PROJECT: t('transactions.form.catProject'),
-    TOOLS: t('transactions.form.catTools'),
-    OPERATIONS: t('transactions.form.catOperations'),
-    TAXES: t('transactions.form.catTaxes'),
-    OTHER: t('transactions.form.catOther'),
-  };
-  return labels[value] || value.toLowerCase().replace(/(^|[_\s-])\w/g, (match) => match.toUpperCase()).replace(/_/g, ' ');
 }
 
 function sourceLabel(tx: Transaction, t: any) {
