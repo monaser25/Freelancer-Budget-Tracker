@@ -329,6 +329,21 @@ export const deleteAccountAPI = async () => {
   return apiRequest<{ ok: boolean }>('/api/user/delete', { method: 'DELETE' }, 'delete account');
 };
 
+// Prefer the RFC 5987 `filename*` (UTF-8, supports Arabic) when present,
+// otherwise fall back to the plain ASCII `filename`.
+const filenameFromDisposition = (disposition: string, fallback: string) => {
+  const star = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (star?.[1]) {
+    try {
+      return decodeURIComponent(star[1]);
+    } catch {
+      /* fall through to the plain filename */
+    }
+  }
+  const plain = disposition.match(/filename="?([^"]+)"?/i);
+  return plain?.[1] || fallback;
+};
+
 export const downloadReportCsv = async (type: string, from: string, to: string) => {
   const qs = new URLSearchParams({ type, from, to, format: 'csv' }).toString();
   const url = `${apiBaseUrl()}/api/reports?${qs}`;
@@ -340,8 +355,7 @@ export const downloadReportCsv = async (type: string, from: string, to: string) 
   if (!response.ok) throw new Error(`Failed to export report (${response.status})`);
   const blob = await response.blob();
   const disposition = response.headers.get('Content-Disposition') || '';
-  const match = disposition.match(/filename="?([^"]+)"?/);
-  return { blob, filename: match?.[1] || `${type}-report.csv` };
+  return { blob, filename: filenameFromDisposition(disposition, `${type}-report.csv`) };
 };
 
 export const downloadReportXlsx = async (type: string, from: string, to: string) => {
@@ -355,8 +369,7 @@ export const downloadReportXlsx = async (type: string, from: string, to: string)
   if (!response.ok) throw new Error(`Failed to export report (${response.status})`);
   const blob = await response.blob();
   const disposition = response.headers.get('Content-Disposition') || '';
-  const match = disposition.match(/filename="?([^"]+)"?/);
-  return { blob, filename: match?.[1] || `${type}-report.xlsx` };
+  return { blob, filename: filenameFromDisposition(disposition, `${type}-report.xlsx`) };
 };
 
 export const createInvoiceAPI = async (invoice: InvoiceInput) => {

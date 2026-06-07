@@ -44,15 +44,30 @@ export const GET = async (request: Request) => withApiError(request, async () =>
 
   const report = buildReport(type, { transactions, clients }, from, to, locale);
 
-  const baseFilename = `${getReportTitle(type, locale).replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`;
+  // The localized title (e.g. Arabic) is used for the human-readable download
+  // name, but the localized slug can contain non-Latin1 characters which are
+  // illegal in an HTTP header value (Content-Disposition must be a ByteString).
+  // We therefore expose the localized name via RFC 5987 `filename*` and keep a
+  // plain ASCII `filename` fallback derived from the stable English title.
+  const localizedSlug = `${getReportTitle(type, locale).replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`;
+  const asciiSlug = `${getReportTitle(type, DEFAULT_LOCALE).replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[\\/:*?"<>|]/g, '-');
+
+  const contentDisposition = (ext: string) => {
+    const fallback = `${asciiSlug || 'report'}.${ext}`.replace(/"/g, '');
+    const utf8 = encodeURIComponent(`${localizedSlug}.${ext}`);
+    return `attachment; filename="${fallback}"; filename*=UTF-8''${utf8}`;
+  };
 
   if (format === 'csv') {
     const csv = reportToCsv(report);
-    return new NextResponse(csv, {
+    // Prepend a UTF-8 BOM so Excel renders Arabic headers/values correctly.
+    return new NextResponse(`﻿${csv}`, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${baseFilename}.csv"`,
+        'Content-Disposition': contentDisposition('csv'),
       },
     });
   }
@@ -63,7 +78,7 @@ export const GET = async (request: Request) => withApiError(request, async () =>
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${baseFilename}.xlsx"`,
+        'Content-Disposition': contentDisposition('xlsx'),
       },
     });
   }

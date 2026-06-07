@@ -3,12 +3,15 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 import { themeNoFlashScript } from '@/components/ThemeProvider';
 
-import { Noto_Sans_Arabic } from 'next/font/google';
+import { IBM_Plex_Sans_Arabic } from 'next/font/google';
 
-const notoArabic = Noto_Sans_Arabic({
+// IBM Plex Sans Arabic shares the clean, even rhythm of our Latin (Inter) UI,
+// so Arabic and English feel like one type system rather than two fonts.
+const arabicFont = IBM_Plex_Sans_Arabic({
   weight: ['400', '500', '600', '700'],
   subsets: ['arabic'],
   variable: '--font-arabic',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -43,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="en" dir="ltr" className={arabicFont.variable} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -65,7 +68,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${notoArabic.variable}`}>
+      <body>
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -205,9 +205,9 @@ export default function AnalyticsPage() {
 
       {/* ── period metrics ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label={t('analytics.stats.revenue')} value={<span dir="ltr">{money.format(periodRevenue)}</span>} tone="positive" sub={periodLabel} />
-        <StatCard label={t('analytics.stats.expenses')} value={<span dir="ltr">{money.format(periodExpenses)}</span>} tone="negative" sub={periodLabel} />
-        <StatCard label={t('analytics.stats.netProfit')} value={<span dir="ltr">{money.format(periodProfit)}</span>} tone={periodProfit >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
+        <StatCard label={t('analytics.stats.revenue')} value={<span dir="ltr">{moneyLong.format(periodRevenue)}</span>} tone="positive" sub={periodLabel} />
+        <StatCard label={t('analytics.stats.expenses')} value={<span dir="ltr">{moneyLong.format(periodExpenses)}</span>} tone="negative" sub={periodLabel} />
+        <StatCard label={t('analytics.stats.netProfit')} value={<span dir="ltr">{moneyLong.format(periodProfit)}</span>} tone={periodProfit >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
         <StatCard label={t('analytics.stats.profitMargin')} value={<span dir="ltr">{`${periodMargin}%`}</span>} tone={periodMargin >= 0 ? 'positive' : 'negative'} sub={periodLabel} />
       </div>
 

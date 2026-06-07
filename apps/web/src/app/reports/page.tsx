@@ -1,9 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/financialStore';
 import { loadReportAPI, downloadReportCsv, downloadReportXlsx, type ReportData } from '@/services/financialApi';
-import { makeCompactCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/ui/Toast';
@@ -69,6 +70,8 @@ export default function ReportsPage() {
 
   const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const money2 = useMemo(() => makeCompactCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  // Report summary cards are spacious — use the full localized currency name.
+  const moneyLong = useMemo(() => makeLongCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const activePreset = useMemo(() => {
     if (from === startOfMonth()) return 'month';
     if (from === startOfQuarter()) return 'quarter';
@@ -190,8 +193,8 @@ export default function ReportsPage() {
         {/* Branded letterhead — only rendered in the printed/PDF output. */}
         <div className="print-letterhead hidden items-center justify-between pb-4 mb-4 border-b-2 border-accent">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-              <Icon name="wallet" size={20} className="text-white" />
+            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center overflow-hidden ring-1 ring-black/5">
+              <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={72} height={72} className="h-full w-full max-w-none object-cover scale-150" />
             </div>
             <div>
               <div className="text-[18px] font-semibold tracking-[-0.02em]">Haseeela</div>
@@ -222,7 +225,7 @@ export default function ReportsPage() {
                   <div key={s.label}>
                     <div className="t-caption text-text-muted">{s.label}</div>
                     <div className={`t-h3 tnum ${s.tone === 'positive' ? 'text-positive' : s.tone === 'negative' ? 'text-negative' : ''}`}>
-                      {isNumericInt ? s.value : <span dir="ltr">{money.format(s.value)}</span>}
+                      {isNumericInt ? s.value : <span dir="ltr">{moneyLong.format(s.value)}</span>}
                     </div>
                   </div>
                 );

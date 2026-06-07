@@ -5,7 +5,7 @@ import { useFinancialStore } from '@/store/financialStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { getOverviewStats } from '@/selectors/financialSelectors';
-import { makeCompactCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale, translateError } from '@/lib/i18n';
 import { formatTransactionName } from '@/lib/format';
@@ -79,6 +79,8 @@ export default function DashboardPage() {
   
   const money0 = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const money2 = useMemo(() => makeCompactCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  // Spacious overview cards use the full localized currency name (e.g. "دولار أمريكي").
+  const moneyLong0 = useMemo(() => makeLongCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money2.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money2]);
 
   useEffect(() => {
@@ -294,25 +296,25 @@ export default function DashboardPage() {
           icon="Users" 
           onClick={() => router.push('/clients')} 
         />
-        <StatCard 
-          label={t('dashboard.stats.totalRevenue')} 
-          value={money0.format(overview.totalRevenue)} 
-          tone="positive" 
-          icon="TrendingUp" 
-          onClick={() => router.push('/transactions?filter=revenue')} 
+        <StatCard
+          label={t('dashboard.stats.totalRevenue')}
+          value={<span dir="ltr">{moneyLong0.format(overview.totalRevenue)}</span>}
+          tone="positive"
+          icon="TrendingUp"
+          onClick={() => router.push('/transactions?filter=revenue')}
         />
-        <StatCard 
-          label={t('dashboard.stats.totalExpenses')} 
-          value={money0.format(overview.totalExpenses)} 
-          tone="negative" 
-          icon="Receipt" 
-          onClick={() => router.push('/transactions?filter=expenses')} 
+        <StatCard
+          label={t('dashboard.stats.totalExpenses')}
+          value={<span dir="ltr">{moneyLong0.format(overview.totalExpenses)}</span>}
+          tone="negative"
+          icon="Receipt"
+          onClick={() => router.push('/transactions?filter=expenses')}
         />
-        <StatCard 
-          label={t('dashboard.stats.netProfit')} 
-          value={money0.format(overview.netProfit)} 
-          icon="Wallet" 
-          onClick={() => router.push('/analytics')} 
+        <StatCard
+          label={t('dashboard.stats.netProfit')}
+          value={<span dir="ltr">{moneyLong0.format(overview.netProfit)}</span>}
+          icon="Wallet"
+          onClick={() => router.push('/analytics')}
         />
         <StatCard 
           label={t('dashboard.stats.activeSubscriptions')} 

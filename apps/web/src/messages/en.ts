@@ -880,6 +880,7 @@ export const en = {
 
   'reports.columns.date': 'Date',
   'reports.columns.description': 'Description',
+  'reports.columns.itemName': 'Item name',
   'reports.columns.type': 'Type',
   'reports.columns.category': 'Category',
   'reports.columns.amount': 'Amount',

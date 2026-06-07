@@ -22,9 +22,9 @@ export type ReportType = 'pl' | 'transactions' | 'clients' | 'tax';
 export const getReportTitle = (type: ReportType, locale: Locale): string => {
   switch (type) {
     case 'pl': return translate(locale, 'reports.types.pl.title');
-    case 'transactions': return translate(locale, 'reports.types.transactions.title' as any) || translate(locale, 'reports.types.transactions.label');
-    case 'clients': return translate(locale, 'reports.types.clients.title' as any) || translate(locale, 'reports.types.clients.label');
-    case 'tax': return translate(locale, 'reports.types.tax.title' as any) || translate(locale, 'reports.types.tax.label');
+    case 'transactions': return translate(locale, 'reports.types.transactions.label');
+    case 'clients': return translate(locale, 'reports.types.clients.label');
+    case 'tax': return translate(locale, 'reports.types.tax.label');
   }
 };
 
@@ -86,7 +86,7 @@ export function buildReport(
       ...base,
       columns: [
         { key: 'date', label: translate(locale, 'reports.columns.date') },
-        { key: 'name', label: translate(locale, 'reports.columns.description') },
+        { key: 'name', label: translate(locale, 'reports.columns.itemName') },
         { key: 'type', label: translate(locale, 'reports.columns.type') },
         { key: 'category', label: translate(locale, 'reports.columns.category') },
         { key: 'amount', label: translate(locale, 'reports.columns.amount'), numeric: true },

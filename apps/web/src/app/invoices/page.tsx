@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInvoiceStore } from '@/store/invoiceStore';
+import { useFinancialStore } from '@/store/financialStore';
 import { Invoice, InvoiceStatus } from '@/types/finance';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import type { Locale } from '@/lib/locales';
@@ -28,6 +29,7 @@ export default function InvoicesPage() {
   const router = useRouter();
   const { t, locale } = useLocale();
   const { invoices, isLoaded, isLoading, error, loadInvoices, deleteInvoice, markPaid } = useInvoiceStore();
+  const selectedCurrency = useFinancialStore((s) => s.currency);
   const { toast } = useToast();
   const [filter, setFilter] = useState<'all' | InvoiceStatus>('all');
   const [deleting, setDeleting] = useState<Invoice | null>(null);
@@ -62,9 +64,11 @@ export default function InvoicesPage() {
     return { outstanding, overdue, paidThisMonth };
   }, [invoices]);
 
-  // Summary cards format in the most common currency among invoices (fallback USD).
-  const baseCurrency = invoices[0]?.currency || 'USD';
-  const money0 = useMemo(() => makeCurrencyFormatter(baseCurrency, { maximumFractionDigits: 0 }, locale), [baseCurrency, locale]);
+  // Summary cards format in the currency of existing invoices, falling back to
+  // the user's selected app currency so an empty list still reflects their choice.
+  const baseCurrency = invoices[0]?.currency || selectedCurrency;
+  // Spacious summary cards use the full localized currency name.
+  const money0 = useMemo(() => makeLongCurrencyFormatter(baseCurrency, { maximumFractionDigits: 0 }, locale), [baseCurrency, locale]);
 
   const filterCounts = useMemo(() => {
     const counts: Record<string, number> = { all: invoices.length };
@@ -115,9 +119,9 @@ export default function InvoicesPage() {
       {error && <InlineAlert tone="negative" title={t('invoices.error.loadTitle')} body={error} />}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label={t('invoices.summary.outstanding')} value={money0.format(summary.outstanding)} icon="clock" />
-        <StatCard label={t('invoices.summary.overdue')} value={money0.format(summary.overdue)} tone={summary.overdue > 0 ? 'negative' : 'neutral'} icon="alertTriangle" />
-        <StatCard label={t('invoices.summary.paidThisMonth')} value={money0.format(summary.paidThisMonth)} tone="positive" icon="checkCircle" />
+        <StatCard label={t('invoices.summary.outstanding')} value={<span dir="ltr">{money0.format(summary.outstanding)}</span>} icon="clock" />
+        <StatCard label={t('invoices.summary.overdue')} value={<span dir="ltr">{money0.format(summary.overdue)}</span>} tone={summary.overdue > 0 ? 'negative' : 'neutral'} icon="alertTriangle" />
+        <StatCard label={t('invoices.summary.paidThisMonth')} value={<span dir="ltr">{money0.format(summary.paidThisMonth)}</span>} tone="positive" icon="checkCircle" />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -156,7 +160,7 @@ export default function InvoicesPage() {
               </thead>
               <tbody>
                 {filtered.map((inv) => {
-                  const money = makeCurrencyFormatter(inv.currency, { minimumFractionDigits: 2 }, locale);
+                  const money = makeCompactCurrencyFormatter(inv.currency, { minimumFractionDigits: 2 }, locale);
                   const statusLabel = STATUS_FILTERS.find(f => f.id === inv.status)?.label || (inv.status[0] + inv.status.slice(1).toLowerCase());
                   return (
                     <tr
