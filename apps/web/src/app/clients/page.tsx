@@ -1,12 +1,12 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { getClientRevenue } from '@/selectors/financialSelectors';
 import { Client } from '@/types/finance';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate, formatTransactionName } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { Avatar, Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
@@ -39,8 +39,8 @@ export default function ClientsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
-  const moneyWithCents = useMemo(() => makeCurrencyFormatter(currency, undefined, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const moneyWithCents = useMemo(() => makeCompactCurrencyFormatter(currency, undefined, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => moneyWithCents.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, moneyWithCents]);
 
   const openAddModal = () => { setModalError(null); setModal({ mode: 'add' }); };
@@ -57,11 +57,11 @@ export default function ClientsPage() {
     }
   }, [isInitialized]);
 
-  const revenueForClient = (clientId: string) =>
-    getClientRevenue(transactions, clientId);
+  const revenueForClient = useCallback((clientId: string) =>
+    getClientRevenue(transactions, clientId), [transactions]);
 
-  const transactionsForClient = (clientId: string) =>
-    transactions.filter((tx) => tx.clientId === clientId || (tx.sourceType === 'client' && tx.sourceId === clientId));
+  const transactionsForClient = useCallback((clientId: string) =>
+    transactions.filter((tx) => tx.clientId === clientId || (tx.sourceType === 'client' && tx.sourceId === clientId)), [transactions]);
 
   const visibleClients = useMemo(
     () => clients.filter((client) => showArchived || !client.archivedAt),
@@ -70,7 +70,7 @@ export default function ClientsPage() {
 
   const chartData = useMemo(
     () => visibleClients.map((client) => ({ name: client.name, value: revenueForClient(client.id) })).filter((row) => row.value > 0),
-    [visibleClients, transactions],
+    [revenueForClient, visibleClients],
   );
   const topClient = [...visibleClients].sort((a, b) => revenueForClient(b.id) - revenueForClient(a.id))[0];
   const clientStats = useMemo(() => ({
@@ -78,7 +78,7 @@ export default function ClientsPage() {
     retainers: clients.filter((client) => !client.archivedAt && client.paymentType === 'retainer').length,
     recordedRevenue: clients.reduce((sum, client) => sum + revenueForClient(client.id), 0),
     archived: clients.filter((client) => client.archivedAt).length,
-  }), [clients, transactions]);
+  }), [clients, revenueForClient]);
 
   const recordPayment = async (client: Client) => {
     setRecordingId(client.id);
@@ -242,11 +242,11 @@ export default function ClientsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {client.paymentType === 'retainer' && client.status === 'ACTIVE' && !client.archivedAt && (
-                        <IconButton icon="DollarSign" size="sm" disabled={recordingId === client.id} onClick={() => recordPayment(client)} title={`Record payment for ${client.name}`} className="text-positive hover:text-positive" />
+                        <IconButton icon="DollarSign" size="sm" disabled={recordingId === client.id} onClick={() => recordPayment(client)} title={t('clients.actions.recordPayment', { name: client.name })} className="text-positive hover:text-positive" />
                       )}
-                      <IconButton icon="Pencil" size="sm" onClick={() => openEditModal(client)} title={`Edit ${client.name}`} />
+                      <IconButton icon="Pencil" size="sm" onClick={() => openEditModal(client)} title={t('clients.actions.edit', { name: client.name })} />
                       <Button type="button" variant="secondary" size="sm" icon="Archive" onClick={() => requestDelete(client)}>
-                        Archive
+                        {t('clients.actions.archive')}
                       </Button>
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 import { CurrencyCode } from '@/types/finance';
 import { createCurrencyFormatter, type NumberFormatOptions } from './format';
-import { DEFAULT_LOCALE, type Locale } from './locales';
+import { DEFAULT_LOCALE, intlTagFor, type Locale } from './locales';
 
 export const supportedCurrencies: { code: CurrencyCode; label: string }[] = [
   { code: 'USD', label: 'USD ($)' },
@@ -21,4 +21,14 @@ export const getCurrencyLabel = (currency: CurrencyCode) => (
 
 export const makeCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => (
   createCurrencyFormatter(currency, locale, options)
+);
+
+export const makeCompactCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => (
+  new Intl.NumberFormat(locale === 'ar' ? 'en-US' : intlTagFor(locale), {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'symbol',
+    numberingSystem: 'latn',
+    ...options,
+  })
 );

@@ -5,7 +5,7 @@ import { useFinancialStore } from '@/store/financialStore';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { useUiStore } from '@/store/uiStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { useLocale, translateError } from '@/lib/i18n';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -33,7 +33,7 @@ export function EntityModals() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const money = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
   const currencyPrefix = useMemo(
     () => money.formatToParts(0).find((p) => p.type === 'currency')?.value || currency,
     [currency, money],

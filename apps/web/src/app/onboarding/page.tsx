@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useFinancialStore, computeNextBillingDate } from '@/store/financialStore';
-import { supportedCurrencies, makeCurrencyFormatter } from '@/lib/currency';
+import { supportedCurrencies, makeCompactCurrencyFormatter } from '@/lib/currency';
 import { useLocale } from '@/lib/i18n';
 import { CurrencyCode, Client, Subscription } from '@/types/finance';
 import { markOnboarded } from '@/lib/onboarding';
@@ -48,7 +48,7 @@ export default function OnboardingPage() {
     setStorageUserId(user.id);
   }, [isLoading, user, router, setStorageUserId]);
 
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const prefix = useMemo(() => money.formatToParts(0).find((p) => p.type === 'currency')?.value || currency, [currency, money]);
 
   const finish = () => {

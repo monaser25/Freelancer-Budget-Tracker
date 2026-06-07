@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Transaction } from '@/types/finance';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate as formatLocaleDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import type { Locale } from '@/lib/locales';
@@ -16,16 +16,16 @@ import { Icon } from '@/components/ui/Icon';
 import { InlineAlert } from '@/components/ui/InlineAlert';
 
 type Filter = 'all' | 'revenue' | 'expenses' | 'subscriptions' | 'client' | 'tools' | 'operations';
-type CurrencyFormatter = ReturnType<typeof makeCurrencyFormatter>;
+type CurrencyFormatter = ReturnType<typeof makeCompactCurrencyFormatter>;
 
-const filters: { id: Filter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'revenue', label: 'Revenue' },
-  { id: 'expenses', label: 'Expenses' },
-  { id: 'subscriptions', label: 'Subscriptions' },
-  { id: 'client', label: 'Client' },
-  { id: 'tools', label: 'Tools' },
-  { id: 'operations', label: 'Operations' },
+const filters: { id: Filter }[] = [
+  { id: 'all' },
+  { id: 'revenue' },
+  { id: 'expenses' },
+  { id: 'subscriptions' },
+  { id: 'client' },
+  { id: 'tools' },
+  { id: 'operations' },
 ];
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -51,12 +51,20 @@ function matchesFilter(tx: Transaction, filter: Filter) {
   return true;
 }
 
-function titleCase(value: string) {
-  return value.toLowerCase().replace(/(^|[_\s-])\w/g, (match) => match.toUpperCase()).replace(/_/g, ' ');
-}
-
 function transactionTitle(tx: Transaction, t: any) {
   return tx.name || tx.notes || t('transactions.labels.unnamed');
+}
+
+function categoryLabel(value: string, t: any) {
+  const labels: Record<string, string> = {
+    CLIENT: t('transactions.form.catClient'),
+    PROJECT: t('transactions.form.catProject'),
+    TOOLS: t('transactions.form.catTools'),
+    OPERATIONS: t('transactions.form.catOperations'),
+    TAXES: t('transactions.form.catTaxes'),
+    OTHER: t('transactions.form.catOther'),
+  };
+  return labels[value] || value.toLowerCase().replace(/(^|[_\s-])\w/g, (match) => match.toUpperCase()).replace(/_/g, ' ');
 }
 
 function sourceLabel(tx: Transaction, t: any) {
@@ -71,7 +79,7 @@ function formatTransactionDate(value: string, locale: Locale) {
 
 export default function TransactionsPage() {
   const { transactions, currency, addTransaction, updateTransaction, deleteTransaction } = useFinancialStore();
-  const { t, locale } = useLocale();
+  const { t, locale, dir } = useLocale();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -81,8 +89,8 @@ export default function TransactionsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
-  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  const money0 = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   useEffect(() => {
@@ -104,7 +112,7 @@ export default function TransactionsPage() {
           .includes(normalizedQuery);
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [filter, query, transactions]);
+  }, [filter, query, t, transactions]);
 
   const filterCounts = useMemo(() => {
     return filters.reduce<Record<Filter, number>>((acc, item) => {
@@ -257,6 +265,8 @@ export default function TransactionsPage() {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('transactions.search.placeholder')}
                 prefix={<Icon name="Search" size={15} />}
+                data-search="true"
+                className="text-start"
               />
             </div>
           </div>
@@ -271,15 +281,15 @@ export default function TransactionsPage() {
           ) : (
             <>
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[760px] text-left border-collapse">
+                <table className="w-full min-w-[860px] border-collapse" dir={dir}>
                   <thead>
                     <tr className="border-b border-border bg-surface">
-                      <TableHead>{t('transactions.table.desc')}</TableHead>
-                      <TableHead>{t('transactions.table.category')}</TableHead>
-                      <TableHead>{t('transactions.table.date')}</TableHead>
-                      <TableHead>{t('transactions.table.type')}</TableHead>
-                      <TableHead align="right">{t('transactions.table.amount')}</TableHead>
-                      <TableHead align="right">{t('transactions.table.actions')}</TableHead>
+                      <TableHead className="min-w-[260px]">{t('transactions.table.desc')}</TableHead>
+                      <TableHead className="min-w-[130px]">{t('transactions.table.category')}</TableHead>
+                      <TableHead className="min-w-[140px]">{t('transactions.table.date')}</TableHead>
+                      <TableHead className="min-w-[170px]">{t('transactions.table.type')}</TableHead>
+                      <TableHead align="end" className="min-w-[140px]">{t('transactions.table.amount')}</TableHead>
+                      <TableHead align="end" className="w-[96px]">{t('transactions.table.actions')}</TableHead>
                     </tr>
                   </thead>
                   <tbody>
@@ -386,9 +396,9 @@ export default function TransactionsPage() {
   );
 }
 
-function TableHead({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+function TableHead({ children, align = 'start', className = '' }: { children: React.ReactNode; align?: 'start' | 'end'; className?: string }) {
   return (
-    <th className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted ${align === 'right' ? 'text-right' : 'text-left'}`}>
+    <th className={`px-5 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted ${align === 'end' ? 'text-end' : 'text-start'} ${className}`}>
       {children}
     </th>
   );
@@ -397,7 +407,7 @@ function TableHead({ children, align = 'left' }: { children: React.ReactNode; al
 function TransactionRow({ transaction, money, locale, onEdit, onDelete, t }: { transaction: Transaction; money: CurrencyFormatter; locale: Locale; onEdit: (tx: Transaction) => void; onDelete: (tx: Transaction) => void; t: any }) {
   return (
     <tr className="border-b border-border last:border-b-0 hover:bg-surface-hover transition-colors">
-      <td className="px-4 py-3">
+      <td className="px-5 py-4">
         <div className="flex items-start gap-3">
           <TransactionIcon type={transaction.type} />
           <div className="min-w-0">
@@ -407,20 +417,20 @@ function TransactionRow({ transaction, money, locale, onEdit, onDelete, t }: { t
           </div>
         </div>
       </td>
-      <td className="px-4 py-3"><Badge>{titleCase(transaction.categoryId)}</Badge></td>
-      <td className="px-4 py-3 text-sm text-text-secondary font-mono"><span dir="ltr">{formatTransactionDate(transaction.date, locale)}</span></td>
-      <td className="px-4 py-3">
+      <td className="px-5 py-4"><Badge className="justify-center">{categoryLabel(transaction.categoryId, t)}</Badge></td>
+      <td className="px-5 py-4 text-sm text-text-secondary font-mono whitespace-nowrap"><span dir="ltr">{formatTransactionDate(transaction.date, locale)}</span></td>
+      <td className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? t('transactions.badges.revenue') : t('transactions.badges.expense')}</Badge>
           {isAutoTransaction(transaction) && <Badge tone="neutral" icon="RefreshCw">{t('transactions.badges.auto')}</Badge>}
           {transaction.isEdited && <Badge tone="warning" icon="Pencil">{t('transactions.badges.edited')}</Badge>}
         </div>
       </td>
-      <td className={`px-4 py-3 text-right font-mono text-sm font-medium ${transaction.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
+      <td className={`px-5 py-4 text-end font-mono text-sm font-medium whitespace-nowrap ${transaction.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
         <span dir="ltr">{transaction.type === 'INCOME' ? '+' : '-'}{money.format(transaction.amount)}</span>
       </td>
-      <td className="px-4 py-3">
-        <div className="flex justify-end gap-1">
+      <td className="px-5 py-4">
+        <div className="flex justify-end rtl:justify-start gap-1">
           <IconButton icon="Pencil" size="sm" title={`${t('transactions.actions.edit')} ${transactionTitle(transaction, t)}`} onClick={() => onEdit(transaction)} />
           <IconButton icon="Trash2" size="sm" title={`${t('transactions.actions.delete')} ${transactionTitle(transaction, t)}`} className="text-negative hover:text-negative" onClick={() => onDelete(transaction)} />
         </div>
@@ -447,7 +457,7 @@ function TransactionCard({ transaction, money, locale, onEdit, onDelete, t }: { 
       {transaction.notes && transaction.notes !== transaction.name && <div className="text-sm text-text-secondary">{transaction.notes}</div>}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5">
-          <Badge>{titleCase(transaction.categoryId)}</Badge>
+          <Badge>{categoryLabel(transaction.categoryId, t)}</Badge>
           <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? t('transactions.badges.revenue') : t('transactions.badges.expense')}</Badge>
           {isAutoTransaction(transaction) && <Badge tone="neutral" icon="RefreshCw">{t('transactions.badges.auto')}</Badge>}
           {transaction.isEdited && <Badge tone="warning" icon="Pencil">{t('transactions.badges.edited')}</Badge>}

@@ -108,10 +108,12 @@ export function CommandPalette() {
           <Icon name="search" size={18} className="text-text-muted" />
           <input
             ref={inputRef}
+            type="search"
+            data-search="true"
             value={q}
             onChange={(e) => { setQ(e.target.value); setSel(0); }}
             placeholder={t('commandPalette.placeholder')}
-            className="flex-1 bg-transparent outline-none text-text text-[15px] placeholder:text-text-muted"
+            className="flex-1 bg-transparent outline-none text-text text-[15px] text-start placeholder:text-text-muted"
           />
           <kbd className="text-[11px] px-1.5 py-0.5 rounded border border-border text-text-muted">Esc</kbd>
         </div>
@@ -124,7 +126,7 @@ export function CommandPalette() {
                 key={`${a.kind}-${a.label}-${i}`}
                 onClick={a.run}
                 onMouseEnter={() => setSel(i)}
-                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-left transition-colors ${
+                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-start transition-colors ${
                   sel === i ? 'bg-surface-hover' : ''
                 }`}
               >

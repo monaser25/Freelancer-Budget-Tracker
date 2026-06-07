@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/useFinancialStore';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { Avatar, Badge, Button, Card, EmptyState, Icon, InlineAlert, SectionHeader, StatCard } from '@/components/ui';
@@ -14,6 +14,7 @@ function RowActions({ count, onRestore, onDelete }: {
   onRestore: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
+  const { t } = useLocale();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState<null | 'restore' | 'delete'>(null);
 
@@ -31,13 +32,13 @@ function RowActions({ count, onRestore, onDelete }: {
     return (
       <div className="flex items-center gap-2 sm:justify-end shrink-0">
         <span className="t-small text-text-muted hidden md:block">
-          Delete permanently{count > 0 ? ` + ${count} transaction${count === 1 ? '' : 's'}` : ''}?
+          {t('archive.actions.deletePermanently')}{count > 0 ? (count === 1 ? t('archive.actions.deleteConfirmTransactions', { count: String(count) }) : t('archive.actions.deleteConfirmTransactionsPlural', { count: String(count) })) : '?'}
         </span>
         <Button type="button" variant="ghost" onClick={() => setConfirming(false)} disabled={busy !== null}>
-          Cancel
+          {t('archive.actions.cancel')}
         </Button>
         <Button type="button" variant="destructive" icon="Trash2" loading={busy === 'delete'} onClick={() => run('delete', onDelete)}>
-          Delete
+          {t('archive.actions.delete')}
         </Button>
       </div>
     );
@@ -46,10 +47,10 @@ function RowActions({ count, onRestore, onDelete }: {
   return (
     <div className="flex items-center gap-2 sm:justify-end shrink-0">
       <Button type="button" variant="secondary" icon="RotateCcw" loading={busy === 'restore'} disabled={busy !== null} onClick={() => run('restore', onRestore)}>
-        Restore
+        {t('archive.actions.restore')}
       </Button>
       <Button type="button" variant="ghost" icon="Trash2" disabled={busy !== null} onClick={() => setConfirming(true)} className="text-negative hover:text-negative">
-        Delete
+        {t('archive.actions.delete')}
       </Button>
     </div>
   );
@@ -63,7 +64,7 @@ export default function ArchivePage() {
   } = useFinancialStore();
   const { t, locale } = useLocale();
   const [error, setError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
 
   const archivedClients = useMemo(
     () => clients.filter((c) => c.archivedAt),
@@ -108,7 +109,7 @@ export default function ArchivePage() {
       </div>
 
       <InlineAlert tone="info">
-        Archived items do not generate future billing. Historical transactions remain in your ledger.
+        {t('archive.info')}
       </InlineAlert>
 
       {error && (
@@ -124,7 +125,7 @@ export default function ArchivePage() {
           {archivedClients.length > 0 && (
             <Card pad={0} className="overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-border">
-                <SectionHeader title="Archived clients" sub={`${archivedClients.length} client${archivedClients.length === 1 ? '' : 's'}`} className="mb-0" />
+                <SectionHeader title={t('archive.clients.title')} sub={archivedClients.length === 1 ? t('archive.clients.count', { count: String(archivedClients.length) }) : t('archive.clients.countPlural', { count: String(archivedClients.length) })} className="mb-0" />
               </div>
               <div className="divide-y divide-border">
                 {archivedClients.map((client) => (
@@ -134,16 +135,16 @@ export default function ArchivePage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="t-body-m text-text">{client.name}</span>
-                          <Badge>{client.paymentType === 'retainer' ? 'Retainer' : 'One-time'}</Badge>
+                          <Badge>{client.paymentType === 'retainer' ? t('archive.badges.retainer') : t('archive.badges.onetime')}</Badge>
                         </div>
                         <div className="text-sm text-text-muted mt-0.5">
-                          {client.paymentType === 'retainer' ? `${money.format(client.revenue)}/mo` : money.format(client.revenue)}
+                          {client.paymentType === 'retainer' ? t('archive.list.perMonth', { amount: <span dir="ltr">{money.format(client.revenue)}</span> }) : <span dir="ltr">{money.format(client.revenue)}</span>}
                           {' · '}
-                          {clientTransactionCount(client.id)} historical transaction{clientTransactionCount(client.id) === 1 ? '' : 's'}
+                          {clientTransactionCount(client.id) === 1 ? t('archive.list.transactions', { count: String(clientTransactionCount(client.id)) }) : t('archive.list.transactionsPlural', { count: String(clientTransactionCount(client.id)) })}
                           {client.archivedAt && (
                             <>
                               {' · '}
-                              Archived {formatDate(client.archivedAt, locale)}
+                              {t('archive.list.archivedDate', { date: <span dir="ltr">{formatDate(client.archivedAt, locale)}</span> })}
                             </>
                           )}
                         </div>
@@ -163,7 +164,7 @@ export default function ArchivePage() {
           {archivedSubscriptions.length > 0 && (
             <Card pad={0} className="overflow-hidden">
               <div className="p-4 sm:p-5 border-b border-border">
-                <SectionHeader title="Archived subscriptions" sub={`${archivedSubscriptions.length} subscription${archivedSubscriptions.length === 1 ? '' : 's'}`} className="mb-0" />
+                <SectionHeader title={t('archive.subscriptions.title')} sub={archivedSubscriptions.length === 1 ? t('archive.subscriptions.count', { count: String(archivedSubscriptions.length) }) : t('archive.subscriptions.countPlural', { count: String(archivedSubscriptions.length) })} className="mb-0" />
               </div>
               <div className="divide-y divide-border">
                 {archivedSubscriptions.map((sub) => (
@@ -175,16 +176,20 @@ export default function ArchivePage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="t-body-m text-text">{sub.name}</span>
-                          <Badge>{(sub.billingCycle || sub.cycle).toLowerCase()}</Badge>
+                          <Badge>{t(`subscriptions.cycle.${(sub.billingCycle || sub.cycle).toLowerCase()}` as any)}</Badge>
                         </div>
                         <div className="text-sm text-text-muted mt-0.5">
-                          {money.format(sub.amount)}/{(sub.billingCycle || sub.cycle) === 'YEARLY' ? 'yr' : (sub.billingCycle || sub.cycle) === 'QUARTERLY' ? 'qtr' : 'mo'}
+                          {(sub.billingCycle || sub.cycle) === 'YEARLY'
+                            ? t('archive.list.perYear', { amount: <span dir="ltr">{money.format(sub.amount)}</span> })
+                            : (sub.billingCycle || sub.cycle) === 'QUARTERLY'
+                              ? t('archive.list.perQuarter', { amount: <span dir="ltr">{money.format(sub.amount)}</span> })
+                              : t('archive.list.perMonth', { amount: <span dir="ltr">{money.format(sub.amount)}</span> })}
                           {' · '}
-                          {subscriptionTransactionCount(sub.id)} historical transaction{subscriptionTransactionCount(sub.id) === 1 ? '' : 's'}
+                          {subscriptionTransactionCount(sub.id) === 1 ? t('archive.list.transactions', { count: String(subscriptionTransactionCount(sub.id)) }) : t('archive.list.transactionsPlural', { count: String(subscriptionTransactionCount(sub.id)) })}
                           {sub.archivedAt && (
                             <>
                               {' · '}
-                              Archived {formatDate(sub.archivedAt, locale)}
+                              {t('archive.list.archivedDate', { date: <span dir="ltr">{formatDate(sub.archivedAt, locale)}</span> })}
                             </>
                           )}
                         </div>

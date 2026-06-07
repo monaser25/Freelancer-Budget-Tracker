@@ -41,7 +41,7 @@ export const ar: Messages = {
   'topbar.copy.profile.subtitle': 'تفاصيلك الشخصية',
   'topbar.copy.notifications.title': 'الإشعارات',
   'topbar.copy.notifications.subtitle': 'التذكيرات والأحداث',
-  'topbar.copy.fallback.title': 'حصيلة',
+  'topbar.copy.fallback.title': 'حصيــــلة',
   'topbar.copy.fallback.subtitle': '',
   
   'brand.name': 'حصيــــلة',
@@ -63,7 +63,7 @@ export const ar: Messages = {
   'sidebar.fallback.freelancer': 'مستقل',
 
   'auth.login.title': 'مرحبًا بعودتك',
-  'auth.login.subtitle': 'سجل الدخول إلى مساحة العمل الخاصة بك في حصيلة.',
+  'auth.login.subtitle': 'سجل الدخول إلى مساحة العمل الخاصة بك في حصيــــلة.',
   'auth.login.notice.email_confirmed': 'تم تأكيد البريد الإلكتروني. يمكنك تسجيل الدخول الآن.',
   'auth.login.notice.password_updated': 'تم تحديث كلمة المرور. سجل الدخول بكلمة المرور الجديدة.',
   'auth.login.notice.session_expired': 'انتهت جلستك. يرجى تسجيل الدخول مرة أخرى.',
@@ -83,7 +83,7 @@ export const ar: Messages = {
   'auth.login.action.forgot_password': 'هل نسيت كلمة المرور؟',
   'auth.login.action.logging_in': 'جاري تسجيل الدخول...',
   'auth.login.action.login': 'تسجيل الدخول',
-  'auth.login.text.new_to': 'جديد على حصيلة؟',
+  'auth.login.text.new_to': 'جديد على حصيــــلة؟',
   'auth.login.action.create_account': 'إنشاء حساب',
 
   'auth.register.title': 'إنشاء حسابك',
@@ -144,7 +144,7 @@ export const ar: Messages = {
   'auth.resetPassword.doneSubtitle': 'جاري التوجيه لتسجيل الدخول بكلمة المرور الجديدة...',
   'auth.resetPassword.title': 'تعيين كلمة مرور جديدة',
   'auth.resetPassword.subtitleAccount': 'اختر كلمة مرور قوية لـ {email}.',
-  'auth.resetPassword.subtitleDefault': 'اختر كلمة مرور قوية لحساب حصيلة الخاص بك.',
+  'auth.resetPassword.subtitleDefault': 'اختر كلمة مرور قوية لحساب حصيــــلة الخاص بك.',
   'auth.resetPassword.errorTitle': "تعذر تحديث كلمة المرور",
   'auth.resetPassword.defaultError': 'فشل في تحديث كلمة المرور.',
   'auth.resetPassword.passwordLabel': 'كلمة المرور الجديدة',
@@ -161,7 +161,7 @@ export const ar: Messages = {
   'auth.verify.email_updated.action': 'العودة إلى ملفك الشخصي',
   'auth.verify.success.title': 'تم تأكيد البريد الإلكتروني',
   'auth.verify.success.subtitle': 'حسابك جاهز. دعنا نعد مساحة العمل الخاصة بك.',
-  'auth.verify.success.action': 'المتابعة إلى حصيلة',
+  'auth.verify.success.action': 'المتابعة إلى حصيــــلة',
   'auth.verify.invalid.title': 'انتهت صلاحية رابط التأكيد',
   'auth.verify.invalid.subtitle': "هذا الرابط غير صالح أو تم استخدامه بالفعل. جرب تسجيل الدخول — إذا لم يتم تأكيد بريدك الإلكتروني بعد، يمكنك إعادة إرسال الرابط من هناك.",
   'auth.verify.invalid.action_login': 'الذهاب لتسجيل الدخول',
@@ -194,7 +194,7 @@ export const ar: Messages = {
   'onboarding.welcome.start': 'البدء',
 
   'onboarding.currency.title': 'اختر عملتك',
-  'onboarding.currency.sub': 'يحدد هذا كيفية عرض المبالغ. هذا للتنسيق فقط — Haseeela لا تقوم بتحويل أموالك أبدًا.',
+  'onboarding.currency.sub': 'يحدد هذا كيفية عرض المبالغ. هذا للتنسيق فقط — حصيــــلة لا تقوم بتحويل أموالك أبدًا.',
   'onboarding.currency.back': 'رجوع',
   'onboarding.currency.continue': 'متابعة',
 
@@ -496,6 +496,9 @@ export const ar: Messages = {
   'subscriptions.empty.title': 'لا توجد اشتراكات بعد',
   'subscriptions.empty.body': 'أضف تكاليف البرامج المتكررة هنا لإبقاء النفقات الشهرية مرئية.',
   'subscriptions.badges.archived': 'مؤرشف',
+  'subscriptions.cycle.monthly': 'شهري',
+  'subscriptions.cycle.quarterly': 'ربع سنوي',
+  'subscriptions.cycle.yearly': 'سنوي',
   'subscriptions.list.next': 'التالي في {date}',
   'subscriptions.list.perMonth': '{amount}/شهرياً',
   'subscriptions.list.billed': 'تم فوترة {amount}',
@@ -708,12 +711,12 @@ export const ar: Messages = {
   'settings.hint.accountingMode': 'الوضع القياسي للمستقلين.',
   'settings.option.cashBasis': 'الأساس النقدي',
   'settings.section.appearance': 'المظهر',
-  'settings.section.appearanceSub': 'اختر كيف تبدو حصيلة.',
+  'settings.section.appearanceSub': 'اختر كيف تبدو حصيــــلة.',
   'settings.theme.system': 'النظام',
   'settings.theme.light': 'فاتح',
   'settings.theme.dark': 'داكن',
   'settings.section.notifications': 'الإشعارات',
-  'settings.section.notificationsSub': 'اختر التذكيرات التي تنشئها حصيلة.',
+  'settings.section.notificationsSub': 'اختر التذكيرات التي تنشئها حصيــــلة.',
   'settings.label.billingReminders': 'تذكيرات الفوترة',
   'settings.hint.billingReminders': 'مدفوعات الاشتراكات والعملاء الدوريين القادمة.',
   'settings.label.invoiceAlerts': 'تنبيهات استحقاق الفواتير',
@@ -723,7 +726,7 @@ export const ar: Messages = {
 
   // Offline
   'offline.title': 'أنت غير متصل بالإنترنت',
-  'offline.body': 'تحتاج حصيلة إلى اتصال بالإنترنت لتحميل أحدث عملائك، واشتراكاتك، ومعاملاتك. أي شيء مفتوح بالفعل في هذه الجلسة سيبقى متاحًا.',
+  'offline.body': 'تحتاج حصيــــلة إلى اتصال بالإنترنت لتحميل أحدث عملائك، واشتراكاتك، ومعاملاتك. أي شيء مفتوح بالفعل في هذه الجلسة سيبقى متاحًا.',
   'offline.action.retry': 'المحاولة مرة أخرى',
 
   // Invoices
@@ -829,7 +832,7 @@ export const ar: Messages = {
   'invoices.doc.notes': 'الملاحظات',
   'invoices.doc.terms': 'الشروط',
   'invoices.send.errorDownload': 'تعذر تنزيل ملف PDF.',
-  'invoices.send.emailSubject': 'الفاتورة {number} من حصيلة',
+  'invoices.send.emailSubject': 'الفاتورة {number} من حصيــــلة',
   'invoices.send.emailMessagePlaceholder': 'مرحباً {name}، يرجى الاطلاع على الفاتورة المرفقة.',
   'invoices.send.emailBody': 'الفاتورة {number}\nالمبلغ المستحق: {amount}\nتاريخ الاستحقاق: {date}',
   'invoices.send.errorInvalidEmail': 'يرجى إدخال عنوان بريد إلكتروني صالح.',

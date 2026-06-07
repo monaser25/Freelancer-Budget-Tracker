@@ -41,7 +41,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, error, prefix, suffix, type = "text", ...props }, ref) => {
     const [focus, setFocus] = useState(false);
     
-    const baseClass = "h-[38px] w-full rounded-sm text-sm outline-none bg-surface text-text transition-all duration-fast placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed";
+    const baseClass = "h-[38px] w-full rounded-sm text-sm text-start outline-none bg-surface text-text transition-all duration-fast placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed";
     
     const borderClass = error 
       ? "border border-negative" 
@@ -58,7 +58,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             onFocus={(e) => { setFocus(true); props.onFocus?.(e); }}
             onBlur={(e) => { setFocus(false); props.onBlur?.(e); }}
-            className="flex-1 min-w-0 border-none outline-none bg-transparent text-text h-full px-3 text-sm placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed focus:shadow-none focus-visible:shadow-none"
+            className="flex-1 min-w-0 border-none outline-none bg-transparent text-text h-full px-3 text-sm text-start placeholder:text-text-muted disabled:opacity-50 disabled:cursor-not-allowed focus:shadow-none focus-visible:shadow-none"
             {...props}
           />
           {suffix && <span className="t-body pe-3 text-text-muted whitespace-nowrap">{suffix}</span>}
@@ -215,7 +215,7 @@ export function Segmented({ className, options, value, onChange, size = 'md', ..
               "focus-ring px-3.5 rounded-[calc(var(--r-md)-3px)] border-none cursor-pointer text-[13px] font-medium transition-all duration-fast",
               hClass,
               active 
-                ? "bg-surface text-text shadow-sm" 
+                ? "bg-accent text-accent-fg shadow-sm"
                 : "bg-transparent text-text-secondary hover:text-text"
             )}
           >

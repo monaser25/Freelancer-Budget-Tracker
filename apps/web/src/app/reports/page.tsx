@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFinancialStore } from '@/store/financialStore';
 import { loadReportAPI, downloadReportCsv, downloadReportXlsx, type ReportData } from '@/services/financialApi';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
 import { useToast } from '@/components/ui/Toast';
@@ -67,8 +67,15 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const money = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
-  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money2 = useMemo(() => makeCompactCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  const activePreset = useMemo(() => {
+    if (from === startOfMonth()) return 'month';
+    if (from === startOfQuarter()) return 'quarter';
+    if (from === startOfYear()) return 'year';
+    if (from === earliestTxDate) return 'all';
+    return 'custom';
+  }, [earliestTxDate, from]);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,7 +163,7 @@ export default function ReportsPage() {
         <div className="flex flex-col gap-1.5">
           <span className="t-body-m text-text-secondary">{t('reports.ui.period')}</span>
           <Segmented
-            value=""
+            value={activePreset}
             onChange={setPreset}
             options={[
               { value: 'month', label: t('reports.ui.presets.month') }, 
@@ -264,4 +271,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-

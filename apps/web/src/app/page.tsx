@@ -5,7 +5,7 @@ import { useFinancialStore } from '@/store/financialStore';
 import { Client, Subscription, Transaction } from '@/types/finance';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { getOverviewStats } from '@/selectors/financialSelectors';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale, translateError } from '@/lib/i18n';
 import { formatTransactionName } from '@/lib/format';
@@ -76,8 +76,8 @@ export default function DashboardPage() {
   
   const overview = useMemo(() => getOverviewStats(transactions, clients, subscriptions), [transactions, clients, subscriptions]);
   
-  const money0 = useMemo(() => makeCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
-  const money2 = useMemo(() => makeCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
+  const money0 = useMemo(() => makeCompactCurrencyFormatter(currency, { maximumFractionDigits: 0 }, locale), [currency, locale]);
+  const money2 = useMemo(() => makeCompactCurrencyFormatter(currency, { minimumFractionDigits: 2 }, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money2.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money2]);
 
   useEffect(() => {

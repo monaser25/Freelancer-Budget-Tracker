@@ -3,9 +3,13 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 import { themeNoFlashScript } from '@/components/ThemeProvider';
 
-import { IBM_Plex_Sans_Arabic } from 'next/font/google';
+import { Noto_Sans_Arabic } from 'next/font/google';
 
-const plexArabic = IBM_Plex_Sans_Arabic({ weight: ['400', '500', '600', '700'], subsets: ['arabic'], variable: '--font-plex-arabic' });
+const notoArabic = Noto_Sans_Arabic({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['arabic'],
+  variable: '--font-arabic',
+});
 
 export const metadata: Metadata = {
   title: 'Haseeela - Freelancer Budget Tracker',
@@ -61,7 +65,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${plexArabic.variable}`}>
+      <body className={`${notoArabic.variable}`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>
