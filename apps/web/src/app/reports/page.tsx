@@ -235,7 +235,7 @@ export default function ReportsPage() {
                   <div key={s.label}>
                     <div className="t-caption text-text-muted">{s.label}</div>
                     <div className={`t-h3 tnum ${s.tone === 'positive' ? 'text-positive' : s.tone === 'negative' ? 'text-negative' : ''}`}>
-                      {isNumericInt ? s.value : <span dir="ltr">{moneyLong.format(s.value)}</span>}
+                      {isNumericInt ? s.value : moneyLong.format(s.value)}
                     </div>
                   </div>
                 );

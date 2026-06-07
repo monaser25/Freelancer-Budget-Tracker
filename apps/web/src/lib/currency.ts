@@ -59,8 +59,13 @@ export const makeLongCurrencyFormatter = (currency: CurrencyCode, options?: Numb
     .formatToParts(0)
     .find((part) => part.type === 'currency')?.value || currency;
 
+  // Long format is *prose* (the currency name is a word, not a symbol), so we
+  // let the surrounding paragraph direction control the visual order: in an
+  // RTL paragraph the Arabic name sits to the left of the number, which is
+  // the natural Arabic reading order; in an LTR paragraph the number leads.
+  // (Compact format gets a different treatment below — see ltrIsolate.)
   return {
-    format: (value: number) => ltrIsolate(`${number.format(value)} ${name}`),
+    format: (value: number) => `${number.format(value)} ${name}`,
     formatToParts: (value: number) => [
       ...number.formatToParts(value),
       { type: 'literal' as const, value: ' ' },

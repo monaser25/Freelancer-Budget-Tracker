@@ -119,9 +119,9 @@ export default function InvoicesPage() {
       {error && <InlineAlert tone="negative" title={t('invoices.error.loadTitle')} body={error} />}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label={t('invoices.summary.outstanding')} value={<span dir="ltr">{money0.format(summary.outstanding)}</span>} icon="clock" />
-        <StatCard label={t('invoices.summary.overdue')} value={<span dir="ltr">{money0.format(summary.overdue)}</span>} tone={summary.overdue > 0 ? 'negative' : 'neutral'} icon="alertTriangle" />
-        <StatCard label={t('invoices.summary.paidThisMonth')} value={<span dir="ltr">{money0.format(summary.paidThisMonth)}</span>} tone="positive" icon="checkCircle" />
+        <StatCard label={t('invoices.summary.outstanding')} value={money0.format(summary.outstanding)} icon="clock" />
+        <StatCard label={t('invoices.summary.overdue')} value={money0.format(summary.overdue)} tone={summary.overdue > 0 ? 'negative' : 'neutral'} icon="alertTriangle" />
+        <StatCard label={t('invoices.summary.paidThisMonth')} value={money0.format(summary.paidThisMonth)} tone="positive" icon="checkCircle" />
       </div>
 
       <div className="flex flex-wrap gap-2">

@@ -299,21 +299,21 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t('dashboard.stats.totalRevenue')}
-          value={<span dir="ltr">{moneyLong0.format(overview.totalRevenue)}</span>}
+          value={moneyLong0.format(overview.totalRevenue)}
           tone="positive"
           icon="TrendingUp"
           onClick={() => router.push('/transactions?filter=revenue')}
         />
         <StatCard
           label={t('dashboard.stats.totalExpenses')}
-          value={<span dir="ltr">{moneyLong0.format(overview.totalExpenses)}</span>}
+          value={moneyLong0.format(overview.totalExpenses)}
           tone="negative"
           icon="Receipt"
           onClick={() => router.push('/transactions?filter=expenses')}
         />
         <StatCard
           label={t('dashboard.stats.netProfit')}
-          value={<span dir="ltr">{moneyLong0.format(overview.netProfit)}</span>}
+          value={moneyLong0.format(overview.netProfit)}
           icon="Wallet"
           onClick={() => router.push('/analytics')}
         />
