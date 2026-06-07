@@ -120,7 +120,7 @@ export default function OnboardingPage() {
           <div className="w-[30px] h-[30px] rounded-[9px] bg-accent flex items-center justify-center shadow-[0_2px_8px_color-mix(in_srgb,var(--accent)_40%,transparent)]">
             <Icon name="wallet" size={18} className="text-white" />
           </div>
-          <span className="text-[16px] font-semibold tracking-[-0.02em]">{t('brand.name')}</span>
+          <span className="brand-wordmark tracking-[-0.02em]">{t('brand.name')}</span>
         </div>
         <ol className="flex flex-col gap-1">
           {steps.map((label, i) => {

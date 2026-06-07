@@ -144,7 +144,7 @@ export default function ArchivePage() {
                           {client.archivedAt && (
                             <>
                               {' · '}
-                              {t('archive.list.archivedDate', { date: <span dir="ltr">{formatDate(client.archivedAt, locale)}</span> })}
+                              {t('archive.list.archivedDate', { date: <span className="date-token">{formatDate(client.archivedAt, locale)}</span> })}
                             </>
                           )}
                         </div>
@@ -189,7 +189,7 @@ export default function ArchivePage() {
                           {sub.archivedAt && (
                             <>
                               {' · '}
-                              {t('archive.list.archivedDate', { date: <span dir="ltr">{formatDate(sub.archivedAt, locale)}</span> })}
+                              {t('archive.list.archivedDate', { date: <span className="date-token">{formatDate(sub.archivedAt, locale)}</span> })}
                             </>
                           )}
                         </div>

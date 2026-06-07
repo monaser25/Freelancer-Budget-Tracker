@@ -106,9 +106,9 @@ export default function InvoiceDetailPage() {
           <Card pad={18} className="flex flex-col gap-3">
             <div className="t-caption text-text-muted">{t('invoices.detail.statusLabel')}</div>
             <Badge tone={statusTone(invoice.status)} className="self-start">{STATUS_LABELS[invoice.status as InvoiceStatus] || (invoice.status[0] + invoice.status.slice(1).toLowerCase())}</Badge>
-            <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.issuedLabel')}</span><span className="tnum" dir="ltr">{fmtDate(invoice.issueDate, locale)}</span></div>
-            <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.dueLabel')}</span><span className="tnum" dir="ltr">{fmtDate(invoice.dueDate, locale)}</span></div>
-            {invoice.paidAt && <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.paidLabel')}</span><span className="tnum text-positive" dir="ltr">{fmtDate(invoice.paidAt, locale)}</span></div>}
+            <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.issuedLabel')}</span><span className="tnum date-token">{fmtDate(invoice.issueDate, locale)}</span></div>
+            <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.dueLabel')}</span><span className="tnum date-token">{fmtDate(invoice.dueDate, locale)}</span></div>
+            {invoice.paidAt && <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.paidLabel')}</span><span className="tnum text-positive date-token">{fmtDate(invoice.paidAt, locale)}</span></div>}
             {invoice.client && <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.clientLabel')}</span><span dir="ltr">{invoice.client.name}</span></div>}
           </Card>
 
@@ -158,4 +158,3 @@ export default function InvoiceDetailPage() {
     </div>
   );
 }
-

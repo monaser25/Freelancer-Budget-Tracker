@@ -8,6 +8,7 @@ import { useUiStore } from '@/store/uiStore';
 import { useTheme } from '@/components/ThemeProvider';
 import { useLocale } from '@/lib/i18n';
 import { MessageKey } from '@/messages/en';
+import { latinTokenClass } from '@/lib/textDirection';
 import { Icon } from '@/components/ui/Icon';
 import { Avatar } from '@/components/ui/Avatar';
 import { Menu } from '@/components/ui/Menu';
@@ -114,10 +115,10 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
         <Link href="/" onClick={onClose} className="flex items-center w-full rounded-md focus-ring">
           <span className={SLOT}>
             <span className="w-9 h-9 rounded-[9px] bg-white flex items-center justify-center shadow-sm overflow-hidden ring-1 ring-black/5">
-              <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={44} height={44} className="h-11 w-11 max-w-none object-cover" />
+              <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={56} height={56} className="h-14 w-14 max-w-none object-cover scale-125" />
             </span>
           </span>
-          <span className={labelStyle(collapsed, 'text-[16px] font-semibold tracking-[-0.02em] text-text')}>
+          <span className={labelStyle(collapsed, 'brand-wordmark tracking-[-0.02em] text-text')}>
             {t('brand.name')}
           </span>
         </Link>
@@ -156,8 +157,8 @@ export function Sidebar({ mobile, onClose }: { mobile?: boolean; onClose?: () =>
                 }`}
               >
                 <span className="flex-1 min-w-0 text-start">
-                  <span className="block t-body-m text-text truncate">{displayName}</span>
-                  <span className="block t-small text-text-muted truncate"><span dir="ltr">{user?.email || t('sidebar.fallback.freelancer')}</span></span>
+                  <span className={`block t-body-m text-text truncate ${latinTokenClass(displayName)}`}>{displayName}</span>
+                  <span className="block t-small text-text-muted truncate"><span className="ltr-token">{user?.email || t('sidebar.fallback.freelancer')}</span></span>
                 </span>
                 <Icon name="chevronDown" size={15} className="text-text-muted ms-1.5 shrink-0" />
               </span>

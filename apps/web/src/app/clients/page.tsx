@@ -9,6 +9,7 @@ import { Client } from '@/types/finance';
 import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate, formatTransactionName } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
+import { latinTokenClass } from '@/lib/textDirection';
 import { Avatar, Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; client: Client } | null;
@@ -224,15 +225,15 @@ export default function ClientsPage() {
                     <Avatar name={client.name} size={40} color="--viz-1" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="t-body-m text-text">{client.name}</span>
+                        <span className={`t-body-m text-text ${latinTokenClass(client.name)}`}>{client.name}</span>
                         <Badge tone={client.paymentType === 'retainer' ? 'accent' : 'positive'}>{client.paymentType === 'retainer' ? t('clients.badges.retainer') : t('clients.badges.onetime')}</Badge>
                         <Badge tone={client.status === 'ACTIVE' ? 'positive' : client.status === 'PROSPECT' ? 'warning' : 'neutral'}>{client.status === 'ACTIVE' ? t('clients.form.statusActive') : client.status === 'PROSPECT' ? t('clients.form.statusProspect') : client.status === 'COMPLETED' ? t('clients.form.statusCompleted') : t('clients.form.statusInactive')}</Badge>
                         {client.archivedAt && <Badge>{t('clients.badges.archived')}</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
                         {client.paymentType === 'retainer'
-                        ? t('clients.payment.monthlyNext', { amount: <span dir="ltr">{money.format(client.revenue)}</span>, date: client.nextBillingDate ? <span dir="ltr">{formatDate(client.nextBillingDate, locale)}</span> : t('clients.payment.notScheduled') })
-                        : t('clients.payment.onetime', { amount: <span dir="ltr">{money.format(client.revenue)}</span>, date: client.paymentDate ? <span dir="ltr">{formatDate(client.paymentDate, locale)}</span> : t('clients.payment.notScheduled') })}
+                        ? t('clients.payment.monthlyNext', { amount: <span dir="ltr">{money.format(client.revenue)}</span>, date: client.nextBillingDate ? <span className="date-token">{formatDate(client.nextBillingDate, locale)}</span> : t('clients.payment.notScheduled') })
+                        : t('clients.payment.onetime', { amount: <span dir="ltr">{money.format(client.revenue)}</span>, date: client.paymentDate ? <span className="date-token">{formatDate(client.paymentDate, locale)}</span> : t('clients.payment.notScheduled') })}
                       </div>
                     </div>
                   </div>
@@ -255,7 +256,7 @@ export default function ClientsPage() {
                   <div className="rounded-md bg-surface-hover border border-border p-3">
                     <div className="flex flex-col gap-1 text-xs text-text-secondary sm:flex-row sm:items-center sm:justify-between">
                       <span>{t('clients.history.title')}</span>
-                      {client.paymentType === 'retainer' && <span>{t('clients.history.nextBilling', { date: client.nextBillingDate ? <span dir="ltr">{formatDate(client.nextBillingDate, locale)}</span> : t('clients.payment.notScheduled') })}</span>}
+                      {client.paymentType === 'retainer' && <span>{t('clients.history.nextBilling', { date: client.nextBillingDate ? <span className="date-token">{formatDate(client.nextBillingDate, locale)}</span> : t('clients.payment.notScheduled') })}</span>}
                     </div>
                     {clientTransactions.length === 0 ? (
                       <div className="text-xs text-text-muted mt-2">{t('clients.history.empty')}</div>
@@ -263,8 +264,8 @@ export default function ClientsPage() {
                       <div className="mt-2 space-y-1">
                         {clientTransactions.slice(0, 3).map((tx) => (
                           <div key={tx.id} className="flex items-center justify-between gap-3 text-xs">
-                            <span className="truncate text-text">{formatTransactionName(tx.name || tx.notes || t('clients.history.paymentFallback'), t as any)}</span>
-                            <span className="shrink-0 text-text-muted">{formatDate(tx.date, locale)} - {money.format(tx.amount)}</span>
+                            <span className={`truncate text-text ${latinTokenClass(tx.name || tx.notes)}`}>{formatTransactionName(tx.name || tx.notes || t('clients.history.paymentFallback'), t as any)}</span>
+                            <span className="shrink-0 text-text-muted"><span className="date-token">{formatDate(tx.date, locale)}</span> - {money.format(tx.amount)}</span>
                           </div>
                         ))}
                       </div>
@@ -289,7 +290,7 @@ export default function ClientsPage() {
             <SectionHeader title={t('clients.top.title')} sub={t('clients.top.subtitle')} />
             {topClient ? (
               <div className="mt-4">
-                <div className="t-h3 text-text">{topClient.name}</div>
+                <div className={`t-h3 text-text ${latinTokenClass(topClient.name)}`}>{topClient.name}</div>
                 <div className="t-display text-positive mt-2">{moneyLong.format(revenueForClient(topClient.id))}</div>
                 <p className="text-sm text-text-muted mt-1">{t('clients.top.totalRevenue')}</p>
               </div>

@@ -6,6 +6,7 @@ import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription, Transaction } from '@/types/finance';
 import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { useLocale } from '@/lib/i18n';
+import { latinTokenClass } from '@/lib/textDirection';
 import { Card, SectionHeader, StatCard } from '@/components/ui/Card';
 import { Segmented } from '@/components/ui/Form';
 import { Avatar } from '@/components/ui/Avatar';
@@ -240,7 +241,7 @@ export default function AnalyticsPage() {
                     <Avatar name={client.name} size={30} />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between mb-1.5">
-                        <span className="t-body-m truncate">{client.name}</span>
+                        <span className={`t-body-m truncate ${latinTokenClass(client.name)}`}>{client.name}</span>
                         <span className="t-body-m font-mono" dir="ltr">{money.format(revenue)}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden" dir="ltr">
@@ -290,7 +291,7 @@ export default function AnalyticsPage() {
                   <div key={sub.id} className="flex items-center gap-2.5 p-3 rounded-md border border-border" dir={dir}>
                     <Avatar name={sub.name} size={32} />
                     <div className="flex-1 min-w-0">
-                      <div className="t-body-m truncate">{sub.name}</div>
+                      <div className={`t-body-m truncate ${latinTokenClass(sub.name)}`}>{sub.name}</div>
                       <div className="text-xs text-text-muted">{t('analytics.subscriptions.itemSubtitle', { percent: pct, cycle: formatEnumLabel(sub.billingCycle || sub.cycle) })}</div>
                     </div>
                     <span className="t-body-m font-mono text-negative" dir="ltr">{money.format(cost)}</span>

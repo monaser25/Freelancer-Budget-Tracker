@@ -7,6 +7,7 @@ import { Subscription } from '@/types/finance';
 import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
+import { latinTokenClass } from '@/lib/textDirection';
 import { Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; subscription: Subscription } | null;
@@ -182,13 +183,13 @@ export default function SubscriptionsPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="t-body-m text-text">{sub.name}</span>
+                        <span className={`t-body-m text-text ${latinTokenClass(sub.name)}`}>{sub.name}</span>
                         <Badge tone={sub.status === 'ACTIVE' ? 'positive' : 'neutral'}>{sub.status === 'ACTIVE' ? t('subscriptions.form.statusActive') : t('subscriptions.form.statusInactive')}</Badge>
                         <Badge tone="accent">{t(`subscriptions.cycle.${(sub.billingCycle || sub.cycle).toLowerCase()}` as any)}</Badge>
                         {sub.archivedAt && <Badge>{t('subscriptions.badges.archived')}</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
-                        {t('subscriptions.list.next', { date: <span dir="ltr">{formatDate(sub.nextBillingDate, locale)}</span> })}
+                        {t('subscriptions.list.next', { date: <span className="date-token">{formatDate(sub.nextBillingDate, locale)}</span> })}
                         {sub.notes ? ` - ${sub.notes}` : ''}
                       </div>
                     </div>

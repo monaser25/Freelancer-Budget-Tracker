@@ -9,6 +9,7 @@ import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale, translateError } from '@/lib/i18n';
 import { formatTransactionName } from '@/lib/format';
+import { latinTokenClass } from '@/lib/textDirection';
 import type { Locale } from '@/lib/locales';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -349,8 +350,8 @@ export default function DashboardPage() {
                   <div key={s.id} className="flex items-center gap-3 py-2">
                     <Avatar name={s.name} size={32} />
                     <div className="flex-1 min-w-0">
-                      <div className="t-body-m truncate">{s.name}</div>
-                      <div className="text-xs text-text-muted">{t('dashboard.subs.renews', { date: formatDate(s.nextBillingDate, locale, { month: 'short', day: 'numeric' }) })}</div>
+                      <div className={`t-body-m truncate ${latinTokenClass(s.name)}`}>{s.name}</div>
+                      <div className="text-xs text-text-muted">{t('dashboard.subs.renews', { date: <span className="date-token">{formatDate(s.nextBillingDate, locale, { month: 'short', day: 'numeric' })}</span> })}</div>
                     </div>
                     <span className="t-body-m font-mono" dir="ltr">{money0.format(s.amount)}<span className="text-text-muted font-sans text-xs">{s.cycle === 'YEARLY' ? t('dashboard.subs.perYear') : t('dashboard.subs.perMonth')}</span></span>
                   </div>
@@ -367,8 +368,8 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
                 <Avatar name={topClient.name} size={40} />
                 <div className="flex-1 min-w-0">
-                  <div className="t-h3 truncate">{topClient.name}</div>
-                  <div className="text-sm text-text-muted truncate">{topClient.email || topClient.company || t('dashboard.topClient.fallbackRole')}</div>
+                  <div className={`t-h3 truncate ${latinTokenClass(topClient.name)}`}>{topClient.name}</div>
+                  <div className={`text-sm text-text-muted truncate ${latinTokenClass(topClient.email || topClient.company)}`}>{topClient.email || topClient.company || t('dashboard.topClient.fallbackRole')}</div>
                 </div>
               </div>
               <div className="mt-4 pt-3.5 border-t border-border flex justify-between items-baseline">
@@ -424,7 +425,7 @@ export default function DashboardPage() {
                           <Icon name={tx.type === 'INCOME' ? 'ArrowDown' : 'ArrowUp'} size={15} strokeWidth={2.2} />
                         </div>
                         <div>
-                          <div className="t-body-m">{formatTransactionName(tx.name || tx.notes || tx.sourceType, t)}</div>
+                          <div className={`t-body-m ${latinTokenClass(tx.name || tx.notes)}`}>{formatTransactionName(tx.name || tx.notes || tx.sourceType, t)}</div>
                           <div className="text-xs text-text-muted mt-0.5">{tx.categoryId} &middot; {getRelativeDate(tx.date, locale, t)}</div>
                         </div>
                       </div>

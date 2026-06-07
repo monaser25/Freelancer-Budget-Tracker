@@ -34,16 +34,6 @@ export const makeLongCurrencyFormatter = (currency: CurrencyCode, options?: Numb
 );
 
 export const makeCompactCurrencyFormatter = (currency: CurrencyCode, options?: NumberFormatOptions, locale: Locale = DEFAULT_LOCALE) => {
-  if (locale !== 'ar') {
-    return new Intl.NumberFormat(intlTagFor(locale), {
-      style: 'currency',
-      currency,
-      currencyDisplay: 'narrowSymbol',
-      numberingSystem: 'latn',
-      ...options,
-    });
-  }
-
   const currencyDefaults = new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions();
   const defaultMaximumFractionDigits = currencyDefaults.maximumFractionDigits ?? 2;
   const defaultMinimumFractionDigits = currencyDefaults.minimumFractionDigits ?? defaultMaximumFractionDigits;
@@ -52,7 +42,7 @@ export const makeCompactCurrencyFormatter = (currency: CurrencyCode, options?: N
     options?.minimumFractionDigits ?? (options?.maximumFractionDigits === 0 ? 0 : defaultMinimumFractionDigits),
     maximumFractionDigits,
   );
-  const number = new Intl.NumberFormat('en-US', {
+  const number = new Intl.NumberFormat(locale === 'ar' ? 'en-US' : intlTagFor(locale), {
     minimumFractionDigits,
     maximumFractionDigits,
     useGrouping: options?.useGrouping,

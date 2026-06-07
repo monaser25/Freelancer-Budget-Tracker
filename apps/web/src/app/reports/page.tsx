@@ -200,7 +200,7 @@ export default function ReportsPage() {
           </div>
           <div className={`text-${dir === 'rtl' ? 'left' : 'right'}`}>
             <div className="text-[14px] font-semibold">{report?.title || t('reports.ui.fallbackReport')}</div>
-            <div className="text-[11px] text-text-muted tnum" dir="ltr">{from} &rarr; {to}</div>
+            <div className="text-[11px] text-text-muted tnum"><span className="date-token">{from}</span> &rarr; <span className="date-token">{to}</span></div>
             <div className="text-[11px] text-text-muted">{t('reports.ui.generated', { date: formatDate(new Date(), locale) })}</div>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function ReportsPage() {
           <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-wrap gap-2">
             <div>
               <div className="t-h3">{report?.title || t('reports.ui.fallbackReport')}</div>
-              <div className="t-small text-text-muted tnum" dir="ltr">{from} &rarr; {to}</div>
+              <div className="t-small text-text-muted tnum"><span className="date-token">{from}</span> &rarr; <span className="date-token">{to}</span></div>
             </div>
           </div>
 

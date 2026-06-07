@@ -6,6 +6,7 @@ import { Transaction } from '@/types/finance';
 import { makeCompactCurrencyFormatter } from '@/lib/currency';
 import { formatDate as formatLocaleDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
+import { latinTokenClass } from '@/lib/textDirection';
 import type { Locale } from '@/lib/locales';
 import { Button, IconButton } from '@/components/ui/Button';
 import { Badge, FilterChip } from '@/components/ui/Badge';
@@ -368,7 +369,7 @@ export default function TransactionsPage() {
             </div>
             <div className="rounded-md bg-surface-hover border border-border p-3 text-sm">
               <div className="font-medium text-text">{transactionTitle(deleting, t)}</div>
-              <div className="mt-1 text-text-muted"><span dir="ltr">{formatTransactionDate(deleting.date, locale)}</span> - <span dir="ltr">{deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</span></div>
+              <div className="mt-1 text-text-muted"><span className="date-token">{formatTransactionDate(deleting.date, locale)}</span> - <span dir="ltr">{deleting.type === 'INCOME' ? '+' : '-'}{money.format(deleting.amount)}</span></div>
             </div>
             {deleteError && <InlineAlert tone="negative">{deleteError}</InlineAlert>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
@@ -411,14 +412,14 @@ function TransactionRow({ transaction, money, locale, onEdit, onDelete, t }: { t
         <div className="flex items-start gap-3">
           <TransactionIcon type={transaction.type} />
           <div className="min-w-0">
-            <div className="t-body-m truncate">{transactionTitle(transaction, t)}</div>
+            <div className={`t-body-m truncate ${latinTokenClass(transactionTitle(transaction, t))}`}>{transactionTitle(transaction, t)}</div>
             {transaction.notes && transaction.notes !== transaction.name && <div className="text-xs text-text-muted mt-0.5 truncate max-w-[320px]">{transaction.notes}</div>}
             <div className="text-xs text-text-muted mt-1">{sourceLabel(transaction, t)}</div>
           </div>
         </div>
       </td>
       <td className="px-5 py-4"><Badge className="justify-center">{categoryLabel(transaction.categoryId, t)}</Badge></td>
-      <td className="px-5 py-4 text-sm text-text-secondary font-mono whitespace-nowrap"><span dir="ltr">{formatTransactionDate(transaction.date, locale)}</span></td>
+      <td className="px-5 py-4 text-sm text-text-secondary whitespace-nowrap"><span className="date-token">{formatTransactionDate(transaction.date, locale)}</span></td>
       <td className="px-5 py-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={transaction.type === 'INCOME' ? 'positive' : 'negative'}>{transaction.type === 'INCOME' ? t('transactions.badges.revenue') : t('transactions.badges.expense')}</Badge>
@@ -446,8 +447,8 @@ function TransactionCard({ transaction, money, locale, onEdit, onDelete, t }: { 
         <div className="flex items-start gap-3 min-w-0">
           <TransactionIcon type={transaction.type} />
           <div className="min-w-0">
-            <div className="t-body-m truncate">{transactionTitle(transaction, t)}</div>
-            <div className="text-xs text-text-muted mt-0.5"><span dir="ltr">{formatTransactionDate(transaction.date, locale)}</span> - {sourceLabel(transaction, t)}</div>
+            <div className={`t-body-m truncate ${latinTokenClass(transactionTitle(transaction, t))}`}>{transactionTitle(transaction, t)}</div>
+            <div className="text-xs text-text-muted mt-0.5"><span className="date-token">{formatTransactionDate(transaction.date, locale)}</span> - {sourceLabel(transaction, t)}</div>
           </div>
         </div>
         <div className={`font-mono text-sm font-medium shrink-0 ${transaction.type === 'INCOME' ? 'text-positive' : 'text-negative'}`}>
