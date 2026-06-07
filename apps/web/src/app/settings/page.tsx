@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Icon } from '@/components/ui/Icon';
 import { LanguageToggle } from '@/components/ui/LanguageToggle';
 import { useToast } from '@/components/ui/Toast';
+import { useLocale } from '@/lib/i18n';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { currency, setCurrency } = useFinancialStore();
   const { toast } = useToast();
+  const { t } = useLocale();
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function SettingsPage() {
       const next = await updatePreferencesAPI(updates);
       setPrefs(next);
     } catch {
-      toast('Could not save preference', 'error');
+      toast(t('settings.toast.saveFailed'), 'error');
     }
   };
 
@@ -46,45 +48,45 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
       <div>
-        <h1 className="t-h1">Settings</h1>
-        <p className="t-body text-text-muted mt-1">Account & workspace</p>
+        <h1 className="t-h1">{t('settings.title')}</h1>
+        <p className="t-body text-text-muted mt-1">{t('settings.subtitle')}</p>
       </div>
 
       {/* Account */}
       <Card pad={20}>
-        <SectionHeader title="Account" sub="Your sign-in identity." />
+        <SectionHeader title={t('settings.section.account')} sub={t('settings.section.accountSub')} />
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-full bg-accent-tint text-accent flex items-center justify-center shrink-0">
               <Icon name="user" size={18} />
             </div>
             <div className="min-w-0">
-              <div className="t-body-m break-all">{user?.email || '—'}</div>
-              <Badge tone="positive" className="mt-1">Authenticated</Badge>
+              <div className="t-body-m break-all" dir="ltr">{user?.email || '—'}</div>
+              <Badge tone="positive" className="mt-1">{t('settings.badge.authenticated')}</Badge>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" icon="user" onClick={() => router.push('/profile')}>Profile</Button>
-            <Button variant="ghost" onClick={() => signOut().then(() => router.replace('/login'))}>Log out</Button>
+            <Button variant="secondary" icon="user" onClick={() => router.push('/profile')}>{t('settings.action.profile')}</Button>
+            <Button variant="ghost" onClick={() => signOut().then(() => router.replace('/login'))}>{t('settings.action.logout')}</Button>
           </div>
         </div>
       </Card>
 
       {/* Workspace */}
       <Card pad={20}>
-        <SectionHeader title="Workspace" sub="Display preferences for your whole workspace." />
+        <SectionHeader title={t('settings.section.workspace')} sub={t('settings.section.workspaceSub')} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Currency" hint={`Formats amounts as ${getCurrencyLabel(currency)}. Formatting only - no conversion.`}>
+          <Field label={t('settings.label.currency')} hint={t('settings.hint.currency', { currency: `\u202A${getCurrencyLabel(currency)}\u202C` })}>
             <Select value={currency} onChange={(e) => onCurrency(e.target.value as CurrencyCode)}>
               {supportedCurrencies.map((c) => <option key={c.code} value={c.code}>{c.label}</option>)}
             </Select>
           </Field>
-          <Field label="Language" hint="Change your interface language.">
+          <Field label={t('settings.label.language')} hint={t('settings.hint.language')}>
             <LanguageToggle variant="segmented" />
           </Field>
-          <Field label="Accounting mode" hint="Standard for freelancers.">
+          <Field label={t('settings.label.accountingMode')} hint={t('settings.hint.accountingMode')}>
             <Select value="cash" disabled>
-              <option value="cash">Cash basis</option>
+              <option value="cash">{t('settings.option.cashBasis')}</option>
             </Select>
           </Field>
         </div>
@@ -92,35 +94,35 @@ export default function SettingsPage() {
 
       {/* Appearance */}
       <Card pad={20}>
-        <SectionHeader title="Appearance" sub="Choose how Haseeela looks." />
+        <SectionHeader title={t('settings.section.appearance')} sub={t('settings.section.appearanceSub')} />
         <Segmented
           value={theme}
           onChange={(v) => setTheme(v as ThemeMode)}
-          options={[{ value: 'system', label: 'System' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]}
+          options={[{ value: 'system', label: t('settings.theme.system') }, { value: 'light', label: t('settings.theme.light') }, { value: 'dark', label: t('settings.theme.dark') }]}
         />
       </Card>
 
       {/* Notifications */}
       <Card pad={20}>
-        <SectionHeader title="Notifications" sub="Choose which reminders Haseeela generates." />
+        <SectionHeader title={t('settings.section.notifications')} sub={t('settings.section.notificationsSub')} />
         <div className="flex flex-col divide-y divide-border">
           <ToggleRow
-            label="Billing reminders"
-            hint="Upcoming subscription & retainer payments."
+            label={t('settings.label.billingReminders')}
+            hint={t('settings.hint.billingReminders')}
             checked={prefs?.notifyBillingReminders ?? true}
             disabled={!prefs}
             onChange={(v) => patch({ notifyBillingReminders: v })}
           />
           <ToggleRow
-            label="Invoice due alerts"
-            hint="When a sent invoice becomes overdue."
+            label={t('settings.label.invoiceAlerts')}
+            hint={t('settings.hint.invoiceAlerts')}
             checked={prefs?.notifyInvoiceDue ?? true}
             disabled={!prefs}
             onChange={(v) => patch({ notifyInvoiceDue: v })}
           />
           <ToggleRow
-            label="Weekly summary"
-            hint="A weekly recap of your finances."
+            label={t('settings.label.weeklySummary')}
+            hint={t('settings.hint.weeklySummary')}
             checked={prefs?.notifyWeeklySummary ?? false}
             disabled={!prefs}
             onChange={(v) => patch({ notifyWeeklySummary: v })}

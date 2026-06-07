@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { formatDate } from '@/lib/format';
-import { DEFAULT_LOCALE } from '@/lib/locales';
+import { DEFAULT_LOCALE, type Locale, dirFor } from '@/lib/locales';
+import { t as translate } from '@/messages';
 import type { ReportResult } from './reports';
 
 // Brand palette (ARGB).
@@ -26,14 +27,15 @@ const colLetter = (n: number) => {
 };
 
 /** Render a report into a branded, styled .xlsx workbook (returned as a Buffer). */
-export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
+export async function reportToXlsx(report: ReportResult, locale: Locale = DEFAULT_LOCALE): Promise<Buffer> {
+  const isRtl = dirFor(locale) === 'rtl';
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Haseeela';
   wb.created = new Date();
 
-  const ws = wb.addWorksheet(report.title.slice(0, 28) || 'Report', {
+  const ws = wb.addWorksheet(report.title.slice(0, 28) || translate(locale, 'reports.ui.fallbackReport'), {
     pageSetup: { fitToWidth: 1, margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 } },
-    views: [{ showGridLines: false }],
+    views: [{ showGridLines: false, rightToLeft: isRtl }],
   });
 
   const colCount = Math.max(report.columns.length, 2);
@@ -47,8 +49,9 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
   ws.getRow(1).height = 26;
 
   ws.mergeCells(`A2:${lastCol}2`);
+  const generatedStr = translate(locale, 'reports.ui.generated', { date: formatDate(new Date(), locale) }) as string;
   ws.getCell('A2').value =
-    `${report.title}   ·   ${report.range.from} → ${report.range.to}   ·   Generated ${formatDate(new Date(), DEFAULT_LOCALE)}`;
+    `${report.title}   ·   ${report.range.from} → ${report.range.to}   ·   ${generatedStr}`;
   ws.getCell('A2').font = { name: 'Calibri', size: 10, color: { argb: MUTED } };
 
   let r = 4;
@@ -68,7 +71,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
         color: { argb: s.tone === 'negative' ? NEGATIVE : s.tone === 'positive' ? POSITIVE : INK },
       };
       val.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } };
-      val.alignment = { horizontal: 'right' };
+      val.alignment = { horizontal: isRtl ? 'left' : 'right' };
       ws.getRow(r).height = 17;
       r += 1;
     }
@@ -83,7 +86,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
     cell.value = c.label;
     cell.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ACCENT } };
-    cell.alignment = { horizontal: c.numeric ? 'right' : 'left', vertical: 'middle' };
+    cell.alignment = { horizontal: c.numeric ? (isRtl ? 'left' : 'right') : (isRtl ? 'right' : 'left'), vertical: 'middle' };
     cell.border = { bottom: { style: 'thin', color: { argb: ACCENT_DARK } } };
   });
   headerRow.height = 20;
@@ -99,7 +102,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
       const cell = dataRow.getCell(i + 1);
       cell.value = value as string | number;
       cell.font = { name: 'Calibri', color: { argb: INK } };
-      cell.alignment = { horizontal: col?.numeric ? 'right' : 'left', vertical: 'middle' };
+      cell.alignment = { horizontal: col?.numeric ? (isRtl ? 'left' : 'right') : (isRtl ? 'right' : 'left'), vertical: 'middle' };
       if (col?.numeric && typeof value === 'number') {
         cell.numFmt = '#,##0.00';
         if (value < 0) cell.font = { name: 'Calibri', color: { argb: NEGATIVE } };
@@ -119,13 +122,13 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } };
       cell.border = { top: { style: 'thin', color: { argb: ACCENT } } };
       if (i === 0) {
-        cell.value = 'Total';
+        cell.value = translate(locale, 'reports.values.total');
         cell.font = { name: 'Calibri', bold: true, color: { argb: INK } };
       } else if (col?.numeric) {
         const sum = report.rows.reduce((acc, row) => acc + (typeof row[i] === 'number' ? (row[i] as number) : 0), 0);
         cell.value = sum;
         cell.numFmt = '#,##0.00';
-        cell.alignment = { horizontal: 'right' };
+        cell.alignment = { horizontal: isRtl ? 'left' : 'right' };
         cell.font = { name: 'Calibri', bold: true, color: { argb: sum < 0 ? NEGATIVE : INK } };
       }
     });
@@ -134,7 +137,7 @@ export async function reportToXlsx(report: ReportResult): Promise<Buffer> {
   }
 
   // Freeze the header and let the user filter/sort the table.
-  ws.views = [{ state: 'frozen', ySplit: headerRowIndex, showGridLines: false }];
+  ws.views = [{ state: 'frozen', ySplit: headerRowIndex, showGridLines: false, rightToLeft: isRtl }];
   if (report.rows.length) {
     ws.autoFilter = { from: { row: headerRowIndex, column: 1 }, to: { row: firstDataRow - 1 + report.rows.length, column: colCount } };
   }

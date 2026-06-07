@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { computeNextBillingDate } from '@/store/financialStore';
 import { useFinancialStore } from '@/store/useFinancialStore';
 import { Subscription } from '@/types/finance';
-import { makeCurrencyFormatter } from '@/lib/currency';
+import { makeCompactCurrencyFormatter, makeLongCurrencyFormatter } from '@/lib/currency';
 import { formatDate } from '@/lib/format';
 import { useLocale } from '@/lib/i18n';
+import { latinTokenClass } from '@/lib/textDirection';
 import { Badge, Button, Card, EmptyState, Field, Icon, IconButton, InlineAlert, Input, SectionHeader, Select, StatCard } from '@/components/ui';
 
 type ModalState = { mode: 'add' } | { mode: 'edit'; subscription: Subscription } | null;
@@ -28,7 +29,7 @@ const monthlyEquivalent = (subscription: Subscription) => {
 
 export default function SubscriptionsPage() {
   const { subscriptions, transactions, currency, isInitialized, addSubscription, updateSubscription, deleteSubscription, recordSubscriptionPayment } = useFinancialStore();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [modal, setModal] = useState<ModalState>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -38,7 +39,8 @@ export default function SubscriptionsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const money = useMemo(() => makeCurrencyFormatter(currency, undefined, locale), [currency, locale]);
+  const money = useMemo(() => makeCompactCurrencyFormatter(currency, undefined, locale), [currency, locale]);
+  const moneyLong = useMemo(() => makeLongCurrencyFormatter(currency, undefined, locale), [currency, locale]);
   const currencyPrefix = useMemo(() => money.formatToParts(0).find((part) => part.type === 'currency')?.value || currency, [currency, money]);
 
   useEffect(() => {
@@ -142,31 +144,35 @@ export default function SubscriptionsPage() {
       <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-10">
         <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h1 className="t-h1">Tool subscriptions</h1>
-            <p className="t-body mt-1 text-text-muted">Software and services that generate recurring expenses</p>
+            <h1 className="t-h1">{t('subscriptions.title')}</h1>
+            <p className="t-body mt-1 text-text-muted">{t('subscriptions.subtitle')}</p>
           </div>
-          <Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="w-full sm:w-auto">Add subscription</Button>
+          <Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }} className="w-full sm:w-auto">{t('subscriptions.addSubscription')}</Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Active tools" value={subscriptionStats.active} icon="CreditCard" />
-          <StatCard label="Monthly cost" value={money.format(subscriptionStats.monthlyCost)} tone="negative" icon="Receipt" />
-          <StatCard label="Annual run rate" value={money.format(subscriptionStats.yearlyRunRate)} tone="negative" icon="TrendingDown" />
-          <StatCard label="Archived" value={subscriptionStats.archived} icon="Archive" />
+          <StatCard label={t('subscriptions.stats.active')} value={subscriptionStats.active} icon="CreditCard" />
+          <StatCard label={t('subscriptions.stats.monthlyCost')} value={money.format(subscriptionStats.monthlyCost)} tone="negative" icon="Receipt" />
+          <StatCard label={t('subscriptions.stats.yearlyRunRate')} value={money.format(subscriptionStats.yearlyRunRate)} tone="negative" icon="TrendingDown" />
+          <StatCard label={t('subscriptions.stats.archived')} value={subscriptionStats.archived} icon="Archive" />
         </div>
 
         <Card pad={0} className="overflow-hidden">
           <div className="p-4 sm:p-5 border-b border-border flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-            <SectionHeader title="Subscription stack" sub={`${visibleSubscriptions.length} subscription${visibleSubscriptions.length === 1 ? '' : 's'} shown`} className="mb-0" />
+            <SectionHeader
+              title={t('subscriptions.stack.title')}
+              sub={visibleSubscriptions.length === 1 ? t('subscriptions.stack.shown', { count: String(visibleSubscriptions.length) }) : t('subscriptions.stack.shownPlural', { count: String(visibleSubscriptions.length) })}
+              className="mb-0"
+            />
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-              <button type="button" onClick={() => setShowArchived(false)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${!showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>Active</button>
-              <button type="button" onClick={() => setShowArchived(true)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>Include archived</button>
+              <button type="button" onClick={() => setShowArchived(false)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${!showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>{t('subscriptions.filters.active')}</button>
+              <button type="button" onClick={() => setShowArchived(true)} className={`focus-ring h-8 px-3 rounded-full text-[13px] font-medium border transition-all ${showArchived ? 'border-transparent bg-accent text-accent-fg' : 'border-border bg-surface hover:bg-surface-hover text-text-secondary'}`}>{t('subscriptions.filters.archived')}</button>
             </div>
           </div>
           {actionError && <div className="mx-4 mt-4 sm:mx-5"><InlineAlert tone="negative">{actionError}</InlineAlert></div>}
 
           {visibleSubscriptions.length === 0 ? (
-            <EmptyState icon="CreditCard" title="No tool subscriptions yet" body="Add recurring software costs here to keep monthly expenses visible." action={<Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }}>Add subscription</Button>} />
+            <EmptyState icon="CreditCard" title={t('subscriptions.empty.title')} body={t('subscriptions.empty.body')} action={<Button icon="Plus" onClick={() => { setModalError(null); setModal({ mode: 'add' }); }}>{t('subscriptions.addSubscription')}</Button>} />
           ) : (
             <div className="divide-y divide-border">
               {visibleSubscriptions.map((sub) => (
@@ -177,29 +183,29 @@ export default function SubscriptionsPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="t-body-m text-text">{sub.name}</span>
-                        <Badge tone={sub.status === 'ACTIVE' ? 'positive' : 'neutral'}>{sub.status}</Badge>
-                        <Badge tone="accent">{(sub.billingCycle || sub.cycle).toLowerCase()}</Badge>
-                        {sub.archivedAt && <Badge>Archived</Badge>}
+                        <span className={`t-body-m text-text ${latinTokenClass(sub.name)}`}>{sub.name}</span>
+                        <Badge tone={sub.status === 'ACTIVE' ? 'positive' : 'neutral'}>{sub.status === 'ACTIVE' ? t('subscriptions.form.statusActive') : t('subscriptions.form.statusInactive')}</Badge>
+                        <Badge tone="accent">{t(`subscriptions.cycle.${(sub.billingCycle || sub.cycle).toLowerCase()}` as any)}</Badge>
+                        {sub.archivedAt && <Badge>{t('subscriptions.badges.archived')}</Badge>}
                       </div>
                       <div className="text-sm text-text-muted mt-1">
-                        next {formatDate(sub.nextBillingDate, locale)}
+                        {t('subscriptions.list.next', { date: <span className="date-token">{formatDate(sub.nextBillingDate, locale)}</span> })}
                         {sub.notes ? ` - ${sub.notes}` : ''}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between gap-3 sm:justify-end">
                     <div className="text-left sm:text-right">
-                      <div className="text-sm font-mono font-semibold text-negative">{money.format(monthlyEquivalent(sub))}/mo</div>
-                      <div className="text-xs text-text-muted">{money.format(sub.amount)} billed</div>
+                      <div className="text-sm font-mono font-semibold text-negative" dir="ltr">{t('subscriptions.list.perMonth', { amount: money.format(monthlyEquivalent(sub)) })}</div>
+                      <div className="text-xs text-text-muted">{t('subscriptions.list.billed', { amount: <span dir="ltr">{money.format(sub.amount)}</span> })}</div>
                     </div>
                     <div className="flex items-center gap-2">
                       {sub.status === 'ACTIVE' && !sub.archivedAt && (
-                        <IconButton icon="DollarSign" size="sm" disabled={recordingId === sub.id} onClick={() => recordPayment(sub)} title={`Record payment for ${sub.name}`} className="text-positive hover:text-positive" />
+                        <IconButton icon="DollarSign" size="sm" disabled={recordingId === sub.id} onClick={() => recordPayment(sub)} title={t('subscriptions.actions.recordPayment', { name: sub.name })} className="text-positive hover:text-positive" />
                       )}
-                      <IconButton icon="Pencil" size="sm" onClick={() => { setModalError(null); setModal({ mode: 'edit', subscription: sub }); }} title={`Edit ${sub.name}`} />
+                      <IconButton icon="Pencil" size="sm" onClick={() => { setModalError(null); setModal({ mode: 'edit', subscription: sub }); }} title={t('subscriptions.actions.edit', { name: sub.name })} />
                       <Button type="button" variant="secondary" size="sm" icon="Archive" onClick={() => requestDelete(sub)}>
-                        Archive
+                        {t('subscriptions.actions.archive')}
                       </Button>
                     </div>
                   </div>
@@ -210,9 +216,9 @@ export default function SubscriptionsPage() {
         </Card>
 
         <Card pad={20} className="max-w-md">
-          <div className="t-caption text-text-muted">Total monthly cost</div>
-          <div className="t-display font-mono text-negative mt-1">{money.format(totalMonthlyCost)}</div>
-          <p className="text-sm text-text-muted mt-1">Converted from monthly, quarterly, and yearly billing cycles.</p>
+          <div className="t-caption text-text-muted">{t('subscriptions.cost.title')}</div>
+          <div className="t-display text-negative mt-1">{moneyLong.format(totalMonthlyCost)}</div>
+          <p className="text-sm text-text-muted mt-1">{t('subscriptions.cost.desc')}</p>
         </Card>
       </div>
 
@@ -227,22 +233,22 @@ export default function SubscriptionsPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-[220] bg-black/40 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto p-4" onMouseDown={closeDeleteModal}>
           <Card role="dialog" aria-modal="true" className="w-full max-w-[460px] max-h-[calc(100vh-2rem)] overflow-y-auto shadow-xl my-8" pad={24} onMouseDown={(event) => event.stopPropagation()}>
-            <h2 className="t-h3">Archive {deleteTarget.subscription.name}?</h2>
+            <h2 className="t-h3">{t('subscriptions.delete.title', { name: deleteTarget.subscription.name })}</h2>
             <p className="text-sm text-text-secondary mt-2">
-              This will move the subscription to Archive and stop future billing. Past transactions will remain in history.
+              {t('subscriptions.delete.desc')}
             </p>
             {deleteTarget.pastCount > 0 && (
               <div className="mt-4 rounded-md bg-info-tint border border-info-border p-3 flex gap-2 text-sm text-info">
                 <Icon name="Info" size={15} className="shrink-0 mt-0.5" />
                 <span>
-                  {deleteTarget.pastCount} past recorded expense{deleteTarget.pastCount === 1 ? '' : 's'} will stay in your transaction history as a permanent record of what was spent.
+                  {deleteTarget.pastCount === 1 ? t('subscriptions.delete.pastNotice', { count: String(deleteTarget.pastCount) }) : t('subscriptions.delete.pastNoticePlural', { count: String(deleteTarget.pastCount) })}
                 </span>
               </div>
             )}
             {deleteError && <div className="mt-3"><InlineAlert tone="negative">{deleteError}</InlineAlert></div>}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-5 mt-5 border-t border-border">
-              <Button type="button" variant="ghost" disabled={isDeleting} onClick={closeDeleteModal}>Cancel</Button>
-              <Button type="button" variant="destructive" loading={isDeleting} onClick={confirmDelete}>{isDeleting ? 'Archiving...' : 'Archive subscription'}</Button>
+              <Button type="button" variant="ghost" disabled={isDeleting} onClick={closeDeleteModal}>{t('subscriptions.delete.cancel')}</Button>
+              <Button type="button" variant="destructive" loading={isDeleting} onClick={confirmDelete}>{isDeleting ? t('subscriptions.delete.archiving') : t('subscriptions.delete.archive')}</Button>
             </div>
           </Card>
         </div>
@@ -252,46 +258,47 @@ export default function SubscriptionsPage() {
 }
 
 function SubscriptionForm({ subscription, currencyPrefix, error, isSaving, onCancel, onSave }: { subscription?: Subscription; currencyPrefix: string; error: string | null; isSaving: boolean; onCancel: () => void; onSave: (formData: FormData, existing?: Subscription) => void }) {
+  const { t } = useLocale();
   const defaultBillingDate = subscription?.nextBillingDate ? String(subscription.nextBillingDate).slice(0, 10) : computeNextBillingDate(new Date().getDate());
 
   return (
     <form onSubmit={(event) => { event.preventDefault(); onSave(new FormData(event.currentTarget), subscription); }} className="space-y-4">
       <div>
-        <h2 className="t-h3">{subscription ? 'Edit subscription' : 'Add subscription'}</h2>
-        <p className="text-sm text-text-muted mt-1">Expenses are auto-recorded on the billing date each cycle.</p>
+        <h2 className="t-h3">{subscription ? t('subscriptions.form.editTitle') : t('subscriptions.form.addTitle')}</h2>
+        <p className="text-sm text-text-muted mt-1">{t('subscriptions.form.subtitle')}</p>
       </div>
-      {subscription && <InlineAlert tone="warning">Changes to amount, cycle, or billing date only affect future billings. Past transactions remain unchanged.</InlineAlert>}
+      {subscription && <InlineAlert tone="warning">{t('subscriptions.form.warning')}</InlineAlert>}
       {error && <InlineAlert tone="negative">{error}</InlineAlert>}
-      <Field label="Service name">
-        <Input name="name" defaultValue={subscription?.name} placeholder="Vercel Pro" required />
+      <Field label={t('subscriptions.form.nameLabel')}>
+        <Input name="name" defaultValue={subscription?.name} placeholder={t('subscriptions.form.namePlaceholder')} required />
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Cost">
-          <Input name="amount" type="number" min="0" step="0.01" defaultValue={subscription?.amount} required prefix={currencyPrefix} />
+        <Field label={t('subscriptions.form.costLabel')}>
+          <Input name="amount" type="number" min="0" step="0.01" defaultValue={subscription?.amount} required prefix={<span dir="ltr">{currencyPrefix}</span>} />
         </Field>
-        <Field label="Next billing date">
+        <Field label={t('subscriptions.form.nextBillingLabel')}>
           <Input name="nextBillingDate" type="date" defaultValue={defaultBillingDate} required />
         </Field>
       </div>
-      <Field label="Billing cycle">
+      <Field label={t('subscriptions.form.cycleLabel')}>
         <Select name="billingCycle" defaultValue={subscription?.billingCycle || subscription?.cycle || 'MONTHLY'}>
-          <option value="MONTHLY">Monthly</option>
-          <option value="QUARTERLY">Quarterly</option>
-          <option value="YEARLY">Yearly</option>
+          <option value="MONTHLY">{t('subscriptions.form.cycleMonthly')}</option>
+          <option value="QUARTERLY">{t('subscriptions.form.cycleQuarterly')}</option>
+          <option value="YEARLY">{t('subscriptions.form.cycleYearly')}</option>
         </Select>
       </Field>
-      <Field label="Status">
+      <Field label={t('subscriptions.form.statusLabel')}>
         <Select name="status" defaultValue={subscription?.status || 'ACTIVE'}>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
+          <option value="ACTIVE">{t('subscriptions.form.statusActive')}</option>
+          <option value="INACTIVE">{t('subscriptions.form.statusInactive')}</option>
         </Select>
       </Field>
-      <Field label="Notes">
-        <Input name="notes" defaultValue={subscription?.notes} placeholder="Optional" />
+      <Field label={t('subscriptions.form.notesLabel')}>
+        <Input name="notes" defaultValue={subscription?.notes} placeholder={t('subscriptions.form.notesOptional')} />
       </Field>
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-border">
-        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={isSaving}>{isSaving ? 'Saving...' : 'Save subscription'}</Button>
+        <Button type="button" variant="ghost" disabled={isSaving} onClick={onCancel}>{t('subscriptions.form.cancel')}</Button>
+        <Button type="submit" loading={isSaving}>{isSaving ? t('subscriptions.form.saving') : t('subscriptions.form.save')}</Button>
       </div>
     </form>
   );

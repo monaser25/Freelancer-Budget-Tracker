@@ -1,6 +1,7 @@
 'use client';
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useLocale } from '@/lib/i18n';
 
 type RevenueExpenseRow = {
   label: string;
@@ -20,6 +21,9 @@ export function AnalyticsRevenueExpensesChart({
   data: RevenueExpenseRow[];
   formatAmount: (value: number) => string;
 }) {
+  const { t } = useLocale();
+  const seriesLabel = (name: string) => name === 'revenue' ? t('analytics.stats.revenue') : t('analytics.stats.expenses');
+
   return (
     <div className="h-[280px] w-full mt-4">
       <ResponsiveContainer width="100%" height="100%">
@@ -28,11 +32,11 @@ export function AnalyticsRevenueExpensesChart({
           <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} dy={10} />
           <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatAmount(Number(v))} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} />
           <Tooltip
-            formatter={(value: number, name: string) => [formatAmount(value), name === 'revenue' ? 'Revenue' : 'Expenses']}
+            formatter={(value: number, name: string) => [formatAmount(value), seriesLabel(name)]}
             cursor={{ fill: 'var(--surface-hover)' }}
             contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
           />
-          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={(v) => v === 'revenue' ? 'Revenue' : 'Expenses'} />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} formatter={(v) => seriesLabel(String(v))} />
           <Bar dataKey="revenue" fill="var(--positive)" radius={[4, 4, 0, 0]} name="revenue" />
           <Bar dataKey="expenses" fill="var(--negative)" radius={[4, 4, 0, 0]} name="expenses" />
         </BarChart>

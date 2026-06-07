@@ -22,7 +22,7 @@ const fmtDate = (v: string | null | undefined, locale: Locale) => (v ? formatDat
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const id = String(params.id);
   const { isLoaded, loadInvoices, getInvoice, markPaid, deleteInvoice } = useInvoiceStore();
   const { toast } = useToast();
@@ -46,12 +46,12 @@ export default function InvoiceDetailPage() {
     }
   }, [invoice, searchParams, id]);
 
-  if (!isLoaded) return <div className="py-24 text-center text-text-muted text-[13px]">Loading invoice…</div>;
+  if (!isLoaded) return <div className="py-24 text-center text-text-muted text-[13px]">{t('invoices.loading')}</div>;
   if (!invoice) {
     return (
       <div className="py-24 text-center">
-        <p className="t-body text-text-muted">Invoice not found.</p>
-        <button onClick={() => router.push('/invoices')} className="mt-3 t-body-m text-accent hover:underline">Back to invoices</button>
+        <p className="t-body text-text-muted">{t('invoices.notFound')}</p>
+        <button onClick={() => router.push('/invoices')} className="mt-3 t-body-m text-accent hover:underline">{t('invoices.back')}</button>
       </div>
     );
   }
@@ -62,18 +62,25 @@ export default function InvoiceDetailPage() {
       await fn();
       toast(success);
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Action failed', 'error');
+      toast(e instanceof Error ? e.message : t('invoices.detail.actionFailed'), 'error');
     } finally {
       setBusy(null);
     }
   };
 
+  const STATUS_LABELS: Record<InvoiceStatus, string> = {
+    DRAFT: t('invoices.status.draft'),
+    SENT: t('invoices.status.sent'),
+    PAID: t('invoices.status.paid'),
+    OVERDUE: t('invoices.status.overdue'),
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3 flex-wrap">
-        <IconButton icon="arrowLeft" title="Back" onClick={() => router.push('/invoices')} />
-        <h1 className="t-h1">{invoice.number}</h1>
-        <Badge tone={statusTone(invoice.status)}>{invoice.status[0] + invoice.status.slice(1).toLowerCase()}</Badge>
+        <IconButton icon="arrowLeft" title={t('invoices.detail.back')} onClick={() => router.push('/invoices')} />
+        <h1 className="t-h1" dir="ltr">{invoice.number}</h1>
+        <Badge tone={statusTone(invoice.status)}>{STATUS_LABELS[invoice.status as InvoiceStatus] || (invoice.status[0] + invoice.status.slice(1).toLowerCase())}</Badge>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
@@ -97,30 +104,30 @@ export default function InvoiceDetailPage() {
         {/* Side panel (hidden on print) */}
         <div className="flex flex-col gap-4 print:hidden">
           <Card pad={18} className="flex flex-col gap-3">
-            <div className="t-caption text-text-muted">Status</div>
-            <Badge tone={statusTone(invoice.status)} className="self-start">{invoice.status[0] + invoice.status.slice(1).toLowerCase()}</Badge>
-            <div className="flex justify-between t-small"><span className="text-text-muted">Issued</span><span className="tnum">{fmtDate(invoice.issueDate, locale)}</span></div>
-            <div className="flex justify-between t-small"><span className="text-text-muted">Due</span><span className="tnum">{fmtDate(invoice.dueDate, locale)}</span></div>
-            {invoice.paidAt && <div className="flex justify-between t-small"><span className="text-text-muted">Paid</span><span className="tnum text-positive">{fmtDate(invoice.paidAt, locale)}</span></div>}
-            {invoice.client && <div className="flex justify-between t-small"><span className="text-text-muted">Client</span><span>{invoice.client.name}</span></div>}
+            <div className="t-caption text-text-muted">{t('invoices.detail.statusLabel')}</div>
+            <Badge tone={statusTone(invoice.status)} className="self-start">{STATUS_LABELS[invoice.status as InvoiceStatus] || (invoice.status[0] + invoice.status.slice(1).toLowerCase())}</Badge>
+            <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.issuedLabel')}</span><span className="tnum date-token">{fmtDate(invoice.issueDate, locale)}</span></div>
+            <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.dueLabel')}</span><span className="tnum date-token">{fmtDate(invoice.dueDate, locale)}</span></div>
+            {invoice.paidAt && <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.paidLabel')}</span><span className="tnum text-positive date-token">{fmtDate(invoice.paidAt, locale)}</span></div>}
+            {invoice.client && <div className="flex justify-between t-small"><span className="text-text-muted">{t('invoices.detail.clientLabel')}</span><span dir="ltr">{invoice.client.name}</span></div>}
           </Card>
 
           <Card pad={18} className="flex flex-col gap-2">
             {invoice.status !== 'PAID' && (
-              <Button icon="checkCircle" className="w-full" loading={busy === 'paid'} onClick={() => run('paid', () => markPaid(invoice.id), 'Marked as paid — income recorded')}>
-                Mark as paid
+              <Button icon="checkCircle" className="w-full" loading={busy === 'paid'} onClick={() => run('paid', () => markPaid(invoice.id), t('invoices.detail.toastMarkedPaid'))}>
+                {t('invoices.detail.markPaid')}
               </Button>
             )}
             {invoice.status !== 'PAID' && (
               <Button variant="secondary" icon="send" className="w-full" onClick={() => setSendOpen(true)}>
-                {invoice.status === 'SENT' ? 'Resend invoice' : 'Send invoice'}
+                {invoice.status === 'SENT' ? t('invoices.detail.resend') : t('invoices.detail.send')}
               </Button>
             )}
             {invoice.status !== 'PAID' && (
-              <Button variant="secondary" icon="pencil" className="w-full" onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>Edit</Button>
+              <Button variant="secondary" icon="pencil" className="w-full" onClick={() => router.push(`/invoices/${invoice.id}/edit`)}>{t('invoices.detail.edit')}</Button>
             )}
-            <Button variant="secondary" icon="download" className="w-full" onClick={() => window.print()}>Download / Print</Button>
-            <Button variant="ghost" icon="trash2" className="w-full text-negative" onClick={() => setConfirmDel(true)}>Delete</Button>
+            <Button variant="secondary" icon="download" className="w-full" onClick={() => window.print()}>{t('invoices.detail.download')}</Button>
+            <Button variant="ghost" icon="trash2" className="w-full text-negative" onClick={() => setConfirmDel(true)}>{t('invoices.detail.delete')}</Button>
           </Card>
         </div>
       </div>
@@ -142,11 +149,11 @@ export default function InvoiceDetailPage() {
         open={confirmDel}
         onClose={() => busy === null && setConfirmDel(false)}
         tone="danger"
-        title="Delete invoice?"
-        description={`${invoice.number} will be permanently removed.`}
-        confirmLabel="Delete invoice"
+        title={t('invoices.detail.deleteTitle')}
+        description={t('invoices.detail.deleteDesc').replace('{number}', invoice.number)}
+        confirmLabel={t('invoices.detail.deleteConfirm')}
         loading={busy === 'del'}
-        onConfirm={() => run('del', async () => { await deleteInvoice(invoice.id); router.push('/invoices'); }, 'Invoice deleted')}
+        onConfirm={() => run('del', async () => { await deleteInvoice(invoice.id); router.push('/invoices'); }, t('invoices.detail.toastDeleted'))}
       />
     </div>
   );

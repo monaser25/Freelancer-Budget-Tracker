@@ -1,5 +1,6 @@
-import { formatDate } from '@/lib/format';
-import { DEFAULT_LOCALE } from '@/lib/locales';
+import { formatDate, formatTransactionName } from '@/lib/format';
+import { DEFAULT_LOCALE, type Locale } from '@/lib/locales';
+import { t as translate } from '@/messages';
 
 type Tx = {
   id: string;
@@ -18,25 +19,28 @@ type ClientRow = { id: string; name: string; company: string | null };
 
 export type ReportType = 'pl' | 'transactions' | 'clients' | 'tax';
 
-export const REPORT_TITLES: Record<ReportType, string> = {
-  pl: 'Profit & Loss Summary',
-  transactions: 'Transactions',
-  clients: 'Client Revenue',
-  tax: 'Tax Summary',
+export const getReportTitle = (type: ReportType, locale: Locale): string => {
+  switch (type) {
+    case 'pl': return translate(locale, 'reports.types.pl.title');
+    case 'transactions': return translate(locale, 'reports.types.transactions.label');
+    case 'clients': return translate(locale, 'reports.types.clients.label');
+    case 'tax': return translate(locale, 'reports.types.tax.label');
+  }
 };
 
-// Categories are stored as short codes (CLIENT, TOOLS, …). Reports must show the
-// human label so a row reads "Tools" / "Client Payment" instead of a raw code.
-const CATEGORY_LABELS: Record<string, string> = {
-  CLIENT: 'Client Payment',
-  PROJECT: 'Project Revenue',
-  TOOLS: 'Tools',
-  OPERATIONS: 'Operations',
-  TAXES: 'Taxes',
-  OTHER: 'Other',
+const getCategoryLabel = (id: string, locale: Locale) => {
+  const keyMap: Record<string, any> = {
+    CLIENT: 'reports.categories.client',
+    PROJECT: 'reports.categories.project',
+    TOOLS: 'reports.categories.tools',
+    OPERATIONS: 'reports.categories.operations',
+    TAXES: 'reports.categories.taxes',
+    OTHER: 'reports.categories.other',
+  };
+  const key = keyMap[id];
+  if (key) return translate(locale, key);
+  return id ? id.charAt(0) + id.slice(1).toLowerCase() : translate(locale, 'reports.categories.uncategorized');
 };
-const categoryLabel = (id: string) =>
-  CATEGORY_LABELS[id] || (id ? id.charAt(0) + id.slice(1).toLowerCase() : 'Uncategorized');
 
 export interface ReportResult {
   type: ReportType;
@@ -49,11 +53,11 @@ export interface ReportResult {
 
 const iso = (d: Date | string) => (typeof d === 'string' ? d : d.toISOString());
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-const monthLabel = (key: string) => {
+const monthLabel = (key: string, locale: Locale) => {
   const [y, m] = key.split('-').map(Number);
-  return formatDate(new Date(y, m - 1, 1), DEFAULT_LOCALE, { month: 'short', year: 'numeric' });
+  return formatDate(new Date(y, m - 1, 1), locale, { month: 'short', year: 'numeric' });
 };
-const dateLabel = (d: Date | string) => formatDate(new Date(iso(d)), DEFAULT_LOCALE, { month: 'short', day: 'numeric', year: 'numeric' });
+const dateLabel = (d: Date | string, locale: Locale) => formatDate(new Date(iso(d)), locale, { month: 'short', day: 'numeric', year: 'numeric' });
 
 const inRange = (d: Date | string, from: Date, to: Date) => {
   const t = new Date(iso(d)).getTime();
@@ -65,33 +69,34 @@ export function buildReport(
   data: { transactions: Tx[]; clients: ClientRow[] },
   fromStr: string,
   toStr: string,
+  locale: Locale = DEFAULT_LOCALE,
 ): ReportResult {
   const from = new Date(`${fromStr}T00:00:00`);
   const to = new Date(`${toStr}T23:59:59`);
   const txs = data.transactions.filter((t) => t.status === 'COMPLETED' && inRange(t.date, from, to));
-  const base = { type, title: REPORT_TITLES[type], range: { from: fromStr, to: toStr } };
+  const base = { type, title: getReportTitle(type, locale), range: { from: fromStr, to: toStr } };
 
   if (type === 'transactions') {
     const rows = [...txs]
       .sort((a, b) => new Date(iso(b.date)).getTime() - new Date(iso(a.date)).getTime())
-      .map((t) => [dateLabel(t.date), t.name || '—', t.type === 'INCOME' ? 'Revenue' : 'Expense', categoryLabel(t.categoryId), t.type === 'INCOME' ? t.amount : -t.amount]);
+      .map((t) => [dateLabel(t.date, locale), formatTransactionName(t.name || '—', (k, vars) => translate(locale, k, vars)), t.type === 'INCOME' ? translate(locale, 'reports.values.revenue') : translate(locale, 'reports.values.expense'), getCategoryLabel(t.categoryId, locale), t.type === 'INCOME' ? t.amount : -t.amount]);
     const revenue = txs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
     const expenses = txs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
     return {
       ...base,
       columns: [
-        { key: 'date', label: 'Date' },
-        { key: 'name', label: 'Description' },
-        { key: 'type', label: 'Type' },
-        { key: 'category', label: 'Category' },
-        { key: 'amount', label: 'Amount', numeric: true },
+        { key: 'date', label: translate(locale, 'reports.columns.date') },
+        { key: 'name', label: translate(locale, 'reports.columns.itemName') },
+        { key: 'type', label: translate(locale, 'reports.columns.type') },
+        { key: 'category', label: translate(locale, 'reports.columns.category') },
+        { key: 'amount', label: translate(locale, 'reports.columns.amount'), numeric: true },
       ],
       rows,
       summary: [
-        { label: 'Transactions', value: txs.length, tone: 'neutral' },
-        { label: 'Revenue', value: revenue, tone: 'positive' },
-        { label: 'Expenses', value: expenses, tone: 'negative' },
-        { label: 'Net', value: revenue - expenses, tone: revenue - expenses >= 0 ? 'positive' : 'negative' },
+        { label: translate(locale, 'reports.summary.transactions'), value: txs.length, tone: 'neutral' },
+        { label: translate(locale, 'reports.summary.revenue'), value: revenue, tone: 'positive' },
+        { label: translate(locale, 'reports.summary.expenses'), value: expenses, tone: 'negative' },
+        { label: translate(locale, 'reports.summary.net'), value: revenue - expenses, tone: revenue - expenses >= 0 ? 'positive' : 'negative' },
       ],
     };
   }
@@ -115,15 +120,15 @@ export function buildReport(
     return {
       ...base,
       columns: [
-        { key: 'client', label: 'Client' },
-        { key: 'company', label: 'Company' },
-        { key: 'count', label: 'Payments', numeric: true },
-        { key: 'revenue', label: 'Revenue', numeric: true },
+        { key: 'client', label: translate(locale, 'reports.columns.client') },
+        { key: 'company', label: translate(locale, 'reports.columns.company') },
+        { key: 'count', label: translate(locale, 'reports.columns.payments'), numeric: true },
+        { key: 'revenue', label: translate(locale, 'reports.columns.revenue'), numeric: true },
       ],
       rows,
       summary: [
-        { label: 'Clients', value: rows.length, tone: 'neutral' },
-        { label: 'Total revenue', value: total, tone: 'positive' },
+        { label: translate(locale, 'reports.summary.clients'), value: rows.length, tone: 'neutral' },
+        { label: translate(locale, 'reports.summary.totalRevenue'), value: total, tone: 'positive' },
       ],
     };
   }
@@ -136,22 +141,22 @@ export function buildReport(
       byCat[key].amount += t.amount;
     }
     const rows = Object.entries(byCat)
-      .map(([key, v]) => [categoryLabel(key.split(':')[1]), v.type === 'INCOME' ? 'Revenue' : 'Expense', v.type === 'INCOME' ? v.amount : -v.amount])
+      .map(([key, v]) => [getCategoryLabel(key.split(':')[1], locale), v.type === 'INCOME' ? translate(locale, 'reports.values.revenue') : translate(locale, 'reports.values.expense'), v.type === 'INCOME' ? v.amount : -v.amount])
       .sort((a, b) => (b[2] as number) - (a[2] as number));
     const revenue = txs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
     const expenses = txs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
     return {
       ...base,
       columns: [
-        { key: 'category', label: 'Category' },
-        { key: 'type', label: 'Type' },
-        { key: 'amount', label: 'Amount', numeric: true },
+        { key: 'category', label: translate(locale, 'reports.columns.category') },
+        { key: 'type', label: translate(locale, 'reports.columns.type') },
+        { key: 'amount', label: translate(locale, 'reports.columns.amount'), numeric: true },
       ],
       rows,
       summary: [
-        { label: 'Gross revenue', value: revenue, tone: 'positive' },
-        { label: 'Deductible expenses', value: expenses, tone: 'negative' },
-        { label: 'Net (taxable)', value: revenue - expenses, tone: revenue - expenses >= 0 ? 'positive' : 'negative' },
+        { label: translate(locale, 'reports.summary.grossRevenue'), value: revenue, tone: 'positive' },
+        { label: translate(locale, 'reports.summary.deductibleExpenses'), value: expenses, tone: 'negative' },
+        { label: translate(locale, 'reports.summary.netTaxable'), value: revenue - expenses, tone: revenue - expenses >= 0 ? 'positive' : 'negative' },
       ],
     };
   }
@@ -166,22 +171,22 @@ export function buildReport(
   }
   const rows = Object.entries(months)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, v]) => [monthLabel(key), v.revenue, v.expenses, v.revenue - v.expenses]);
+    .map(([key, v]) => [monthLabel(key, locale), v.revenue, v.expenses, v.revenue - v.expenses]);
   const totalRev = txs.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
   const totalExp = txs.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
   return {
     ...base,
     columns: [
-      { key: 'month', label: 'Month' },
-      { key: 'revenue', label: 'Revenue', numeric: true },
-      { key: 'expenses', label: 'Expenses', numeric: true },
-      { key: 'net', label: 'Net', numeric: true },
+      { key: 'month', label: translate(locale, 'reports.columns.month') },
+      { key: 'revenue', label: translate(locale, 'reports.columns.revenue'), numeric: true },
+      { key: 'expenses', label: translate(locale, 'reports.columns.expenses'), numeric: true },
+      { key: 'net', label: translate(locale, 'reports.columns.net'), numeric: true },
     ],
     rows,
     summary: [
-      { label: 'Revenue', value: totalRev, tone: 'positive' },
-      { label: 'Expenses', value: totalExp, tone: 'negative' },
-      { label: 'Net profit', value: totalRev - totalExp, tone: totalRev - totalExp >= 0 ? 'positive' : 'negative' },
+      { label: translate(locale, 'reports.summary.revenue'), value: totalRev, tone: 'positive' },
+      { label: translate(locale, 'reports.summary.expenses'), value: totalExp, tone: 'negative' },
+      { label: translate(locale, 'reports.summary.netProfit'), value: totalRev - totalExp, tone: totalRev - totalExp >= 0 ? 'positive' : 'negative' },
     ],
   };
 }

@@ -3,9 +3,16 @@ import './globals.css';
 import { AppShell } from '@/components/AppShell';
 import { themeNoFlashScript } from '@/components/ThemeProvider';
 
-import { Cairo } from 'next/font/google';
+import { IBM_Plex_Sans_Arabic } from 'next/font/google';
 
-const cairo = Cairo({ subsets: ['arabic'], variable: '--font-cairo' });
+// IBM Plex Sans Arabic shares the clean, even rhythm of our Latin (Inter) UI,
+// so Arabic and English feel like one type system rather than two fonts.
+const arabicFont = IBM_Plex_Sans_Arabic({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['arabic'],
+  variable: '--font-arabic',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Haseeela - Freelancer Budget Tracker',
@@ -39,12 +46,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="en" dir="ltr" className={arabicFont.variable} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         {/* Set the theme class before first paint to avoid a light/dark flash. */}
         <script dangerouslySetInnerHTML={{ __html: themeNoFlashScript }} />
         <script
@@ -61,7 +68,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${cairo.variable}`}>
+      <body>
         <AppShell>{children}</AppShell>
       </body>
     </html>

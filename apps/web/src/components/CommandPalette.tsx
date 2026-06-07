@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '@/store/uiStore';
 import { useFinancialStore } from '@/store/financialStore';
+import { useLocale } from '@/lib/i18n';
+import { MessageKey } from '@/messages/en';
 import { Icon } from '@/components/ui/Icon';
 import { Badge } from '@/components/ui/Badge';
 
@@ -11,28 +13,29 @@ interface Command {
   icon: string;
   label: string;
   sub?: string;
-  kind: 'Action' | 'Page' | 'Client' | 'Subscription';
+  kind: string;
   run: () => void;
 }
 
-const PAGES: { icon: string; label: string; href: string }[] = [
-  { icon: 'layoutDashboard', label: 'Overview', href: '/' },
-  { icon: 'walletCards', label: 'Transactions', href: '/transactions' },
-  { icon: 'fileText', label: 'Invoices', href: '/invoices' },
-  { icon: 'users', label: 'Clients & Revenue', href: '/clients' },
-  { icon: 'creditCard', label: 'Subscriptions', href: '/subscriptions' },
-  { icon: 'barChart3', label: 'Analytics', href: '/analytics' },
-  { icon: 'fileBarChart', label: 'Reports', href: '/reports' },
-  { icon: 'archive', label: 'Archive', href: '/archive' },
-  { icon: 'settings', label: 'Settings', href: '/settings' },
-  { icon: 'bell', label: 'Notifications', href: '/notifications' },
-  { icon: 'user', label: 'Profile', href: '/profile' },
+const PAGES: { icon: string; labelKey: MessageKey; href: string }[] = [
+  { icon: 'layoutDashboard', labelKey: 'nav.overview', href: '/' },
+  { icon: 'walletCards', labelKey: 'nav.transactions', href: '/transactions' },
+  { icon: 'fileText', labelKey: 'nav.invoices', href: '/invoices' },
+  { icon: 'users', labelKey: 'nav.clients', href: '/clients' },
+  { icon: 'creditCard', labelKey: 'nav.subscriptions', href: '/subscriptions' },
+  { icon: 'barChart3', labelKey: 'nav.analytics', href: '/analytics' },
+  { icon: 'fileBarChart', labelKey: 'nav.reports', href: '/reports' },
+  { icon: 'archive', labelKey: 'nav.archive', href: '/archive' },
+  { icon: 'settings', labelKey: 'nav.settings', href: '/settings' },
+  { icon: 'bell', labelKey: 'topbar.notifications', href: '/notifications' },
+  { icon: 'user', labelKey: 'sidebar.menu.profile', href: '/profile' },
 ];
 
 export function CommandPalette() {
   const { paletteOpen, setPaletteOpen, openNewModal } = useUiStore();
   const { clients, subscriptions } = useFinancialStore();
   const router = useRouter();
+  const { t } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const [q, setQ] = useState('');
   const [sel, setSel] = useState(0);
@@ -48,26 +51,26 @@ export function CommandPalette() {
   const all = useMemo<Command[]>(() => {
     const close = () => setPaletteOpen(false);
     const actions: Command[] = [
-      { icon: 'trendingUp', label: 'Add revenue', kind: 'Action', run: () => { close(); openNewModal('income'); } },
-      { icon: 'receipt', label: 'Log expense', kind: 'Action', run: () => { close(); openNewModal('expense'); } },
-      { icon: 'fileText', label: 'New invoice', kind: 'Action', run: () => { close(); router.push('/invoices/new'); } },
-      { icon: 'users', label: 'Add client', kind: 'Action', run: () => { close(); openNewModal('client'); } },
-      { icon: 'creditCard', label: 'Add subscription', kind: 'Action', run: () => { close(); openNewModal('subscription'); } },
+      { icon: 'trendingUp', label: t('commandPalette.actions.addRevenue'), kind: t('commandPalette.groups.actions'), run: () => { close(); openNewModal('income'); } },
+      { icon: 'receipt', label: t('commandPalette.actions.logExpense'), kind: t('commandPalette.groups.actions'), run: () => { close(); openNewModal('expense'); } },
+      { icon: 'fileText', label: t('commandPalette.actions.newInvoice'), kind: t('commandPalette.groups.actions'), run: () => { close(); router.push('/invoices/new'); } },
+      { icon: 'users', label: t('commandPalette.actions.addClient'), kind: t('commandPalette.groups.actions'), run: () => { close(); openNewModal('client'); } },
+      { icon: 'creditCard', label: t('commandPalette.actions.addSubscription'), kind: t('commandPalette.groups.actions'), run: () => { close(); openNewModal('subscription'); } },
     ];
     const pages: Command[] = PAGES.map((p) => ({
       icon: p.icon,
-      label: p.label,
-      kind: 'Page',
+      label: t(p.labelKey),
+      kind: t('commandPalette.groups.navigation'),
       run: () => { close(); router.push(p.href); },
     }));
     const clientCmds: Command[] = clients
       .filter((c) => !c.archivedAt)
-      .map((c) => ({ icon: 'users', label: c.name, sub: c.company, kind: 'Client', run: () => { close(); router.push('/clients'); } }));
+      .map((c) => ({ icon: 'users', label: c.name, sub: c.company, kind: t('commandPalette.groups.recentClients'), run: () => { close(); router.push('/clients'); } }));
     const subCmds: Command[] = subscriptions
       .filter((s) => !s.archivedAt)
-      .map((s) => ({ icon: 'creditCard', label: s.name, kind: 'Subscription', run: () => { close(); router.push('/subscriptions'); } }));
+      .map((s) => ({ icon: 'creditCard', label: s.name, kind: t('commandPalette.groups.subscriptions'), run: () => { close(); router.push('/subscriptions'); } }));
     return [...actions, ...pages, ...clientCmds, ...subCmds];
-  }, [clients, subscriptions, openNewModal, router, setPaletteOpen]);
+  }, [clients, subscriptions, openNewModal, router, setPaletteOpen, t]);
 
   const filtered = useMemo(
     () =>
@@ -105,23 +108,25 @@ export function CommandPalette() {
           <Icon name="search" size={18} className="text-text-muted" />
           <input
             ref={inputRef}
+            type="search"
+            data-search="true"
             value={q}
             onChange={(e) => { setQ(e.target.value); setSel(0); }}
-            placeholder="Search clients, tools, pages, or run an action…"
-            className="flex-1 bg-transparent outline-none text-text text-[15px] placeholder:text-text-muted"
+            placeholder={t('commandPalette.placeholder')}
+            className="flex-1 bg-transparent outline-none text-text text-[15px] text-start placeholder:text-text-muted"
           />
           <kbd className="text-[11px] px-1.5 py-0.5 rounded border border-border text-text-muted">Esc</kbd>
         </div>
         <div className="max-h-[360px] overflow-y-auto p-2">
           {filtered.length === 0 ? (
-            <div className="py-6 text-center t-body text-text-muted">No results for &quot;{q}&quot;</div>
+            <div className="py-6 text-center t-body text-text-muted">{t('commandPalette.empty').replace('{q}', q)}</div>
           ) : (
             filtered.map((a, i) => (
               <button
                 key={`${a.kind}-${a.label}-${i}`}
                 onClick={a.run}
                 onMouseEnter={() => setSel(i)}
-                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-left transition-colors ${
+                className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-start transition-colors ${
                   sel === i ? 'bg-surface-hover' : ''
                 }`}
               >

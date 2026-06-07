@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
           className="w-full"
           icon="refreshCcw"
         >
-          {waitSeconds > 0 ? t('auth.forgotPassword.resendAvailableIn', { time: formatAuthWaitTime(waitSeconds) }) : 'Send another link'}
+          {waitSeconds > 0 ? t('auth.forgotPassword.resendAvailableIn', { time: formatAuthWaitTime(waitSeconds) }) : t('auth.forgotPassword.resendButton')}
         </Button>
         <div className="t-body text-text-secondary text-center mt-6">
           <Link href="/login" className="text-accent font-semibold hover:underline">{t('auth.forgotPassword.backToLoginLink')}</Link>
@@ -95,12 +95,12 @@ export default function ForgotPasswordPage() {
           <Input name="email" type="email" placeholder={t('auth.forgotPassword.emailPlaceholder')} required autoFocus />
         </Field>
         <Button type="submit" loading={isSubmitting} size="lg" className="w-full mt-1">
-          {isSubmitting ? 'Sending…' : 'Send reset link'}
+          {isSubmitting ? t('auth.forgotPassword.submitButtonLoading') : t('auth.forgotPassword.submitButton')}
         </Button>
       </form>
 
       <div className="t-body text-text-secondary text-center mt-6">
-        {t('auth.forgotPassword.backToLoginPrompt')} <Link href="/login" className="text-accent font-semibold hover:underline">Back to log in</Link>
+        {t('auth.forgotPassword.backToLoginPrompt')} <Link href="/login" className="text-accent font-semibold hover:underline">{t('auth.forgotPassword.backToLoginLink')}</Link>
       </div>
     </AuthLayout>
   );

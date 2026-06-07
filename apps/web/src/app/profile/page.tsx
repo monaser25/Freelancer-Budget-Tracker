@@ -15,11 +15,13 @@ import { Modal } from '@/components/ui/Modal';
 import { Icon } from '@/components/ui/Icon';
 import { InlineAlert } from '@/components/ui/InlineAlert';
 import { useToast } from '@/components/ui/Toast';
+import { useLocale } from '@/lib/i18n';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { t } = useLocale();
   const dev = isDevAuthEnabled();
 
   const [name, setName] = useState('');
@@ -59,7 +61,7 @@ export default function ProfilePage() {
       email: user?.email || '',
       password,
     });
-    if (error) throw new Error('Current password is incorrect.');
+    if (error) throw new Error(t('profile.error.currentPassword'));
   };
 
   const saveName = async () => {
@@ -68,9 +70,9 @@ export default function ProfilePage() {
     try {
       await updatePreferencesAPI({ name: name.trim() });
       if (!dev) await getSupabaseBrowserClient().auth.updateUser({ data: { name: name.trim() } });
-      toast('Name updated');
+      toast(t('profile.toast.nameUpdated'));
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to update name', 'error');
+      toast(e instanceof Error ? e.message : t('profile.toast.nameFailed'), 'error');
     } finally {
       setSavingName(false);
     }
@@ -78,8 +80,8 @@ export default function ProfilePage() {
 
   const saveEmail = async () => {
     if (!email.trim() || email === user?.email) return;
-    if (dev) { toast('Email change is disabled in local dev mode', 'info'); return; }
-    if (!emailCurrentPw) { toast('Enter your current password to change email', 'error'); return; }
+    if (dev) { toast(t('profile.toast.devEmail'), 'info'); return; }
+    if (!emailCurrentPw) { toast(t('profile.toast.reqCurrentPassword'), 'error'); return; }
     setSavingEmail(true);
     try {
       await verifyPassword(emailCurrentPw);
@@ -87,35 +89,35 @@ export default function ProfilePage() {
       if (error) throw error;
       setEmailCurrentPw('');
       setPendingEmail(email.trim());
-      toast('Confirmation links sent to both your old and new email', 'info');
+      toast(t('profile.toast.emailLinksSent'), 'info');
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to update email', 'error');
+      toast(e instanceof Error ? e.message : t('profile.toast.emailFailed'), 'error');
     } finally {
       setSavingEmail(false);
     }
   };
 
   const savePassword = async () => {
-    if (dev) { toast('Password change is disabled in local dev mode', 'info'); return; }
-    if (!currentPw) { toast('Enter your current password', 'error'); return; }
-    if (pw.length < 8) { toast('New password must be at least 8 characters', 'error'); return; }
-    if (pw !== pw2) { toast('Passwords do not match', 'error'); return; }
+    if (dev) { toast(t('profile.toast.devPassword'), 'info'); return; }
+    if (!currentPw) { toast(t('profile.toast.reqPassword'), 'error'); return; }
+    if (pw.length < 8) { toast(t('profile.toast.passwordLength'), 'error'); return; }
+    if (pw !== pw2) { toast(t('profile.toast.passwordMismatch'), 'error'); return; }
     setSavingPw(true);
     try {
       await verifyPassword(currentPw);
       const { error } = await getSupabaseBrowserClient().auth.updateUser({ password: pw });
       if (error) throw error;
       setCurrentPw(''); setPw(''); setPw2('');
-      toast('Password updated');
+      toast(t('profile.toast.passwordUpdated'));
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to update password', 'error');
+      toast(e instanceof Error ? e.message : t('profile.toast.passwordFailed'), 'error');
     } finally {
       setSavingPw(false);
     }
   };
 
   const doDelete = async () => {
-    if (!dev && !delPw) { toast('Enter your password to confirm', 'error'); return; }
+    if (!dev && !delPw) { toast(t('profile.toast.reqConfirmPassword'), 'error'); return; }
     setDeleting(true);
     try {
       if (!dev) await verifyPassword(delPw);
@@ -123,7 +125,7 @@ export default function ProfilePage() {
       await signOut().catch(() => undefined);
       router.replace('/login');
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'Failed to delete account', 'error');
+      toast(e instanceof Error ? e.message : t('profile.toast.deleteFailed'), 'error');
       setDeleting(false);
     }
   };
@@ -133,46 +135,55 @@ export default function ProfilePage() {
       <div className="flex items-center gap-3">
         <Avatar name={name || email} size={48} />
         <div>
-          <h1 className="t-h1">{name || 'Your profile'}</h1>
-          <p className="t-body text-text-muted">{email}</p>
+          <h1 className="t-h1">{name || t('profile.title')}</h1>
+          <p className="t-body text-text-muted"><span dir="ltr">{email}</span></p>
         </div>
       </div>
 
       {/* Personal info */}
       <Card pad={20}>
-        <SectionHeader title="Personal information" />
+        <SectionHeader title={t('profile.section.personal')} />
         <div className="flex flex-col gap-4">
-          <Field label="Name">
+          <Field label={t('profile.label.name')}>
             <div className="flex gap-2">
               <Input value={name} onChange={(e) => setName(e.target.value)} className="flex-1" />
-              <Button variant="secondary" loading={savingName} onClick={saveName}>Save</Button>
+              <Button variant="secondary" loading={savingName} onClick={saveName}>{t('profile.action.save')}</Button>
             </div>
           </Field>
           <Field
-            label="Email"
+            label={t('profile.label.email')}
             hint={dev
-              ? 'Disabled in local dev mode.'
-              : 'Changing your email requires your current password. For your security, you’ll need to confirm links sent to both your old and new addresses to complete the change.'}
+              ? t('profile.hint.devDisabled')
+              : t('profile.hint.emailChange')}
           >
             <Input
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setPendingEmail(null); }}
               disabled={dev}
+              dir="ltr"
             />
           </Field>
           {!dev && pendingEmail && (
             <InlineAlert
               tone="info"
-              title="Confirm both inboxes to finish"
-              body={`We sent confirmation links to both your current (${user?.email}) and new (${pendingEmail}) email addresses. Please confirm both emails to complete the change — your email won’t update until you do.`}
+              title={t('profile.alert.emailConfirmTitle')}
+              body={
+                <>
+                  {t('profile.alert.emailConfirmBody1')}
+                  <span dir="ltr">{user?.email || ''}</span>
+                  {t('profile.alert.emailConfirmBody2')}
+                  <span dir="ltr">{pendingEmail}</span>
+                  {t('profile.alert.emailConfirmBody3')}
+                </>
+              }
             />
           )}
           {!dev && email !== user?.email && email.trim() && (
-            <Field label="Current password">
+            <Field label={t('profile.label.currentPassword')}>
               <div className="flex gap-2">
-                <PasswordInput value={emailCurrentPw} onChange={(e) => setEmailCurrentPw(e.target.value)} className="flex-1" placeholder="Confirm it's you" />
-                <Button variant="secondary" loading={savingEmail} disabled={!emailCurrentPw} onClick={saveEmail}>Update email</Button>
+                <PasswordInput value={emailCurrentPw} onChange={(e) => setEmailCurrentPw(e.target.value)} className="flex-1" placeholder={t('profile.placeholder.confirmIdentity')} />
+                <Button variant="secondary" loading={savingEmail} disabled={!emailCurrentPw} onClick={saveEmail}>{t('profile.action.updateEmail')}</Button>
               </div>
             </Field>
           )}
@@ -181,28 +192,28 @@ export default function ProfilePage() {
 
       {/* Password */}
       <Card pad={20}>
-        <SectionHeader title="Change password" sub={dev ? 'Disabled in local dev mode.' : 'Verify your current password, then set a new one.'} />
+        <SectionHeader title={t('profile.section.password')} sub={dev ? t('profile.hint.devDisabled') : t('profile.section.passwordSub')} />
         <div className="flex flex-col gap-4">
-          <Field label="Current password">
+          <Field label={t('profile.label.currentPassword')}>
             <PasswordInput value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} disabled={dev} autoComplete="current-password" />
           </Field>
-          <Field label="New password" hint="Minimum 8 characters">
+          <Field label={t('profile.label.newPassword')} hint={t('profile.hint.minChars')}>
             <PasswordInput value={pw} onChange={(e) => setPw(e.target.value)} minLength={8} disabled={dev} autoComplete="new-password" />
             {pw && <div className="mt-2"><StrengthMeter value={pw} /></div>}
           </Field>
-          <Field label="Confirm new password" error={pw2 && pw2 !== pw ? 'Passwords do not match' : undefined}>
+          <Field label={t('profile.label.confirmPassword')} error={pw2 && pw2 !== pw ? t('profile.error.passwordMismatch') : undefined}>
             <PasswordInput value={pw2} onChange={(e) => setPw2(e.target.value)} disabled={dev} autoComplete="new-password" />
           </Field>
           <div className="flex justify-end">
-            <Button loading={savingPw} disabled={dev || !currentPw || strength(pw) < 2 || pw !== pw2} onClick={savePassword}>Update password</Button>
+            <Button loading={savingPw} disabled={dev || !currentPw || strength(pw) < 2 || pw !== pw2} onClick={savePassword}>{t('profile.action.updatePassword')}</Button>
           </div>
         </div>
       </Card>
 
       {/* Danger zone */}
       <Card pad={20} className="border-negative/40">
-        <SectionHeader title="Delete account" sub="Permanently remove your account and all data. This cannot be undone." />
-        <Button variant="destructive" icon="trash2" onClick={() => { setDelPw(''); setConfirmDel(true); }}>Delete my account</Button>
+        <SectionHeader title={t('profile.section.delete')} sub={t('profile.section.deleteSub')} />
+        <Button variant="destructive" icon="trash2" onClick={() => { setDelPw(''); setConfirmDel(true); }}>{t('profile.action.deleteAccount')}</Button>
       </Card>
 
       <Modal
@@ -215,21 +226,21 @@ export default function ProfilePage() {
           <div className="w-12 h-12 rounded-full bg-negative-tint text-negative flex items-center justify-center">
             <Icon name="alertTriangle" size={24} />
           </div>
-          <h2 className="t-h3">Delete your account?</h2>
+          <h2 className="t-h3">{t('profile.modal.deleteTitle')}</h2>
           <p className="t-body text-text-secondary max-w-[360px]">
-            This permanently deletes your account and every client, subscription, transaction, and invoice. This cannot be undone.
+            {t('profile.modal.deleteBody')}
           </p>
         </div>
         {!dev && (
           <div className="mt-4">
-            <Field label="Enter your password to confirm">
-              <PasswordInput value={delPw} onChange={(e) => setDelPw(e.target.value)} placeholder="Your password" autoFocus />
+            <Field label={t('profile.modal.passwordLabel')}>
+              <PasswordInput value={delPw} onChange={(e) => setDelPw(e.target.value)} placeholder={t('profile.modal.passwordPlaceholder')} autoFocus />
             </Field>
           </div>
         )}
         <div className="flex flex-col-reverse sm:flex-row sm:justify-center gap-2 pt-5">
-          <Button variant="secondary" disabled={deleting} onClick={() => setConfirmDel(false)}>Cancel</Button>
-          <Button variant="destructive" loading={deleting} disabled={!dev && !delPw} onClick={doDelete}>Delete everything</Button>
+          <Button variant="secondary" disabled={deleting} onClick={() => setConfirmDel(false)}>{t('profile.action.cancel')}</Button>
+          <Button variant="destructive" loading={deleting} disabled={!dev && !delPw} onClick={doDelete}>{t('profile.action.deleteEverything')}</Button>
         </div>
       </Modal>
     </div>

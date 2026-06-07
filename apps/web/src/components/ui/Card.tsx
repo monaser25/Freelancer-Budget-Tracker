@@ -69,7 +69,7 @@ export function SectionHeader({ className, title, action, sub, ...props }: Secti
 
 export interface StatCardProps extends Omit<CardProps, 'title'> {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   delta?: number;
   tone?: 'positive' | 'negative' | 'neutral';
   sub?: string;

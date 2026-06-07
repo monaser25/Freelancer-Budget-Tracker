@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { authenticateRequest, getUserId } from '@/server/auth';
 import { prisma } from '@/server/prisma';
 import { withApiError } from '@/server/errors';
-import { buildReport, reportToCsv, REPORT_TITLES, type ReportType } from '@/server/reports';
+import { buildReport, reportToCsv, getReportTitle, type ReportType } from '@/server/reports';
 import { reportToXlsx } from '@/server/reportXlsx';
+import { DEFAULT_LOCALE, type Locale } from '@/lib/locales';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export const GET = async (request: Request) => withApiError(request, async () =>
   const typeParam = url.searchParams.get('type') || 'pl';
   const type: ReportType = isReportType(typeParam) ? typeParam : 'pl';
   const format = url.searchParams.get('format') || 'json';
+  const locale = (url.searchParams.get('locale') as Locale) || DEFAULT_LOCALE;
 
   const now = new Date();
   const defaultFrom = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
@@ -40,28 +42,43 @@ export const GET = async (request: Request) => withApiError(request, async () =>
     prisma.client.findMany({ where: { userId }, select: { id: true, name: true, company: true } }),
   ]);
 
-  const report = buildReport(type, { transactions, clients }, from, to);
+  const report = buildReport(type, { transactions, clients }, from, to, locale);
 
-  const baseFilename = `${REPORT_TITLES[type].replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`;
+  // The localized title (e.g. Arabic) is used for the human-readable download
+  // name, but the localized slug can contain non-Latin1 characters which are
+  // illegal in an HTTP header value (Content-Disposition must be a ByteString).
+  // We therefore expose the localized name via RFC 5987 `filename*` and keep a
+  // plain ASCII `filename` fallback derived from the stable English title.
+  const localizedSlug = `${getReportTitle(type, locale).replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`;
+  const asciiSlug = `${getReportTitle(type, DEFAULT_LOCALE).replace(/\s+/g, '-').toLowerCase()}-${from}_to_${to}`
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/[\\/:*?"<>|]/g, '-');
+
+  const contentDisposition = (ext: string) => {
+    const fallback = `${asciiSlug || 'report'}.${ext}`.replace(/"/g, '');
+    const utf8 = encodeURIComponent(`${localizedSlug}.${ext}`);
+    return `attachment; filename="${fallback}"; filename*=UTF-8''${utf8}`;
+  };
 
   if (format === 'csv') {
     const csv = reportToCsv(report);
-    return new NextResponse(csv, {
+    // Prepend a UTF-8 BOM so Excel renders Arabic headers/values correctly.
+    return new NextResponse(`﻿${csv}`, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${baseFilename}.csv"`,
+        'Content-Disposition': contentDisposition('csv'),
       },
     });
   }
 
   if (format === 'xlsx') {
-    const buffer = await reportToXlsx(report);
+    const buffer = await reportToXlsx(report, locale);
     return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${baseFilename}.xlsx"`,
+        'Content-Disposition': contentDisposition('xlsx'),
       },
     });
   }

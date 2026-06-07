@@ -16,10 +16,10 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
         }}
       >
         <div className="flex items-center gap-[11px]">
-          <div className="w-[34px] h-[34px] rounded-[10px] bg-[rgba(255,255,255,0.16)] flex items-center justify-center backdrop-blur-sm">
-            <Image src="/haseeela_icon.png" alt="Haseeela logo" width={22} height={22} />
+          <div className="w-11 h-11 rounded-[12px] bg-white flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.15)] shrink-0 overflow-hidden">
+            <Image src="/haseeela_icon.png" alt={`${t('brand.name')} logo`} width={88} height={88} className="h-full w-full max-w-none object-cover scale-150" />
           </div>
-          <span className="text-[18px] font-semibold text-white">Haseeela</span>
+          <span className="brand-wordmark auth-brand-wordmark text-white">{t('brand.name')}</span>
         </div>
         
         {/* Decorative grid */}
@@ -56,7 +56,7 @@ export function AuthLayout({ children, wide }: { children: React.ReactNode; wide
         </div>
         
         <div className="relative z-10 text-[13px] text-[rgba(255,255,255,0.6)] flex items-center justify-between">
-          <span>c 2026 Haseeela  {t('auth.marketing.footer')}</span>
+          <span>&copy; 2026 {t('brand.name')} · {t('auth.marketing.footer')}</span>
         </div>
       </div>
       

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { t as translate, type MessageKey, type MessageVars } from '../messages';
 import { DEFAULT_LOCALE, dirFor, type Locale, type LocaleDir } from './locales';
 
@@ -20,6 +20,20 @@ const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children, initialLocale = DEFAULT_LOCALE }: LocaleProviderProps) {
   const [locale, setLocale] = useState<Locale>(initialLocale);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem('haseeela.locale') as Locale;
+      if (stored === 'ar' || stored === 'en') {
+        setLocale(stored);
+      }
+    } catch (e) {}
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = dirFor(locale);
+  }, [locale]);
 
   const t = useCallback(
     (key: MessageKey, vars?: MessageVars) => translate(locale, key, vars),
@@ -43,4 +57,27 @@ export const useLocale = () => {
   const ctx = useContext(LocaleContext);
   if (!ctx) throw new Error('useLocale must be used within LocaleProvider');
   return ctx;
+};
+
+const ERROR_KEYS_MAP: Record<string, MessageKey> = {
+  'Validation failed': 'errors.validationFailed',
+  'Resource not found': 'errors.resourceNotFound',
+  'Duplicate generated transaction for this billing date': 'errors.duplicateTransaction',
+  'Your account is not fully set up. Please sign out and sign in again.': 'errors.accountNotSetup',
+  'Internal server error': 'errors.internalServer',
+  'Invalid date': 'errors.invalidDate',
+  'Add at least one line item': 'errors.minLineItem',
+  'Client not found': 'errors.clientNotFound',
+  'Only monthly retainer clients can record recurring payments': 'errors.clientNotRetainer',
+  'Only active clients can record recurring payments': 'errors.clientNotActive',
+  'Subscription not found': 'errors.subNotFound',
+  'Only active subscriptions can record payments': 'errors.subNotActive',
+  'Using locally cached data. API sync will resume when the backend is available.': 'errors.cachedData',
+  'Financial data is unavailable. Check the API connection and try again.': 'errors.dataUnavailable',
+};
+
+export const translateError = (msg: string, t: (key: MessageKey, vars?: MessageVars) => string) => {
+  const key = Object.keys(ERROR_KEYS_MAP).find(k => msg.includes(k));
+  if (key) return t(ERROR_KEYS_MAP[key]);
+  return msg;
 };

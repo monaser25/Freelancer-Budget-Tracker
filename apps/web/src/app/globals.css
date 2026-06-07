@@ -61,6 +61,9 @@
     --text-primary: var(--text);
     --accent-light: var(--accent-tint);
     
+    --selection-bg: var(--accent-tint);
+    --selection-color: var(--text);
+    
     /* Legacy Radius (for existing unmigrated components that might use them directly) */
     --radius-sm: var(--r-sm);
     --radius-md: var(--r-md);
@@ -69,7 +72,66 @@
   }
 
   html[lang="ar"], html[dir="rtl"] {
-    --font: var(--font-cairo), 'Cairo', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --font: var(--font-arabic), 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
+  }
+
+  html[lang="ar"] [dir="ltr"], html[dir="rtl"] [dir="ltr"], .font-latin {
+    font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .ltr-token {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-family: 'Inter', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .date-token {
+    unicode-bidi: isolate;
+    font-family: var(--font);
+  }
+
+  /* English wordmark is a proper logotype: heavy weight, tight tracking. */
+  .brand-wordmark {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  /* The Arabic wordmark (حصيــــلة) reads as a logotype, so it carries more
+     size to balance the icon. Weight stays at 700 — the Arabic font's 800
+     gets cramped at these sizes. */
+  html[dir="rtl"] .brand-wordmark {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  .auth-brand-wordmark {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+  }
+
+  html[dir="rtl"] .auth-brand-wordmark {
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  html[lang="ar"] body,
+  html[dir="rtl"] body,
+  html[dir="rtl"] button,
+  html[dir="rtl"] input,
+  html[dir="rtl"] select,
+  html[dir="rtl"] textarea,
+  html[dir="rtl"] .font-sans {
+    font-family: var(--font);
+  }
+
+  html[dir="rtl"] input[type="search"],
+  html[dir="rtl"] input[data-search="true"] {
+    text-align: right;
   }
 
   .dark {
@@ -104,6 +166,9 @@
     --shadow-md: 0 4px 12px rgba(0,0,0,.5);
     --shadow-lg: 0 12px 32px rgba(0,0,0,.6);
     --ring: 0 0 0 1px var(--border);
+    --selection-bg: var(--accent);
+    --selection-color: var(--accent-fg);
+    
     color-scheme: dark;
   }
 
@@ -119,7 +184,8 @@
   }
 
   ::selection { 
-    background: var(--accent-tint); 
+    background-color: var(--selection-bg); 
+    color: var(--selection-color);
   }
 
   .tnum { 
@@ -169,7 +235,7 @@
 /* Print: isolate the invoice/report document so "Print" yields a clean PDF */
 @media print {
   @page { margin: 14mm; }
-  body { background: #fff; }
+  html, body { background: #fff !important; }
   body * { visibility: hidden; }
   #invoice-document, #invoice-document *,
   #report-document, #report-document * { visibility: visible; }
@@ -178,6 +244,16 @@
     border: none !important; border-radius: 0 !important; box-shadow: none !important;
     /* Keep brand/accent colours accurate in the printed PDF. */
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    /* Always print on clean white paper with dark ink — never inherit the
+       app's dark-mode palette. We re-pin the light design tokens locally so
+       every surface/border/text utility resolves to its light value. */
+    --bg:#FFFFFF; --surface:#FFFFFF; --surface-elevated:#FFFFFF; --surface-hover:#F4F4F6;
+    --border:#E7E7EC; --border-strong:#D4D4D8;
+    --text:#18181B; --text-secondary:#52525B; --text-muted:#71717A;
+    --accent:#6D5EFC; --accent-hover:#5B4FE0; --accent-tint:#EEEDFE; --accent-fg:#FFFFFF;
+    --positive:#10B981; --positive-tint:#ECFDF5; --negative:#EF4444; --negative-tint:#FEF2F2;
+    --warning:#F59E0B; --warning-tint:#FFFBEB; --info:#0EA5E9; --info-tint:#F0F9FF;
+    background:#FFFFFF !important; color:#18181B !important; color-scheme: light;
   }
   /* Only show the branded letterhead when printing. */
   .print-letterhead { display: flex !important; }
